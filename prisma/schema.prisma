@@ -225,6 +225,15 @@ enum PlaylistActionType {
   create_playlist
   move_item
   add_item
+  remove_item
+}
+
+/// Ba thứ lấy được từ tài khoản YouTube. Lịch sử xem và "Xem sau" KHÔNG
+/// nằm trong danh sách này vì Google không cho phép truy cập qua API.
+enum YouTubeAccountSignalType {
+  subscription /// Kênh đã đăng ký
+  liked_video /// Video đã thích — tín hiệu gu mạnh nhất
+  playlist_member /// Video nằm trong playlist tự lập
 }
 
 enum DigestTrigger {
@@ -731,6 +740,27 @@ model LibraryItem {
   @@index([folder])
 }
 
+/// Tín hiệu nhập từ chính tài khoản YouTube của người dùng — dùng để dựng gu
+/// ngay từ ngày đầu, khi app chưa có lịch sử xem của riêng nó.
+///
+/// LƯU Ý: lịch sử xem và danh sách "Xem sau" KHÔNG lấy được — Google đã chặn
+/// từ 2016. Chỉ có ba thứ dưới đây.
+model YouTubeAccountSignal {
+  id         String                   @id @default(cuid())
+  signalType YouTubeAccountSignalType
+  externalId String /// ID kênh hoặc ID video
+
+  title        String
+  channelTitle String?
+  /// Nếu nội dung này cũng đã được quét về thì nối vào đây
+  mappedContentItemId String?
+
+  importedAt DateTime @default(now())
+
+  @@unique([signalType, externalId])
+  @@index([signalType])
+}
+
 model YouTubePlaylist {
   id                String  @id @default(cuid())
   youtubePlaylistId String  @unique
@@ -901,6 +931,11 @@ model ContentEmbedding {
   embeddingModel String
   sourceText     String   @db.Text
   createdAt      DateTime @default(now())
+
+  /// 1024 chiều, khớp model voyage-3.
+  /// Prisma không đọc/ghi được kiểu này — truy vấn bằng $queryRaw.
+  /// Khai báo ở đây để Prisma biết cột tồn tại và không xoá nó đi.
+  vector Unsupported("vector(1024)")?
 }
 
 model NoteEmbedding {
@@ -911,4 +946,6 @@ model NoteEmbedding {
   embeddingModel String
   sourceText     String   @db.Text
   createdAt      DateTime @default(now())
+
+  vector Unsupported("vector(1024)")?
 }

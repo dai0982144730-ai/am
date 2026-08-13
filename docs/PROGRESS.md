@@ -4,29 +4,27 @@
 
 ## Đang ở đâu
 
-**Phase 0 — Nền tảng: xong phần code.** Còn chờ database mới chạy migration được.
+**Phase 0 — Nền tảng: XONG.**
 
-Đã có: khung Next.js 16 + Tailwind 4, Prisma 7 với đầy đủ cấu trúc dữ liệu
-(~30 bảng), logic chấm điểm chất lượng, trang chủ tạm hiển thị tiến độ.
-Chạy `npm run dev` là lên được.
+Khung Next.js 16 + Tailwind 4, Prisma 7, database Neon đã chạy thật với 36 bảng,
+pgvector đã bật, logic chấm điểm chất lượng đã viết. `npm run dev` lên được trang.
 
-## Việc kế tiếp
+## Việc kế tiếp — Phase 1
 
-1. **Tạo database trên Neon** rồi dán `DATABASE_URL` vào `.env` ← đang vướng ở đây
-2. Chạy `npm run db:migrate` để tạo bảng thật
-3. Bật pgvector và thêm cột vector cho `ContentEmbedding` / `NoteEmbedding`
-   (Prisma chưa hỗ trợ kiểu vector nên phải thêm bằng SQL trong migration)
-4. Sang Phase 1: quét YouTube — client gọi API kèm đếm quota, lấy lời thoại,
-   phân loại bằng Claude
+1. Đăng nhập Google + xin quyền YouTube
+2. Nhập **kênh đã đăng ký, video đã thích, playlist hiện có** → `YouTubeAccountSignal`
+   (đây là cách dựng gu ngay từ ngày đầu, vì lịch sử xem thì Google không cho lấy)
+3. Client gọi YouTube Data API kèm đếm quota (`QuotaUsageLog`)
+4. Lấy lời thoại video + phân loại bằng Claude
 
 ## Cần chủ dự án chuẩn bị
 
 | Việc | Trạng thái | Ghi chú |
 |---|---|---|
-| Database trên [Neon](https://neon.tech) | ⬜ chưa | Miễn phí, đăng ký bằng Google. **Cần trước khi làm tiếp** |
+| Database trên [Neon](https://neon.tech) | ✅ xong | Đã kết nối, đã tạo bảng |
 | Khoá Anthropic API | ⬜ chưa | [console.anthropic.com](https://console.anthropic.com) → API Keys |
 | Khoá YouTube Data API v3 | ⬜ chưa | [console.cloud.google.com](https://console.cloud.google.com) → bật YouTube Data API v3 |
-| Google OAuth (đăng nhập) | ⬜ chưa | Cùng trang trên → Credentials → OAuth client ID |
+| Google OAuth (đăng nhập) | ⬜ chưa | Cùng trang trên → Credentials → OAuth client ID. **Cần cho Phase 1** |
 | Whitelist tác giả/nguồn ban đầu | ⬜ chưa | Tác giả truyện, giảng sư, blog AI uy tín bạn đã biết |
 
 ## Chạy trên máy mới
@@ -64,11 +62,34 @@ npm run dev
 - Đã kiểm tra: `npx prisma validate` hợp lệ, `next build` thành công,
   `npm run dev` trả về trang đúng
 
+**Kết nối database + chốt cách dùng tài khoản YouTube**
+- Neon đã kết nối, chạy migration thật: 36 bảng, pgvector đã bật, cột vector 1024
+  chiều + chỉ mục HNSW cho `ContentEmbedding` và `NoteEmbedding`
+- `scripts/check-db.ts` — kiểm tra nhanh tình trạng database
+- Chốt phạm vi dùng tài khoản YouTube: **lịch sử xem và "Xem sau" không lấy được**
+  (Google chặn từ 2016). Thay bằng nhập kênh đã đăng ký + video đã thích + playlist
+  hiện có (`YouTubeAccountSignal`) để dựng gu ban đầu, còn lịch sử xem thì app tự ghi
+- Chốt quyền ghi playlist: thêm/tạo **tự động**, di chuyển/gỡ **chờ duyệt**,
+  xoá cả playlist thì **không bao giờ**
+
 **Ghi chú kỹ thuật**
 - Prisma 7 bỏ `url` trong `datasource` — chuỗi kết nối chuyển sang
   `prisma.config.ts`, và `PrismaClient` cần driver adapter (`@prisma/adapter-pg`)
+- Neon cho hai địa chỉ: bản `-pooler` dùng khi chạy app, bản không `-pooler`
+  dùng khi tạo/sửa bảng. `prisma.config.ts` ưu tiên `DIRECT_URL`
 - `src/generated/` là code Prisma tự sinh, không đưa lên Git. Script
   `postinstall` tự chạy `prisma generate` nên máy mới clone về chỉ cần
   `npm install`
 - `.claude/launch.json` trỏ tới dự án này; nếu mở Claude Code ở thư mục cha
   (`D:\CLAUDE\CODE\QLDA`) thì preview sẽ chạy nhầm sang `qlda-web`
+
+**Cạm bẫy đã vấp — Prisma xoá thứ nó không hiểu**
+
+Cột `vector` ban đầu thêm bằng SQL thủ công, không khai báo trong schema. Lần
+`migrate dev` sau đó Prisma coi nó là thừa và **xoá mất**. Đã sửa bằng cách khai
+báo `Unsupported("vector(1024)")` trong schema.
+
+Hai chỉ mục HNSW thì vẫn chưa có cách khai báo — mỗi lần `migrate dev` Prisma vẫn
+định xoá. Quy trình an toàn khi tạo migration mới: `--create-only` → mở file SQL
+xoá các dòng `DROP INDEX ..._vector_idx` → `migrate deploy`. Đã ghi rõ trong
+`CLAUDE.md`.

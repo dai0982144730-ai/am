@@ -62,7 +62,7 @@ Ingestion/Crawler (adapter: YouTube / Blog+Forum / Podcast / SoundCloud)
 
 1. **Tổng quát hoá nguồn từ Phase 0**: mọi thứ xoay quanh `Source`/`ContentItem`, không cứng theo "YouTube video" — thêm nguồn mới chỉ là thêm 1 adapter.
 2. **Music đi đường riêng trong pipeline**: nhạc không có transcript hữu ích, đánh giá "hay" của nhạc cũng không dựa trên nội dung ngữ nghĩa. Ép nhạc qua pipeline transcript+LLM sẽ vừa tốn tiền vừa cho kết quả vô nghĩa → tách nhánh ngay từ bước sau ingestion.
-3. **Mọi thao tác ghi ra thế giới thật đều qua "đề xuất → duyệt → áp dụng"**: ghi playlist YouTube thật, công nhận tác giả mới vào whitelist — không bao giờ tự động.
+3. **Thao tác ghi ra thế giới thật phải cân nhắc mức độ hoàn tác được.** Thêm video vào playlist hay tạo playlist mới thì gỡ ra dễ → cho tự động. Di chuyển, gỡ bỏ, và công nhận tác giả mới vào whitelist thì khó sửa hơn → chờ duyệt. Xoá cả playlist thì không hoàn tác được → không bao giờ làm.
 
 ---
 
@@ -96,6 +96,43 @@ Ingestion/Crawler (adapter: YouTube / Blog+Forum / Podcast / SoundCloud)
 - **Note**: `contentItemId`, `timestampSeconds`, `inputType` (`text | voice`), `rawText`, `voiceAudioUrl`, `autoTags` (JSON, LLM tự gắn), `userCorrectedTags` (JSON, học từ lần sửa), `collectionId`, `noteType` (`freeform | action_item | quote`), `createdAt`
 - **KnowledgeCollection**: `title`, `autoCreated`, `synthesizedSummary` (bài "wiki cá nhân" LLM viết lại định kỳ), `lastSynthesizedAt`
 - **ActionItem**: `noteId`, `contentItemId`, `description`, `status` (`todo | done`), `remindedAt`
+
+### Kết nối tài khoản YouTube
+
+Người dùng đăng nhập bằng chính tài khoản YouTube của mình. Trợ lý dùng dữ liệu
+sẵn có trên tài khoản để hiểu gu ngay từ ngày đầu, và quản lý playlist thật.
+
+**Giới hạn quan trọng — phải nói rõ để sau này không hiểu nhầm:**
+
+| Dữ liệu | Lấy được? | Ghi chú |
+|---|---|---|
+| Kênh đã đăng ký | ✅ | `subscriptions.list` |
+| Video đã thích | ✅ | `videos.list?myRating=like` — tín hiệu gu mạnh nhất lấy được |
+| Playlist và nội dung bên trong | ✅ | `playlists.list` + `playlistItems.list` |
+| **Lịch sử xem** | ❌ | **Google chặn từ 2016**, không có cách hợp pháp nào qua API |
+| **Xem sau (Watch Later)** | ❌ | Bị chặn cùng đợt |
+
+Bù cho lịch sử xem: app **tự ghi lịch sử của chính nó** (`ConsumptionEvent` /
+`ConsumptionSession`). Dữ liệu này thực ra giàu hơn — YouTube chỉ biết người dùng
+đã bấm vào, còn app biết xem được bao lâu, bỏ ở phút nào, xem lại mấy lần, chấm
+mấy sao. Càng dùng thì trợ lý càng hiểu gu.
+
+- **YouTubeAccountSignal** (nhập từ tài khoản, dùng dựng gu ban đầu — giải bài
+  toán cold start): `signalType` (`subscription | liked_video | playlist_member`),
+  `externalId`, `title`, `channelTitle`, `importedAt`, `mappedContentItemId`
+  (FK, nếu nội dung đó cũng đã được quét về)
+
+**Quyền ghi lên tài khoản thật** (đã chốt với chủ dự án):
+
+| Thao tác | Cách xử lý |
+|---|---|
+| Thêm video vào playlist | **Tự động**, không cần hỏi |
+| Tạo playlist mới | **Tự động** |
+| Di chuyển video sang playlist khác | Chờ duyệt |
+| Gỡ video khỏi playlist | Chờ duyệt |
+| **Xoá cả playlist** | **Không bao giờ** — YouTube không có thùng rác, xoá nhầm là mất hẳn |
+
+Mọi thao tác đã áp dụng đều ghi vào `PlaylistActionLog` để tra cứu lại.
 
 ### Thư viện & playlist thật
 
@@ -265,7 +302,11 @@ Whitelist seed người dùng nhập (`trustScore = 1.0`) → fuzzy-match tên t
 - **Điểm khác biệt của Music**: với video/bài viết, xem lại nhiều lần là hiếm; với nhạc, **nghe lại nhiều lần là tín hiệu tích cực mạnh nhất**. `replayCount` phải được diễn giải khác nhau theo `contentGroup`, nếu dùng chung một công thức sẽ hiểu sai gu nhạc.
 - **Cập nhật taste profile**: job định kỳ gửi Claude (profile hiện tại + N phiên gần nhất + feedback tường minh) → profile mới dạng structured output + `freeformSummary` bằng lời tự nhiên, dùng luôn làm context cho chat agent. Lưu versioned để rollback nếu một đợt dữ liệu nhiễu làm lệch gu.
 - **Ảnh hưởng ngược vào ranking**: `finalScore = compositeScore × personalizationMultiplier`, cộng nguồn candidate từ semantic search (`ContentEmbedding` qua pgvector) trên các nội dung đã xem hết/đánh giá cao.
-- **Cold start**: khi chưa có lịch sử, hệ thống chạy bằng whitelist nguồn/tác giả người dùng nhập lúc setup + bộ lọc mặc định theo chủ đề, và **chủ động hỏi vài câu trong chat** ("thích nghe truyện dài hay ngắn?") thay vì gợi ý ngẫu nhiên trong vài ngày đầu.
+- **Cold start**: ngay lần đăng nhập đầu, nhập **kênh đã đăng ký + video đã thích +
+  playlist hiện có** từ tài khoản YouTube (`YouTubeAccountSignal`) → có ngay một
+  bức tranh gu tương đối. Cộng thêm whitelist nguồn/tác giả người dùng tự nhập, và
+  **chủ động hỏi vài câu trong chat** ("thích nghe truyện dài hay ngắn?") thay vì
+  gợi ý ngẫu nhiên trong vài ngày đầu.
 
 ---
 
@@ -310,7 +351,8 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 | Chi phí Claude tăng theo lượng nội dung | Two-stage funnel (Haiku lọc → Sonnet đánh giá sâu), Batches API, prompt caching, giới hạn độ dài bài, **Music không đi qua LLM đọc sâu** |
 | False positive khi LLM tự phát hiện tác giả mới *(rủi ro cao nhất)* | Bắt buộc `pendingReview` + duyệt tay, kết hợp nhiều tín hiệu độc lập, giữ `aiGeneratedSuspicionScore` tách biệt |
 | Thư viện transcript gãy khi YouTube đổi API ngầm | Thư viện bảo trì tích cực, adapter thay được, heartbeat cảnh báo khi tỷ lệ fail tăng |
-| Ghi nhầm vào playlist YouTube thật | Luôn đề xuất → duyệt; log đầy đủ; không bao giờ xoá playlist |
+| Ghi nhầm vào playlist YouTube thật | Phân mức theo khả năng hoàn tác: thêm/tạo tự động (gỡ ra dễ), di chuyển/gỡ phải duyệt, xoá playlist thì không bao giờ. `PlaylistActionLog` ghi đủ để lần lại |
+| Tưởng nhầm là lấy được lịch sử xem YouTube | Google chặn từ 2016, không có đường vòng hợp pháp. Bù bằng lịch sử app tự ghi — chi tiết hơn về thời lượng xem thực tế |
 | BPM gắn sai làm hỏng buổi tập | `bpmConfidence` rõ ràng, thiếu tin cậy thì để trống thay vì đoán |
 | Job nền chạy lại gây nhân đôi dữ liệu | `JobRun.idempotencyKey` + upsert theo `externalId` |
 | Từ khoá "New" bật tự quét nhiều làm cạn quota | Mỗi từ khoá = 100 units/ngày; UI hiện rõ chi phí, cảnh báo khi vượt ~10 từ khoá đang bật, và mục New bị tắt trước khi circuit-breaker chạm ngưỡng |
@@ -323,7 +365,7 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 | Phase | Nội dung |
 |---|---|
 | **0** | Repo mới, schema `Source`/`ContentItem`/`Author`, Postgres+pgvector, auth 1 tài khoản, YouTube client + `QuotaUsageLog` |
-| **1** | YouTube pipeline lõi: ingestion, transcript fetcher, classification 4 nhóm + trường mở rộng, CRUD whitelist thủ công |
+| **1** | YouTube pipeline lõi: đăng nhập Google + **nhập kênh đã đăng ký, video đã thích, playlist hiện có** (`YouTubeAccountSignal` — giải cold start), ingestion, transcript fetcher, classification 4 nhóm + trường mở rộng, CRUD whitelist thủ công |
 | **2** | Blog/Diễn đàn AI + TTS tiếng Việt *(ưu tiên sớm)*: adapter 4 tier nguồn, `NarrationAsset`, tích hợp TTS |
 | **3** | Nhánh Music: metadata extractor, parse BPM + `bpmConfidence`, chuẩn hoá genre bằng Haiku |
 | **4** | **Engine chấm chất lượng theo nguồn**: 4 trụ tín hiệu chuẩn hoá percentile, `SourceQualityProfile` + UI chỉnh trọng số trong Cài đặt, `CommentAnalysis` vòng 2, `ExternalDiscussion` cho blog/podcast |
@@ -331,7 +373,7 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 | **4c** | Chuyên mục **New**: `AdHocInterest` (ô nhập từ khoá, bật/tắt tự quét), tích hợp vào cron 21:00 + hiển thị chi phí quota |
 | **5** | Player + theo dõi hành vi + `ResumePoint` đồng bộ đa thiết bị + rating cảm xúc |
 | **6** | Xác thực tác giả nâng cao: LLM auto-discovery + `pendingReview` + tủ sách tác giả + full-text search |
-| **7** | Thư viện cá nhân + quản lý playlist YouTube (OAuth write scope) |
+| **7** | Thư viện cá nhân + quản lý playlist YouTube: thêm/tạo tự động, di chuyển/gỡ chờ duyệt, không bao giờ xoá playlist |
 | **8** | Trợ lý ghi chú: `Note` (text/voice), auto-tag, `KnowledgeCollection` + wiki, `ActionItem` |
 | **9** | Personalization engine: taste profile, embeddings, mood-theo-giờ, cold-start onboarding |
 | **10** | Trợ lý chủ động: `DigestRun`, `AssistantBriefing` + audio briefing, dedup, checklist AI |

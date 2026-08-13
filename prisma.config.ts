@@ -8,7 +8,8 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    // Đọc từ file .env — file này không nằm trong Git, mỗi máy tự tạo
-    url: process.env["DATABASE_URL"],
+    // Việc tạo/sửa bảng cần kết nối trực tiếp, không đi qua pooler của Neon.
+    // Nếu chưa khai báo DIRECT_URL thì dùng tạm DATABASE_URL.
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });

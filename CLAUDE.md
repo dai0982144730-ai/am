@@ -47,6 +47,28 @@ Ba điều này xuyên suốt thiết kế, đừng phá vỡ khi thêm tính n�
 Thêm một điều về chấm điểm: **chuẩn hoá percentile trong cùng loại nguồn**, không
 bao giờ so trực tiếp lượt xem YouTube với điểm Hacker News.
 
+## Cạm bẫy đã gặp — đọc trước khi chạy migration
+
+**Prisma sẽ tự ý xoá thứ nó không hiểu.** Hai chỉ mục HNSW cho tìm kiếm ngữ nghĩa
+(`ContentEmbedding_vector_idx`, `NoteEmbedding_vector_idx`) do pgvector quản lý,
+Prisma không biết chúng tồn tại nên **mỗi lần `prisma migrate dev` nó đều định
+xoá đi**.
+
+Cách xử lý khi tạo migration mới:
+
+1. Dùng `prisma migrate dev --create-only` để chỉ tạo file, chưa chạy
+2. Mở file `migration.sql` vừa tạo, **xoá các dòng `DROP INDEX ..._vector_idx`**
+3. Chạy `prisma migrate deploy` để áp dụng
+
+Riêng cột `vector` thì đã an toàn — đã khai báo bằng `Unsupported("vector(1024)")`
+trong schema nên Prisma giữ lại.
+
+Kiểm tra nhanh tình trạng database bất cứ lúc nào:
+
+```bash
+npx tsx scripts/check-db.ts
+```
+
 ## Next.js
 
 Bản Next.js dùng ở đây có thể khác với những gì bạn quen. Trước khi viết code
