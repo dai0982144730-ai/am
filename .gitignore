@@ -1,0 +1,51 @@
+# ==========================================================
+# QUAN TRỌNG: file chứa khoá API — không bao giờ đưa lên GitHub
+# ==========================================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Thư viện — mỗi máy tự cài bằng "npm install"
+node_modules/
+.pnp
+.pnp.js
+
+# Kết quả build
+.next/
+out/
+build/
+dist/
+
+# Cơ sở dữ liệu để trên máy (nếu có dùng tạm)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# File tạm của hệ điều hành
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Log
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Cache công cụ
+.eslintcache
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# Cấu hình riêng của trình soạn thảo
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# File âm thanh sinh ra (TTS/voice note) — không đưa lên repo
+/public/generated/
+/storage/
