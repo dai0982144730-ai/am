@@ -1,0 +1,914 @@
+// ==========================================================================
+// Am — cấu trúc cơ sở dữ liệu
+//
+// Thiết kế đầy đủ: docs/plan.md
+//
+// Ba nguyên tắc xuyên suốt:
+//   1. Mọi thứ xoay quanh Source/ContentItem, không cứng theo "YouTube video"
+//   2. Music đi nhánh riêng — không transcript, không LLM đọc sâu
+//   3. Ghi ra thế giới thật (playlist YouTube, whitelist tác giả) luôn phải
+//      qua "đề xuất → người dùng duyệt → áp dụng"
+// ==========================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7: chuỗi kết nối nằm trong prisma.config.ts, không đặt ở đây nữa
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================================================
+// ENUM
+// ==========================================================================
+
+/// Năm chuyên mục nội dung
+enum ContentGroup {
+  ai
+  triet_hoc
+  truyen
+  music
+  new_search /// Chuyên mục "New" — từ khoá người dùng tự nhập
+  other
+}
+
+enum SourceType {
+  youtube_channel
+  blog_feed
+  forum_community
+  podcast_rss
+  soundcloud_channel
+}
+
+/// Cấp uy tín nguồn — dùng chính cho nhánh AI
+enum SourceReputationTier {
+  official_vendor /// Blog chính thức của hãng (Anthropic, OpenAI…)
+  expert_individual /// Blog cá nhân của chuyên gia
+  community_forum /// Hacker News, Reddit, LessWrong
+  aggregator /// Trang tổng hợp tin
+}
+
+enum SubscriptionStatus {
+  subscribed
+  not_subscribed
+  unknown
+}
+
+enum ContentItemType {
+  video
+  podcast_episode
+  audio_track
+  blog_article
+  forum_post
+}
+
+enum NarrationType {
+  human_voice /// Người thật đọc
+  ai_tts /// Giọng máy
+  text_only /// Bài viết chưa có bản audio
+  instrumental /// Nhạc không lời
+  unknown
+}
+
+enum IngestSource {
+  subscribed /// Từ kênh đã theo dõi
+  discovery /// Từ tìm kiếm mở rộng
+  manual /// Người dùng tự thêm
+  adhoc_interest /// Từ từ khoá trong chuyên mục New
+}
+
+enum ContentStatus {
+  pending_transcript
+  pending_classification
+  classified
+  transcript_unavailable
+  rejected
+}
+
+enum TranscriptSource {
+  captions
+  unofficial_scrape
+  podcast_shownotes
+  asr_fallback
+  blog_article_text
+}
+
+enum FetchStatus {
+  success
+  failed
+  not_applicable /// Nhạc không cần transcript
+}
+
+/// Bốn nhóm tác giả/nguồn uy tín cần xác thực
+enum AuthorDomain {
+  story_writer /// Tác giả truyện
+  philosophy_teacher /// Giảng sư, diễn giả triết học
+  ai_blog_source /// Blog, diễn đàn AI
+  music_curator /// Kênh nhạc
+}
+
+enum AuthorOrigin {
+  whitelist_seed /// Người dùng tự nhập
+  llm_discovered /// Claude tự phát hiện, chờ duyệt
+}
+
+// --- Trường riêng theo chuyên mục ---
+
+enum AiSubtopic {
+  claude_news
+  ai_news_general
+  ai_agent_enterprise
+  coding_experience_howto
+  claude_usage_guide
+}
+
+enum PhilosophySchool {
+  stoic
+  hien_sinh
+  tam_ly_hoc_hien_dai
+  phat_giao_nguyen_thuy
+  khac
+}
+
+enum PhilosophyContentForm {
+  giang_phap
+  van_dap
+  ung_dung_thuc_hanh
+  phan_tich_hoc_thuat
+}
+
+enum ListenerLevel {
+  moi_bat_dau
+  chuyen_sau
+}
+
+enum StoryGenre {
+  kinh_di
+  vien_tuong
+  phieu_luu_mao_hiem
+}
+
+enum StoryOrigin {
+  viet_nam_sang_tac
+  dich_trung_quoc
+  dich_au_my
+  khac
+}
+
+enum StoryIntensity {
+  nhe_nhang
+  cang_thang
+  kinh_khung
+}
+
+enum MusicGenre {
+  workout_bpm
+  dance
+  piano
+  guitar_rock
+  nhac_vang
+}
+
+/// Mức tin cậy của BPM — thà để trống còn hơn đoán sai làm hỏng buổi tập
+enum BpmConfidence {
+  stated_in_title /// Ghi rõ trong tiêu đề — tin cậy nhất
+  stated_in_description
+  inferred /// Suy đoán — độ tin cậy thấp
+}
+
+// --- Hành vi & trợ lý ---
+
+enum DeviceType {
+  desktop
+  mobile
+}
+
+enum ConsumptionEventType {
+  play
+  pause
+  seek
+  complete
+  abandon
+}
+
+enum NoteInputType {
+  text
+  voice
+}
+
+enum NoteType {
+  freeform
+  action_item
+  quote
+}
+
+enum ActionItemStatus {
+  todo
+  done
+}
+
+enum SuggestionType {
+  new_save /// Lưu nội dung mới vào playlist
+  misplaced_fix /// Sửa video đang nằm sai playlist
+}
+
+enum SuggestionStatus {
+  pending
+  approved
+  rejected
+  applied
+}
+
+enum PlaylistActionType {
+  create_playlist
+  move_item
+  add_item
+}
+
+enum DigestTrigger {
+  scheduled_daily
+  manual
+}
+
+enum RunStatus {
+  running
+  success
+  failed
+}
+
+enum DigestDensity {
+  it
+  vua
+  nhieu
+}
+
+enum ExternalPlatform {
+  hackernews
+  reddit
+}
+
+// ==========================================================================
+// LÕI NỘI DUNG
+// ==========================================================================
+
+/// Một kênh YouTube, một blog, một diễn đàn, một podcast…
+model Source {
+  id         String     @id @default(cuid())
+  type       SourceType
+  externalId String /// ID kênh YouTube, hoặc URL feed
+  url        String?
+  title      String
+
+  followerCount      Int?
+  isVerified         Boolean               @default(false)
+  subscriptionStatus SubscriptionStatus    @default(unknown)
+  reputationTier     SourceReputationTier?
+  contentGroupHint   ContentGroup?
+
+  /// Playlist "uploads" của kênh YouTube — dùng để quét giá rẻ (1 unit)
+  /// thay vì search.list (100 units)
+  uploadsPlaylistId String?
+
+  createdAt     DateTime  @default(now())
+  lastCrawledAt DateTime?
+  crawlPriority Int       @default(0)
+
+  contentItems ContentItem[]
+  authors      AuthorOnSource[]
+
+  @@unique([type, externalId])
+  @@index([type, lastCrawledAt])
+}
+
+/// Một video, một tập podcast, một bài blog, một bản nhạc…
+model ContentItem {
+  id         String  @id @default(cuid())
+  sourceId   String
+  source     Source  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  externalId String /// ID video YouTube, URL bài viết…
+  url        String?
+
+  type        ContentItemType
+  title       String
+  description String?         @db.Text
+  thumbnailUrl String?
+  publishedAt DateTime?
+
+  durationSeconds Int?
+  viewOrPlayCount Int?
+  likeCount       Int?
+  commentCount    Int?
+  originalLanguage String?
+
+  contentGroup  ContentGroup
+  subtopic      String?
+  narrationType NarrationType @default(unknown)
+  ingestSource  IngestSource
+  status        ContentStatus @default(pending_transcript)
+
+  /// Chỉ có giá trị khi contentGroup = new_search
+  adHocInterestId String?
+  adHocInterest   AdHocInterest? @relation(fields: [adHocInterestId], references: [id], onDelete: SetNull)
+
+  dedupGroupId String?
+  dedupGroup   DedupGroup? @relation("GroupMembers", fields: [dedupGroupId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transcript          Transcript?
+  narrationAsset      NarrationAsset?
+  classification      ContentClassification?
+  score               ContentScore?
+  embedding           ContentEmbedding?
+  commentAnalysis     CommentAnalysis?
+  externalDiscussions ExternalDiscussion[]
+  consumptionEvents   ConsumptionEvent[]
+  consumptionSessions ConsumptionSession[]
+  resumePoint         ResumePoint?
+  notes               Note[]
+  actionItems         ActionItem[]
+  libraryItem         LibraryItem?
+  playlistSuggestions PlaylistOrganizationSuggestion[]
+  representativeOf    DedupGroup?                     @relation("GroupRepresentative")
+
+  @@unique([sourceId, externalId])
+  @@index([contentGroup, publishedAt])
+  @@index([sourceId, publishedAt])
+  @@index([status])
+}
+
+/// Lời thoại/nội dung chữ. Không áp dụng cho nhạc.
+model Transcript {
+  id            String      @id @default(cuid())
+  contentItemId String      @unique
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  source      TranscriptSource
+  language    String?
+  rawText     String           @db.Text
+  /// Mảng {start, text} để nhảy đúng mốc thời gian
+  segments    Json?
+  fetchStatus FetchStatus      @default(success)
+  fetchedAt   DateTime         @default(now())
+}
+
+/// Bản thuật lại tiếng Việt + audio, cho blog/diễn đàn nước ngoài
+model NarrationAsset {
+  id            String      @id @default(cuid())
+  contentItemId String      @unique
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  /// Thuật lại đầy đủ gần bản gốc, diễn đạt bằng lời văn riêng
+  /// (không sao chép nguyên văn — xem phần bản quyền trong plan)
+  scriptText  String  @db.Text
+  detailLevel String  @default("full_retelling")
+  ttsAudioUrl String?
+  ttsVoice    String?
+  durationSeconds Int?
+
+  generatedAt DateTime @default(now())
+}
+
+/// Tác giả truyện, giảng sư, blog AI, kênh nhạc — dùng chung một bảng
+model Author {
+  id            String       @id @default(cuid())
+  canonicalName String
+  aliases       String[]     @default([])
+  domain        AuthorDomain
+  origin        AuthorOrigin
+
+  trustScore Float @default(0)
+  /// Bằng chứng LLM dựa vào để đề xuất: kênh xác minh, mức nhất quán
+  /// dẫn nguồn, chất lượng bình luận, tuổi kênh…
+  verificationEvidence Json?
+
+  /// Tác giả do LLM phát hiện phải được duyệt tay mới có hiệu lực đầy đủ
+  approvedByUser Boolean @default(false)
+  pendingReview  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sources         AuthorOnSource[]
+  classifications ContentClassification[]
+
+  @@unique([canonicalName, domain])
+  @@index([domain, pendingReview])
+}
+
+/// Một tác giả có thể xuất hiện trên nhiều kênh, và ngược lại
+model AuthorOnSource {
+  authorId String
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  sourceId String
+  source   Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([authorId, sourceId])
+}
+
+/// Kết quả Claude đọc nội dung — tách riêng để chạy lại được mà không mất lịch sử
+model ContentClassification {
+  id            String      @id @default(cuid())
+  contentItemId String      @unique
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  extractedTopics          String[] @default([])
+  extractedAuthorNameRaw   String?
+  authorCreditedInDescription Boolean @default(false)
+  contentQualityNotes      String?  @db.Text
+
+  authorId String?
+  author   Author? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  // --- AI ---
+  aiSubtopic AiSubtopic?
+
+  // --- Triết học ---
+  philosophySchool      PhilosophySchool?
+  philosophyContentForm PhilosophyContentForm?
+  listenerLevel         ListenerLevel?
+  /// Cờ mê tín dị đoan / thương mại hoá tâm linh — lọc loại trừ mặc định
+  misleadingContentFlag Boolean                @default(false)
+
+  // --- Truyện ---
+  storyGenre       StoryGenre?
+  storyOrigin      StoryOrigin?
+  storyIntensity   StoryIntensity?
+  basedOnTrueStory Boolean?
+  /// 0–1. Bộ lọc CỨNG cho nhóm truyện: truyện AI viết hàng loạt bị loại hẳn,
+  /// không phải chỉ xếp cuối
+  aiGeneratedSuspicionScore Float?
+
+  // --- Music (điền bằng rule + Haiku, không cần đọc transcript) ---
+  musicGenre       MusicGenre?
+  bpm              Int?
+  bpmBucket        String? /// "155-160"
+  bpmConfidence    BpmConfidence?
+  mixLengthBucket  String? /// ">20ph" | ">40ph" | ">1h"
+  isContinuousMix  Boolean?
+
+  modelUsed     String?
+  promptVersion String?
+  classifiedAt  DateTime @default(now())
+
+  @@index([authorId])
+}
+
+// ==========================================================================
+// CHẤM ĐIỂM CHẤT LƯỢNG
+// ==========================================================================
+
+/// Bốn trụ tín hiệu, tất cả chuẩn hoá 0–1 theo percentile TRONG CÙNG loại nguồn.
+/// Không bao giờ so trực tiếp lượt xem YouTube với điểm Hacker News.
+model ContentScore {
+  id            String      @id @default(cuid())
+  contentItemId String      @unique
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  popularityScore      Float? /// Lượt xem/nghe/upvote, chia theo quy mô nguồn
+  engagementDepthScore Float? /// Tỷ lệ bình luận & like trên lượt xem
+  discussionQualityScore Float? /// Claude đọc bình luận (chỉ ứng viên top)
+  sourceAuthorityScore Float? /// Người theo dõi + whitelist + tuổi kênh
+  contentQualityScore  Float? /// Claude đọc nội dung — KHÔNG áp dụng cho nhạc
+
+  compositeScore Float?
+  scoreVersion   String @default("v1")
+
+  computedAt DateTime @default(now())
+
+  @@index([compositeScore])
+}
+
+/// Trọng số xếp hạng, cấu hình riêng cho từng loại nguồn trong mục Cài đặt.
+/// Chỉ dùng để XẾP HẠNG — không có ngưỡng loại bỏ cứng, để kênh nhỏ mà hay
+/// vẫn có cơ hội xuất hiện.
+model SourceQualityProfile {
+  id         String     @id @default(cuid())
+  sourceType SourceType @unique
+
+  weightPopularity      Float @default(0.2)
+  weightEngagementDepth Float @default(0.3)
+  weightDiscussion      Float @default(0.3)
+  weightAuthority       Float @default(0.2)
+  weightContentQuality  Float @default(0)
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Vòng 2 của việc chấm điểm — chỉ chạy cho ~20 ứng viên đứng đầu mỗi ngày
+/// để tiết kiệm quota và chi phí
+model CommentAnalysis {
+  id            String      @id @default(cuid())
+  contentItemId String      @unique
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  sampledCount           Int
+  discussionQualityScore Float
+  /// Cờ: spam_emoji_only | clickbait_complaint | praised_specific_detail
+  signals                Json?
+
+  analyzedAt DateTime @default(now())
+}
+
+/// Blog và podcast không có chỉ số công khai nào — đo gián tiếp bằng
+/// mức độ được bàn tán trên Hacker News / Reddit
+model ExternalDiscussion {
+  id            String      @id @default(cuid())
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  platform     ExternalPlatform
+  score        Int?
+  commentCount Int?
+  url          String
+
+  fetchedAt DateTime @default(now())
+
+  @@unique([contentItemId, platform, url])
+}
+
+/// Gộp nhiều nguồn cùng đưa một tin — chỉ hiện bản đại diện
+model DedupGroup {
+  id                 String       @id @default(cuid())
+  representativeId   String?      @unique
+  representative     ContentItem? @relation("GroupRepresentative", fields: [representativeId], references: [id], onDelete: SetNull)
+  topicSummary       String?
+
+  createdAt DateTime @default(now())
+
+  members ContentItem[] @relation("GroupMembers")
+}
+
+// ==========================================================================
+// CHUYÊN MỤC "NEW"
+// ==========================================================================
+
+/// Từ khoá người dùng tự nhập, thay đổi theo ngày.
+/// Mỗi từ khoá bật tự quét tốn 100 units quota mỗi ngày (search.list).
+model AdHocInterest {
+  id      String  @id @default(cuid())
+  keyword String  @unique
+  note    String?
+
+  active   Boolean @default(true)
+  autoScan Boolean @default(true)
+
+  createdAt     DateTime  @default(now())
+  lastScannedAt DateTime?
+  resultCount   Int       @default(0)
+
+  contentItems ContentItem[]
+
+  @@index([active, autoScan])
+}
+
+// ==========================================================================
+// CÁ NHÂN HOÁ & HÀNH VI
+// ==========================================================================
+
+/// Hồ sơ gu cá nhân, do Claude viết lại định kỳ. Lưu theo phiên bản để
+/// quay lại được nếu một đợt dữ liệu nhiễu làm lệch gu.
+model UserTasteProfile {
+  id      String @id @default(cuid())
+  version Int    @default(1)
+
+  /// map subtopic → trọng số
+  preferredSubtopics    Json?
+  preferredDurationMin  Int?
+  preferredDurationMax  Int?
+  preferredNarrationType NarrationType?
+  preferredLanguages    String[]       @default([])
+  /// Khung giờ → chuyên mục ưu tiên
+  moodSchedule          Json?
+  blockedVoices         String[]       @default([])
+  blockedSourceIds      String[]       @default([])
+  blockedAuthorIds      String[]       @default([])
+  dislikedPatterns      Json?
+  /// Tóm tắt bằng lời tự nhiên — dùng làm ngữ cảnh cho trợ lý trò chuyện
+  freeformSummary       String?        @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@unique([version])
+}
+
+model ConsumptionEvent {
+  id            String      @id @default(cuid())
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  sessionId     String?
+  session       ConsumptionSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  eventType       ConsumptionEventType
+  positionSeconds Int
+  deviceType      DeviceType
+  timestamp       DateTime             @default(now())
+
+  @@index([contentItemId, timestamp])
+}
+
+model ConsumptionSession {
+  id            String      @id @default(cuid())
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  startedAt      DateTime  @default(now())
+  endedAt        DateTime?
+  watchedSeconds Int       @default(0)
+  percentComplete Float    @default(0)
+  completed      Boolean   @default(false)
+  /// Với nhạc, nghe lại nhiều lần là tín hiệu THÍCH mạnh nhất.
+  /// Với video/bài viết thì ngược lại, xem lại là hiếm.
+  /// Phải diễn giải khác nhau theo contentGroup.
+  replayCount    Int       @default(0)
+
+  explicitRating Int? /// 1–5 sao
+  emotionTags    String[] @default([]) /// "sợ", "an yên", "hữu ích"…
+
+  deviceType DeviceType
+
+  events ConsumptionEvent[]
+
+  @@index([contentItemId, startedAt])
+}
+
+/// Bỏ dở trên máy này, mở máy kia nghe tiếp đúng chỗ
+model ResumePoint {
+  id            String      @id @default(cuid())
+  contentItemId String      @unique
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  positionSeconds Int
+  lastDevice      DeviceType
+  updatedAt       DateTime   @updatedAt
+}
+
+// ==========================================================================
+// GHI CHÚ & TRÍ NHỚ KIẾN THỨC
+// ==========================================================================
+
+model Note {
+  id            String      @id @default(cuid())
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  /// Gắn đúng mốc thời gian trong clip
+  timestampSeconds Int?
+  inputType        NoteInputType @default(text)
+  rawText          String        @db.Text
+  voiceAudioUrl    String?
+
+  /// Nhãn Claude tự gắn từ nội dung note + đoạn transcript quanh đó
+  autoTags          Json?
+  /// Người dùng sửa lại — hệ thống học dần từ đây
+  userCorrectedTags Json?
+
+  noteType NoteType @default(freeform)
+
+  collectionId String?
+  collection   KnowledgeCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  embedding  NoteEmbedding?
+  actionItem ActionItem?
+
+  @@index([contentItemId, timestampSeconds])
+  @@index([collectionId])
+}
+
+/// "Wiki cá nhân" theo chủ đề — tách biệt hoàn toàn với playlist YouTube thật
+model KnowledgeCollection {
+  id          String  @id @default(cuid())
+  title       String  @unique
+  autoCreated Boolean @default(true)
+
+  /// Bài tổng hợp Claude viết lại định kỳ từ toàn bộ ghi chú bên trong
+  synthesizedSummary String?   @db.Text
+  lastSynthesizedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  notes Note[]
+}
+
+/// Ghi chú mang tính "cần làm" được tách ra để nhắc lại sau
+model ActionItem {
+  id            String      @id @default(cuid())
+  noteId        String      @unique
+  note          Note        @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  description String
+  status      ActionItemStatus @default(todo)
+  remindedAt  DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+// ==========================================================================
+// THƯ VIỆN & PLAYLIST YOUTUBE THẬT
+// ==========================================================================
+
+model LibraryItem {
+  id            String      @id @default(cuid())
+  contentItemId String      @unique
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  folder       String?
+  readStatus   String  @default("unread")
+  personalNote String?
+
+  savedAt DateTime @default(now())
+
+  @@index([folder])
+}
+
+model YouTubePlaylist {
+  id                String  @id @default(cuid())
+  youtubePlaylistId String  @unique
+  title             String
+  description       String?
+  itemCount         Int     @default(0)
+  /// Có cho phép trợ lý đề xuất sắp xếp playlist này không
+  managedByAI       Boolean @default(false)
+
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+
+  suggestions PlaylistOrganizationSuggestion[]
+}
+
+/// Trợ lý CHỈ đề xuất. Mọi thay đổi thật trên kênh YouTube đều phải được
+/// người dùng duyệt trước khi áp dụng.
+model PlaylistOrganizationSuggestion {
+  id            String      @id @default(cuid())
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  suggestedPlaylistId String?
+  suggestedPlaylist   YouTubePlaylist? @relation(fields: [suggestedPlaylistId], references: [id], onDelete: SetNull)
+  /// Khi cần tạo playlist mới chưa tồn tại
+  newPlaylistTitle    String?
+  /// Playlist hiện tại, khi phát hiện video đặt sai chỗ
+  currentPlaylistTitle String?
+
+  reason String  @db.Text
+  type   SuggestionType
+  status SuggestionStatus @default(pending)
+
+  createdAt  DateTime  @default(now())
+  decidedAt  DateTime?
+
+  @@index([status, createdAt])
+}
+
+/// Nhật ký thao tác đã ghi thật lên YouTube — để tra cứu và khôi phục tay.
+/// Hệ thống KHÔNG BAO GIỜ xoá playlist, chỉ tạo mới / thêm / di chuyển.
+model PlaylistActionLog {
+  id          String             @id @default(cuid())
+  actionType  PlaylistActionType
+  payload     Json
+  triggeredBy String /// "user_single_approval" | "user_approved_batch"
+  appliedAt   DateTime           @default(now())
+}
+
+// ==========================================================================
+// TRỢ LÝ CHỦ ĐỘNG & VẬN HÀNH
+// ==========================================================================
+
+/// Mỗi lần quét — tự động 21:00 giờ VN, hoặc người dùng bấm quét tay
+model DigestRun {
+  id          String        @id @default(cuid())
+  triggeredBy DigestTrigger
+  startedAt   DateTime      @default(now())
+  finishedAt  DateTime?
+  newItemsFound Int         @default(0)
+  status      RunStatus     @default(running)
+  errorSummary String?
+
+  briefing AssistantBriefing?
+}
+
+/// Bản tin dạng trò chuyện + audio ngắn, không phải danh sách khô khan
+model AssistantBriefing {
+  id          String    @id @default(cuid())
+  digestRunId String    @unique
+  digestRun   DigestRun @relation(fields: [digestRunId], references: [id], onDelete: Cascade)
+
+  /// { topPicks: [...], moreIfInterested: [...] } — chắt lọc còn vài lựa chọn
+  /// nổi bật mỗi chuyên mục, phần còn lại gấp gọn lại
+  pickedItemsTiered   Json
+  conversationalScript String  @db.Text
+  audioBriefingUrl    String?
+
+  deliveredAt     DateTime  @default(now())
+  userRespondedAt DateTime?
+}
+
+model UserAssistantSettings {
+  id String @id @default("singleton")
+
+  /// Giờ quét tự động, giờ Việt Nam. Mặc định 21:00 tối hôm trước để
+  /// sáng hôm sau đã có sẵn bản tin.
+  dailyScanHour   Int           @default(21)
+  digestDensity   DigestDensity @default(vua)
+  autoScanEnabled Boolean       @default(true)
+  ttsVoice        String?
+
+  updatedAt DateTime @updatedAt
+}
+
+model FilterPreset {
+  id           String        @id @default(cuid())
+  name         String
+  contentGroup ContentGroup?
+  filterJson   Json
+  isDefault    Boolean       @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  title     String?
+  startedAt DateTime @default(now())
+
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  role      String /// "user" | "assistant"
+  content   String  @db.Text
+  toolCalls Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+/// Theo dõi quota YouTube. Chạm 80% ngân sách thì ngắt phần tìm kiếm mở rộng
+/// trước, giữ lại việc quét các kênh đã whitelist.
+model QuotaUsageLog {
+  id       String   @id @default(cuid())
+  date     DateTime @db.Date
+  endpoint String
+  unitCost Int
+  callCount Int     @default(1)
+
+  @@unique([date, endpoint])
+  @@index([date])
+}
+
+/// Job nền chạy lại phải an toàn, không nhân đôi dữ liệu
+model JobRun {
+  id             String    @id @default(cuid())
+  jobType        String
+  idempotencyKey String?   @unique
+  status         RunStatus @default(running)
+  attemptCount   Int       @default(1)
+  lastError      String?   @db.Text
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([jobType, startedAt])
+}
+
+// ==========================================================================
+// EMBEDDINGS
+//
+// Cột vector do pgvector quản lý, Prisma chưa hỗ trợ kiểu này trực tiếp nên
+// sẽ thêm bằng SQL trong migration và truy vấn bằng $queryRaw.
+// ==========================================================================
+
+model ContentEmbedding {
+  id            String      @id @default(cuid())
+  contentItemId String      @unique
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  embeddingModel String
+  sourceText     String   @db.Text
+  createdAt      DateTime @default(now())
+}
+
+model NoteEmbedding {
+  id     String @id @default(cuid())
+  noteId String @unique
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  embeddingModel String
+  sourceText     String   @db.Text
+  createdAt      DateTime @default(now())
+}

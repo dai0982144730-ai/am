@@ -18,6 +18,9 @@ out/
 build/
 dist/
 
+# Code Prisma tự sinh — mỗi máy tự tạo bằng "npx prisma generate"
+/src/generated/
+
 # Cơ sở dữ liệu để trên máy (nếu có dùng tạm)
 *.db
 *.db-journal
