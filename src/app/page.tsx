@@ -1,10 +1,14 @@
+import Link from "next/link";
+
 import { auth } from "@/auth";
+import { DangXemDo } from "@/components/DangXemDo";
 import { KhungTrang } from "@/components/KhungTrang";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
 import {
   layNoiDungTrangChu,
   layTinhHinhKho,
 } from "@/lib/nghiepVu/layNoiDungTrangChu";
+import { docDangXemDo } from "@/lib/tieuThu/docTienDo";
 
 /** Không lưu bản dựng sẵn — kho thay đổi mỗi lần quét. */
 export const dynamic = "force-dynamic";
@@ -19,17 +23,18 @@ function docThoiDiem(luc: Date | null): string {
 }
 
 export default async function TrangChu() {
-  const [phien, cacMuc, tinhHinh] = await Promise.all([
+  const [phien, cacMuc, tinhHinh, dangXemDo] = await Promise.all([
     auth(),
     layNoiDungTrangChu(4),
     layTinhHinhKho(),
+    docDangXemDo(),
   ]);
 
   return (
     <KhungTrang emailNguoiDung={phien?.user?.email}>
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        {/* Dải thông tin về lần quét gần nhất — thay cho bản tin của trợ lý,
-            vốn là việc của Phase 10 */}
+        {/* Dải thông tin về lần quét gần nhất. Bản tin trò chuyện nằm ở trang
+            riêng — ở đây chỉ dẫn sang. */}
         <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
           <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             Kho nội dung
@@ -47,10 +52,14 @@ export default async function TrangChu() {
             ) : null}
             .
           </p>
-          <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">
-            Bản tin trò chuyện hằng sáng và phần audio là việc của Phase 10.
+          <p className="mt-3 text-sm">
+            <Link href="/ban-tin" className="font-medium underline">
+              Đọc bản tin sáng nay →
+            </Link>
           </p>
         </div>
+
+        <DangXemDo cacMuc={dangXemDo} />
 
         {cacMuc.length === 0 ? (
           <div className="mt-10 rounded-xl border border-dashed border-neutral-300 p-10 text-center dark:border-neutral-700">

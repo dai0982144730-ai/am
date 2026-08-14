@@ -2,9 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
+import { DanhGiaCamXuc } from "@/components/DanhGiaCamXuc";
 import { KhungTrang } from "@/components/KhungTrang";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
+import { TrinhPhatYouTube } from "@/components/TrinhPhatYouTube";
 import { prisma } from "@/lib/db/prisma";
+import { docTinhTrangXem } from "@/lib/tieuThu/docTienDo";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +59,8 @@ export default async function TrangXem({
   if (!muc) notFound();
 
   const maYouTube = maVideoYouTube(muc.url);
+  const laChu = Boolean(phien?.user?.email);
+  const tinhTrang = await docTinhTrangXem(muc.id);
 
   // Nội dung cùng chuyên mục để xem tiếp — đúng kiểu cột phải của YouTube
   const lienQuan = await prisma.contentItem.findMany({
@@ -118,15 +123,14 @@ export default async function TrangXem({
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
             {maYouTube ? (
-              <div className="aspect-video overflow-hidden rounded-xl bg-black">
-                <iframe
-                  src={`https://www.youtube-nocookie.com/embed/${maYouTube}`}
-                  title={muc.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="size-full"
-                />
-              </div>
+              <TrinhPhatYouTube
+                maVideo={maYouTube}
+                idNoiDung={muc.id}
+                tieuDe={muc.title}
+                laChu={laChu}
+                viTriDangDo={tinhTrang.viTriDangDo}
+                soLanDaXem={tinhTrang.soLanDaXem}
+              />
             ) : (
               <div className="rounded-xl border border-neutral-200 p-8 text-center dark:border-neutral-800">
                 <p className="text-sm text-neutral-500">
@@ -224,6 +228,14 @@ export default async function TrangXem({
                 </p>
               </section>
             ) : null}
+
+            <DanhGiaCamXuc
+              idNoiDung={muc.id}
+              chuyenMuc={muc.contentGroup}
+              laChu={laChu}
+              saoBanDau={tinhTrang.saoDaCham}
+              tagBanDau={tinhTrang.tagCamXuc}
+            />
 
             {muc.description ? (
               <details className="mt-6 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">

@@ -12,6 +12,7 @@
 | **3** — Nhánh nhạc | ✅ xong, chạy hoàn toàn bằng luật |
 | **4** — Chấm chất lượng | ✅ xong trọn: hai vòng chấm + màn hình chỉnh trọng số |
 | **4b** — Tìm kiếm & bộ lọc | ✅ xong, tìm được cả trong nhận xét của Claude |
+| **5** — Trình phát & nhớ chỗ dở | ✅ xong, đồng bộ máy tính ↔ điện thoại |
 | **10** — Bản tin hằng sáng | ✅ xong, Claude viết bằng giọng trò chuyện |
 | **Tự chạy** | ✅ một lệnh làm đủ 8 bước, hẹn giờ 21:00 |
 | **15** — Cổng API trợ lý | ✅ xong, đã chạy thật |
@@ -585,6 +586,69 @@ và bản thiết kế cũng nói nhạc không dùng điểm chất lượng n�
 
 Không còn thiếu gì — màn hình chỉnh trọng số đã làm xong, xem mục "Trang Cài
 đặt" bên dưới.
+
+## Phase 5 — Trình phát, nhớ chỗ đang dở, đánh giá: XONG
+
+File: `src/lib/tieuThu/actions.ts` (ghi), `docTienDo.ts` (đọc),
+`src/components/TrinhPhatYouTube.tsx`, `DanhGiaCamXuc.tsx`, `DangXemDo.tsx`,
+`src/app/api/tieu-thu/roi-trang/route.ts`.
+
+**Vì sao phải bỏ thẻ iframe thường**: iframe trơn thì trang không hỏi được video
+đang phát tới đâu, mà biết vị trí chính là toàn bộ mục đích của phần này. Phải
+nạp thư viện IFrame API của YouTube mới hỏi được.
+
+### Ba quyết định đáng ghi lại
+
+**Chỉ mở phiên xem khi thật sự bấm phát**, không phải lúc tải trang. Mở trang
+rồi đóng ngay không phải là một lần xem — tạo phiên từ lúc tải thì mỗi cái bấm
+nhầm cũng thành một bản ghi, và về sau phần học gu đọc phải toàn phiên rỗng,
+tưởng chủ nhà mở nhiều mà chẳng xem gì.
+
+**Có một tuyến API riêng chỉ để ghi lúc đóng tab** (`/api/tieu-thu/roi-trang`).
+Lúc trang sắp đóng, trình duyệt huỷ mọi lời gọi mạng đang dở, kể cả server
+action — chỉ `navigator.sendBeacon` là được cam kết gửi đi, mà beacon cần một
+địa chỉ HTTP thật. Không có nó thì xem tới phút 47 rồi tắt máy, hôm sau mở điện
+thoại lại thấy phút 45.
+
+**Khách không để lại dấu vết nào.** Không phải giấu nút trên giao diện — chặn
+thật ở server. Gọi thẳng tuyến beacon khi chưa đăng nhập thì nhận **HTTP 401**
+(đã thử). Lý do: ghi cả lượt xem của người lạ thì hồ sơ gu bị pha loãng bởi
+người khác, mà web này làm riêng cho một người.
+
+### Tag cảm xúc khác nhau theo chuyên mục
+
+Hỏi một bản nhạc có "hữu ích" không thì vô nghĩa, hỏi bài về AI có "thư giãn"
+không cũng vậy. Danh sách chung cho mọi thứ sẽ khiến phần lớn lựa chọn thành
+nhiễu. Nên: AI được hỏi *"áp dụng được ngay / lý thuyết suông / đã biết rồi"*,
+truyện được hỏi *"sợ / cuốn / giọng đọc hay / nghe như AI đọc"*, nhạc được hỏi
+*"thư giãn / tăng năng lượng / hợp lúc làm việc / nghe lại được"*.
+
+### Đã kiểm tới đâu
+
+Chạy `npx tsx scripts/thu-tieu-thu.ts` — diễn lại đúng kịch bản bản thiết kế
+đòi, cả bốn cảnh đều đúng:
+
+| Cảnh | Kết quả |
+|---|---|
+| Xem trên máy tính, bỏ dở phút 8 | ghi 4 sự kiện: play, pause, play, abandon |
+| Mở trên điện thoại | tiếp từ giây 480, biết máy dừng lần trước là desktop |
+| Nghe hết trên điện thoại | chỗ đang dở **tự xoá** — không ai muốn mở lại thấy "tiếp từ phút 58" của video đã xem hết |
+| Mở lại lần nữa | máy biết đã xem xong 1 lần trước (`replayCount`) |
+
+Script **tự dọn sạch dữ liệu nó tạo ra**. Bắt buộc phải vậy: nó ghi "đã xem
+hết, chấm 4 sao" lên một video thật mà chủ nhà chưa hề xem — để lại thì phần học
+gu sau này tưởng đó là thứ chủ nhà thích. Dữ liệu thử lẫn vào dữ liệu thật còn
+tệ hơn không thử.
+
+Phần khách nhìn thấy: đã mở bằng trình duyệt trong ứng dụng (không có phiên đăng
+nhập). Trình phát hiện ra bình thường, **không có nút sao nào, không có tag
+nào**, không có lời gọi ghi nào bắn đi, và có lời mời đăng nhập.
+
+**Chưa kiểm được bằng mắt**: phần giao diện khi đã đăng nhập — hàng "Đang xem
+dở" ở trang chủ, chấm sao, lời nhắc "đang tiếp tục từ…". Trình duyệt trong ứng
+dụng không đăng nhập được, và không nên tự thao tác đăng nhập hộ. Lớp dữ liệu
+bên dưới thì đã chứng minh chạy đúng bằng script trên. Chủ dự án mở
+`localhost:3000` trên trình duyệt đang đăng nhập là thấy ngay.
 
 ## Tự chạy hằng đêm — XONG
 
