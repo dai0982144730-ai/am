@@ -14,6 +14,7 @@ import "dotenv/config";
 
 import { prisma } from "../src/lib/db/prisma";
 import { phanLoaiHangLoat } from "../src/lib/llm/luuPhanLoai";
+import { chonCachGoi } from "../src/lib/llm/phanLoai";
 
 /** Giá Haiku 4.5, đô la Mỹ cho mỗi triệu token. Đổi khi dùng model khác. */
 const GIA = { vao: 1.0, ra: 5.0, nhoLai: 0.1 };
@@ -42,6 +43,7 @@ async function main() {
       classification: null,
     },
   });
+  console.log(`Đường gọi: ${chonCachGoi() === "cli" ? "Claude CLI trên máy (gói Pro)" : "khoá API"}`);
   console.log(`Đang chờ phân loại: ${conCho} nội dung`);
   console.log(`Lần này xử lý tối đa: ${gioiHan}\n`);
 
@@ -62,12 +64,48 @@ async function main() {
       console.log(`  ${(TEN_NHOM[nhom] ?? nhom).padEnd(12)} ${so}`);
     }
 
+    const tongChu = kq.tongTokenVao + kq.tongTokenNhoLai + kq.tongTokenRa;
+    const conLai = conCho - kq.thanhCong;
+
+    if (kq.cachGoi === "cli") {
+      // Qua Claude CLI thì dùng gói Claude Pro/Max trả theo tháng — không có
+      // hoá đơn theo từng nghìn chữ. Nhưng vẫn có hạn mức dùng trong mỗi khung
+      // giờ, nên số chữ vẫn đáng theo dõi.
+      console.log("\nMức dùng lần chạy này (qua gói Claude Pro — KHÔNG tính tiền theo chữ):");
+      console.log(
+        `  Chữ đọc vào:      ${kq.tongTokenVao.toLocaleString("vi-VN").padStart(9)}`,
+      );
+      if (kq.tongTokenNhoLai > 0) {
+        console.log(
+          `  Chữ nhớ lại:      ${kq.tongTokenNhoLai.toLocaleString("vi-VN").padStart(9)}`,
+        );
+      }
+      console.log(
+        `  Chữ trả lời:      ${kq.tongTokenRa.toLocaleString("vi-VN").padStart(9)}`,
+      );
+      console.log(
+        `  Trung bình mỗi nội dung: ${Math.round(tongChu / kq.thanhCong).toLocaleString("vi-VN")} chữ`,
+      );
+
+      if (conLai > 0) {
+        console.log(
+          `\nCòn ${conLai} nội dung — ước tính thêm khoảng ` +
+            `${Math.round((tongChu / kq.thanhCong) * conLai).toLocaleString("vi-VN")} chữ nữa.`,
+        );
+        console.log(
+          "Gói Pro có hạn mức theo từng khung 5 giờ. Nếu bị báo hết hạn mức,\n" +
+            "chờ sang khung sau rồi chạy tiếp — phần đã làm không phải làm lại.",
+        );
+      }
+      return;
+    }
+
     const tienVao = (kq.tongTokenVao / 1e6) * GIA.vao;
     const tienRa = (kq.tongTokenRa / 1e6) * GIA.ra;
     const tienNhoLai = (kq.tongTokenNhoLai / 1e6) * GIA.nhoLai;
     const tong = tienVao + tienRa + tienNhoLai;
 
-    console.log("\nChi phí lần chạy này:");
+    console.log("\nChi phí lần chạy này (qua khoá API):");
     console.log(
       `  Token đọc vào:    ${kq.tongTokenVao.toLocaleString("vi-VN").padStart(9)}  ~${tienVao.toFixed(4)} đô`,
     );
@@ -82,7 +120,6 @@ async function main() {
       `  Trung bình mỗi nội dung:    ~${(tong / kq.thanhCong).toFixed(5)} đô`,
     );
 
-    const conLai = conCho - kq.thanhCong;
     if (conLai > 0) {
       console.log(
         `\nCòn ${conLai} nội dung chưa phân loại — ước tính thêm ~${((tong / kq.thanhCong) * conLai).toFixed(2)} đô.`,

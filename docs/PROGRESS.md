@@ -21,12 +21,13 @@ Chia thành sáu bước để dễ kiểm chứng từng chặng:
 | 1c | Nhập kênh đã đăng ký / video đã thích / playlist | ✅ xong, **đã nhập 1.029 mục thật** |
 | 1d | Quét video về thành `ContentItem` | ✅ xong, **kho có 820 video thật** |
 | 1e | Lấy lời thoại video | ✅ xong, **779/820 video (95%)** |
-| 1f | Phân loại bằng Claude | ✅ code xong, **chờ `ANTHROPIC_API_KEY` để chạy** |
+| 1f | Phân loại bằng Claude | ✅ xong, **chạy thật qua gói Claude Pro, không cần khoá API** |
 
-**Việc kế tiếp — cần chủ dự án**: lấy khoá Anthropic API tại
-[console.anthropic.com](https://console.anthropic.com) → Settings → API Keys,
-điền vào dòng `ANTHROPIC_API_KEY` trong `.env`. Đó là thứ duy nhất còn thiếu để
-chạy bước 1f và khép lại Phase 1.
+**Không còn chờ gì từ chủ dự án.** Khoá Anthropic API hoá ra không cần: đã
+chuyển sang gọi Claude qua CLI dùng gói Claude Pro sẵn có — xem mục "Gọi Claude
+qua CLI" bên dưới.
+
+**Việc kế tiếp**: chạy phân loại cho 812 nội dung còn lại, rồi sang Phase 2.
 
 ### 1a — Đăng nhập Google
 
@@ -253,8 +254,70 @@ quên chỗ kia. Không phải dò tìm trong văn bản tự do, không sợ tr
 Script luôn in chi phí ước tính ở cuối, kèm ước tính cho phần còn lại của kho —
 chạy `--so 5` xem kết quả trước rồi mới chạy cả kho.
 
-**Chưa kiểm chứng được**: `.env` chưa có `ANTHROPIC_API_KEY` thật. Code đã chạy
-đúng tới tận điểm gọi API và báo lỗi bằng tiếng Việt chỉ rõ phải lấy khoá ở đâu.
+### Gọi Claude qua CLI — không cần khoá API
+
+**Quyết định của chủ dự án (2026-08-14)**: dùng gói **Claude Pro trả theo tháng**
+thay vì khoá API tính tiền theo từng nghìn chữ. Cách làm học từ dự án `phaply`
+(Web Pháp lý) của cùng chủ dự án — xem `phaply/lib/claude-cli.ts`.
+
+File: `src/lib/llm/claudeCli.ts`. Chạy lệnh `claude --print` ở chế độ không
+tương tác, đẩy câu hỏi qua đầu vào chuẩn, đọc câu trả lời dạng JSON.
+
+Chọn đường gọi tự động: máy có Claude CLI thì dùng CLI, không thì quay sang khoá
+API. Ép bằng `CACH_GOI_CLAUDE="cli"` hoặc `"api"` trong `.env`.
+
+**Chỗ tiết kiệm lớn nhất — tắt hết công cụ.** Claude Code vốn là trợ lý lập
+trình, mỗi lần chạy nạp sẵn bản mô tả mấy chục công cụ. Việc ở đây chỉ là đọc
+hiểu và xếp nhóm, không cần công cụ nào. Đo thật, mỗi lần gọi:
+
+| Cách gọi | Chữ nạp vào |
+|---|---|
+| Như `phaply` làm (`--append-system-prompt`) | 30.087 |
+| Thay hẳn lời dặn (`--system-prompt`) | 23.689 |
+| **Thêm `--tools ""`** | **1.817** — rẻ hơn **94%** |
+
+**Điểm khác biệt phải bù**: đường API có chế độ *bắt buộc trả lời theo khuôn*,
+Claude không thể trả sai khuôn được. Đường CLI không có. Nên phải đưa khuôn JSON
+vào lời dặn, rồi tự kiểm tra lại bằng đúng khuôn Zod đó, sai thì hỏi lại một lần
+kèm chỉ rõ sai ở đâu.
+
+### Chọn model: đo thật thay vì đoán
+
+Ban đầu chọn Haiku vì rẻ hơn ba lần. Nhưng qua CLI thì không tính tiền theo chữ
+nữa, nên lý do đó mất. Đã đo trên tám video (`scripts/so-sanh-model.ts`):
+
+| | Haiku 4.5 | Sonnet 5 |
+|---|---|---|
+| Bốn video dễ (đều nhóm "khác") | đúng 4/4 | đúng 4/4 |
+| **Bốn video khó** (triết học, giảng pháp) | **sai khuôn 2/4** | đúng 4/4 |
+| Thời gian mỗi video | ~9 giây | ~12 giây |
+
+Haiku hỏng đúng chỗ cần nhất: với bài giảng Phật pháp, nó điền trường riêng của
+nhóm AI vào, dù lời dặn đã ghi rõ "trường không thuộc chuyên mục thì để trống".
+Nhận xét của Sonnet cũng sắc hơn hẳn — nó nhận ra *"không sa vào kiểu trích dẫn
+khắc kỷ sáo rỗng thường thấy trên mạng"* và *"nội dung nghiêm túc, không mê
+tín"*, đúng loại phân biệt tinh tế mà bản thiết kế đặt ra.
+
+→ **Qua CLI dùng Sonnet 5** (mạnh hơn mà không tốn thêm), **qua API dùng Haiku**
+(rẻ hơn ba lần, chấp nhận thỉnh thoảng sai khuôn vì đã có cơ chế hỏi lại).
+
+### Hai cạm bẫy đã vấp khi dựng đường CLI
+
+**1. Khoá API giả làm treo mọi thứ.** `.env` còn để nguyên
+`ANTHROPIC_API_KEY="sk-ant-..."` (giá trị mẫu). Claude CLI thấy có khoá là dùng
+khoá đó và **bỏ qua tài khoản Claude Pro đã đăng nhập** — đúng cái đang muốn
+tránh. Khoá lại là giả nên treo im lặng 180 giây rồi mới báo lỗi. Thông báo thật
+nằm khuất trong luồng lỗi: *"connectors are disabled because ANTHROPIC_API_KEY
+… takes precedence over your claude.ai login"*. Nay `claudeCli.ts` xoá hẳn biến
+này khỏi tiến trình con.
+
+**2. Tiến trình mồ côi làm nghẽn máy.** `child.kill()` của Node trên Windows chỉ
+giết tiến trình gốc, để lại đàn con chạy tiếp. Sau vài lần hết giờ, máy còn sáu
+tiến trình `claude.exe` mồ côi mỗi cái vài trăm MB, và từ đó **mọi lần gọi mới
+đều treo**. Mất khá lâu mới nhận ra thủ phạm không phải câu lệnh sai mà là máy
+đã nghẽn. Nay dùng `taskkill /T /F` để giết cả cây tiến trình.
+
+**Đã chạy thật**: 8 video, 8/8 thành công, không lỗi.
 
 ## Phase 15 — Cổng API trợ lý: XONG và ĐÃ XÁC NHẬN CHẠY THẬT (phần của `am`)
 
@@ -346,7 +409,7 @@ biến mới có hiệu lực.
 | Việc | Trạng thái | Ghi chú |
 |---|---|---|
 | Database trên [Neon](https://neon.tech) | ✅ xong | Đã kết nối, đã tạo bảng |
-| Khoá Anthropic API | ⬜ **chưa — việc duy nhất còn chặn Phase 1** | [console.anthropic.com](https://console.anthropic.com) → Settings → API Keys |
+| Khoá Anthropic API | ⚪ **không cần nữa** | Đã chuyển sang gọi Claude qua CLI dùng gói Claude Pro trả theo tháng |
 | Khoá YouTube Data API v3 | ✅ xong | Đã điền, đã gọi thật thành công |
 | Google OAuth (đăng nhập) | ✅ xong | Đã điền `GOOGLE_CLIENT_ID`/`SECRET`, `AUTH_SECRET`, `EMAIL_CHU_DU_AN` |
 | **Đăng nhập Google một lần** | ⬜ **chưa** | Mở http://localhost:3000 bấm "Đăng nhập bằng Google". Không có bước này thì bước 1c trở đi không chạy được |

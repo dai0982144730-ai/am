@@ -25,6 +25,7 @@ import type { KetQuaPhanLoai } from "./khungPhanLoai";
 import {
   phanLoaiMotNoiDung,
   PHIEN_BAN_HUONG_DAN,
+  type CachGoi,
   type NoiDungCanPhanLoai,
 } from "./phanLoai";
 
@@ -104,6 +105,8 @@ export interface KetQuaPhanLoaiHangLoat {
   tongTokenRa: number;
   tongTokenNhoLai: number;
   theoNhom: Record<string, number>;
+  /** Đã gọi qua đường nào — để biết có tốn tiền theo chữ hay không */
+  cachGoi: CachGoi | null;
 }
 
 function nghi(ms: number): Promise<void> {
@@ -140,6 +143,7 @@ export async function phanLoaiHangLoat(
   let tongTokenVao = 0;
   let tongTokenRa = 0;
   let tongTokenNhoLai = 0;
+  let cachGoi: CachGoi | null = null;
 
   for (const [thuTu, muc] of cacMuc.entries()) {
     if (thuTu > 0) await nghi(NGHI_GIUA_HAI_LAN_MS);
@@ -181,6 +185,7 @@ export async function phanLoaiHangLoat(
       );
 
       thanhCong += 1;
+      cachGoi = goi.cachGoi;
       theoNhom[kq.nhom] = (theoNhom[kq.nhom] ?? 0) + 1;
       tongTokenVao += goi.tokenVao;
       tongTokenRa += goi.tokenRa;
@@ -203,5 +208,6 @@ export async function phanLoaiHangLoat(
     tongTokenRa,
     tongTokenNhoLai,
     theoNhom,
+    cachGoi,
   };
 }

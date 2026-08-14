@@ -1,32 +1,62 @@
 /**
  * Nhờ Claude đọc nội dung rồi xếp vào đúng chuyên mục.
  *
- * Ba quyết định về chi phí, vì đây là chỗ tốn tiền nhất trong cả hệ thống —
- * mỗi video quét về đều phải đi qua đây:
+ * HAI ĐƯỜNG GỌI, tự chọn:
+ *
+ *   1. **Qua Claude CLI trên máy** (mặc định) — dùng gói Claude Pro/Max trả tiền
+ *      theo tháng. Không cần khoá API, không tính tiền theo từng nghìn chữ.
+ *   2. **Qua khoá API** — dùng khi máy không có Claude CLI, hoặc khi khai
+ *      `CACH_GOI_CLAUDE="api"` trong .env.
+ *
+ * Khác biệt đáng kể giữa hai đường: bản API có chế độ **bắt buộc trả lời theo
+ * khuôn** — Claude không thể trả về thứ sai khuôn được. Bản CLI không có, nên
+ * phải tự dặn trong lời nhắc rồi tự kiểm tra lại bằng đúng khuôn Zod đó. Kết quả
+ * cuối cùng giống nhau, chỉ khác chỗ ai đứng ra bảo đảm.
+ *
+ * BA QUYẾT ĐỊNH VỀ CHI PHÍ, vì đây là chỗ tốn nhất — mọi video quét về đều đi qua:
  *
  * 1. **Dùng Haiku, không dùng Sonnet.** Việc ở bước này là xếp nhóm và điền vài
- *    trường, không phải phân tích sâu. Haiku rẻ hơn ba lần và làm tốt việc này.
- *    Sonnet để dành cho bước chấm chất lượng (Phase 4), khi chỉ còn vài chục
- *    ứng viên đứng đầu chứ không phải cả nghìn video.
- *
- * 2. **Bản hướng dẫn được ghi nhớ tạm.** Phần hướng dẫn phân loại dài và giống
- *    hệt nhau ở mọi lần gọi, nên đánh dấu để Claude nhớ lại thay vì đọc lại từ
- *    đầu mỗi lần — phần nhớ lại chỉ tốn khoảng một phần mười.
- *
- * 3. **Cắt bớt lời thoại.** Để biết một video thuộc chuyên mục nào thì mấy nghìn
- *    chữ đầu là đủ; gửi cả bản 130.000 chữ chỉ tốn tiền vô ích.
- *
- * Câu trả lời đi theo khuôn định sẵn (`KhungPhanLoai`), nên không phải dò tìm
- * trong văn bản tự do và không sợ Claude trả về thứ không đọc được.
+ *    trường, không phải phân tích sâu. Sonnet để dành cho bước chấm chất lượng
+ *    (Phase 4), khi chỉ còn vài chục ứng viên đứng đầu.
+ * 2. **Cắt bớt lời thoại.** Để biết một video thuộc chuyên mục nào thì mấy nghìn
+ *    chữ đầu là đủ; gửi cả bản 160.000 chữ chỉ tốn công vô ích.
+ * 3. **Bên đường API còn ghi nhớ tạm phần lời dặn** giữa các lần gọi. Bên CLI
+ *    thì việc tắt hết công cụ đã tiết kiệm sẵn 94% (xem `claudeCli.ts`).
  */
 
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import * as z from "zod/v4";
 
+import { coClaudeCli, goiClaudeCli } from "./claudeCli";
 import { KhungPhanLoai, type KetQuaPhanLoai } from "./khungPhanLoai";
 
-/** Đổi được qua .env khi muốn thử model khác. */
-const MODEL_MAC_DINH = "claude-haiku-4-5";
+/**
+ * Model mặc định, khác nhau theo đường gọi — và đây là kết luận từ đo thật,
+ * không phải phỏng đoán (2026-08-14, tám video, xem `scripts/so-sanh-model.ts`):
+ *
+ * | | Haiku 4.5 | Sonnet 5 |
+ * |---|---|---|
+ * | Bốn video dễ (đều nhóm "khác") | đúng 4/4 | đúng 4/4 |
+ * | Bốn video khó (triết học, giảng pháp) | **sai khuôn 2/4** | đúng 4/4 |
+ * | Thời gian mỗi video | ~9 giây | ~12 giây |
+ *
+ * Haiku hỏng đúng chỗ cần nhất: với bài giảng Phật pháp, nó điền trường riêng
+ * của nhóm AI vào, dù lời dặn đã ghi rõ "trường không thuộc chuyên mục thì để
+ * trống". Nhận xét chất lượng của Sonnet cũng sắc hơn hẳn — nó nhận ra được
+ * "không sa vào kiểu trích dẫn khắc kỷ sáo rỗng thường thấy trên mạng", đúng
+ * loại phân biệt tinh tế mà bản thiết kế đặt ra.
+ *
+ * Nên:
+ *   - Đi đường CLI (gói tháng, không tính tiền theo chữ) → **Sonnet**, vì dùng
+ *     model mạnh hơn không tốn thêm đồng nào.
+ *   - Đi đường khoá API (tính tiền theo chữ) → **Haiku**, rẻ hơn ba lần; chấp
+ *     nhận thỉnh thoảng sai khuôn, đã có cơ chế thử lại.
+ */
+const MODEL_THEO_DUONG: Record<CachGoi, string> = {
+  cli: "claude-sonnet-5",
+  api: "claude-haiku-4-5",
+};
 
 /** Số chữ lời thoại gửi cho Claude. Đủ để biết chuyên mục. */
 const TOI_DA_CHU_LOI_THOAI = 4_000;
@@ -34,12 +64,13 @@ const TOI_DA_CHU_LOI_THOAI = 4_000;
 /** Phiên bản hướng dẫn — đổi hướng dẫn thì tăng số này để biết bản ghi cũ mới. */
 export const PHIEN_BAN_HUONG_DAN = "v1";
 
+export type CachGoi = "cli" | "api";
+
 /**
  * Hướng dẫn phân loại.
  *
- * Viết dài có chủ đích: mô tả rõ từng chuyên mục và từng cạm bẫy sẽ cho kết quả
- * ổn định hơn nhiều so với một câu chung chung. Phần này giống hệt nhau ở mọi
- * lần gọi nên được ghi nhớ tạm, dài thêm gần như không tốn thêm tiền.
+ * Viết dài có chủ đích: mô tả rõ từng chuyên mục và từng cạm bẫy cho kết quả ổn
+ * định hơn nhiều so với một câu chung chung.
  */
 const HUONG_DAN = `Bạn giúp một người Việt sắp xếp nội dung họ quét về mỗi ngày từ YouTube.
 
@@ -89,25 +120,54 @@ phải 'truyen'. Chỉ xếp vào bốn nhóm đầu khi nội dung CHÍNH thu�
 Nhận xét chất lượng viết bằng tiếng Việt, ngắn gọn, nói thẳng vào cái đáng xem
 hoặc cái dở của nội dung này.`;
 
+/**
+ * Phần dặn thêm chỉ dùng cho đường CLI.
+ *
+ * Bên API, khuôn trả lời do máy chủ bắt buộc nên không cần dặn. Bên CLI thì phải
+ * nói rõ, kèm nguyên bản mô tả khuôn để Claude biết từng trường tên gì kiểu gì.
+ */
+function dinhKemKhuon(): string {
+  const khuon = JSON.stringify(z.toJSONSchema(KhungPhanLoai), null, 1);
+  return `\n\n## Cách trả lời
+
+Trả lời DUY NHẤT một object JSON hợp lệ theo đúng khuôn dưới đây. Không viết gì
+thêm trước hay sau nó. Không bọc trong dấu \`\`\`. Không giải thích.
+
+Mọi trường trong "required" đều phải có mặt; trường nào không áp dụng thì điền null.
+
+Khuôn:
+${khuon}`;
+}
+
 let khachHang: Anthropic | null = null;
 
-function layKhachHang(): Anthropic {
+function layKhachHangApi(): Anthropic {
   const khoa = process.env.ANTHROPIC_API_KEY?.trim();
 
-  // Bắt luôn trường hợp còn để nguyên giá trị mẫu trong .env.example — nếu
-  // không thì phải gọi API mới biết, và lỗi trả về là "API key is invalid"
-  // bằng tiếng Anh, không nói được là phải đi lấy khoá ở đâu.
   if (!khoa || khoa === "sk-ant-..." || !khoa.startsWith("sk-ant-")) {
     throw new Error(
       "Chưa có ANTHROPIC_API_KEY thật trong .env " +
         `(hiện tại: ${khoa ? "giá trị mẫu" : "để trống"}).\n` +
         "Lấy tại https://console.anthropic.com → Settings → API Keys, " +
-        "rồi điền vào dòng ANTHROPIC_API_KEY trong file .env.",
+        "hoặc chuyển sang dùng Claude CLI bằng cách đặt CACH_GOI_CLAUDE=\"cli\".",
     );
   }
 
   khachHang ??= new Anthropic();
   return khachHang;
+}
+
+/**
+ * Chọn đường gọi.
+ *
+ * Ưu tiên CLI vì rẻ hơn hẳn: gói tháng đã trả rồi, dùng thêm không mất thêm.
+ * Chỉ quay sang khoá API khi máy không có Claude CLI.
+ */
+export function chonCachGoi(): CachGoi {
+  const khai = process.env.CACH_GOI_CLAUDE?.trim().toLowerCase();
+  if (khai === "api") return "api";
+  if (khai === "cli") return "cli";
+  return coClaudeCli() ? "cli" : "api";
 }
 
 export interface NoiDungCanPhanLoai {
@@ -120,6 +180,7 @@ export interface NoiDungCanPhanLoai {
 
 export interface KetQuaGoiClaude {
   ketQua: KetQuaPhanLoai;
+  cachGoi: CachGoi;
   modelDaDung: string;
   tokenVao: number;
   tokenRa: number;
@@ -157,21 +218,110 @@ function soanNoiDung(noiDung: NoiDungCanPhanLoai): string {
   return phan.join("\n\n");
 }
 
-/** Phân loại một nội dung. */
-export async function phanLoaiMotNoiDung(
-  noiDung: NoiDungCanPhanLoai,
-): Promise<KetQuaGoiClaude> {
-  const model = process.env.MODEL_PHAN_LOAI?.trim() || MODEL_MAC_DINH;
+/**
+ * Bóc lấy phần JSON trong câu trả lời.
+ *
+ * Dù đã dặn kỹ, mô hình vẫn thỉnh thoảng bọc JSON trong dấu ``` hoặc viết thêm
+ * một câu dẫn. Cắt lấy từ dấu ngoặc nhọn đầu tiên tới dấu đóng cuối cùng.
+ */
+function bocJson(vanBan: string): string {
+  const daBoRao = vanBan
+    .replace(/^\s*```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/, "")
+    .trim();
 
-  const phanHoi = await layKhachHang().messages.parse({
+  const dau = daBoRao.indexOf("{");
+  const cuoi = daBoRao.lastIndexOf("}");
+  if (dau === -1 || cuoi === -1 || cuoi < dau) return daBoRao;
+
+  return daBoRao.slice(dau, cuoi + 1);
+}
+
+/**
+ * Gọi qua Claude CLI trên máy.
+ *
+ * Bên này không có ai bắt buộc khuôn trả lời, nên tự kiểm tra bằng đúng khuôn
+ * Zod mà đường API dùng. Sai thì hỏi lại một lần, kèm chỉ rõ sai ở đâu — cách
+ * này chữa được phần lớn trường hợp, vì mô hình thường chỉ nhầm một trường chứ
+ * không hiểu sai cả bài.
+ */
+async function phanLoaiQuaCli(
+  noiDung: NoiDungCanPhanLoai,
+  model: string,
+): Promise<KetQuaGoiClaude> {
+  const loiDan = HUONG_DAN + dinhKemKhuon();
+  const cauHoiGoc = soanNoiDung(noiDung);
+
+  let tokenVao = 0;
+  let tokenRa = 0;
+  let tokenNhoLai = 0;
+  let nhacLoi = "";
+
+  for (let lan = 0; lan < 2; lan += 1) {
+    const goi = await goiClaudeCli({
+      loiDan,
+      cauHoi: cauHoiGoc + nhacLoi,
+      model,
+    });
+
+    tokenVao += goi.dung.tokenVao + goi.dung.tokenTaoCache;
+    tokenRa += goi.dung.tokenRa;
+    tokenNhoLai += goi.dung.tokenDocCache;
+
+    let thoJson: unknown;
+    try {
+      thoJson = JSON.parse(bocJson(goi.vanBan));
+    } catch {
+      nhacLoi =
+        "\n\nLần trước bạn trả lời không phải JSON hợp lệ. " +
+        "Lần này chỉ trả về đúng một object JSON, không kèm gì khác.";
+      continue;
+    }
+
+    const kiemTra = KhungPhanLoai.safeParse(thoJson);
+    if (kiemTra.success) {
+      return {
+        ketQua: kiemTra.data,
+        cachGoi: "cli",
+        modelDaDung: model,
+        tokenVao,
+        tokenRa,
+        tokenNhoLai,
+      };
+    }
+
+    const loiDau = kiemTra.error.issues[0];
+    const tenTruong = loiDau?.path.join(".") ?? "(không rõ)";
+
+    if (lan === 1) {
+      throw new Error(
+        `Claude trả về JSON sai khuôn ở trường "${tenTruong}": ${loiDau?.message}`,
+      );
+    }
+
+    nhacLoi =
+      `\n\nLần trước bạn điền sai trường "${tenTruong}": ${loiDau?.message}. ` +
+      "Nhớ rằng trường nào không thuộc chuyên mục của video này thì phải để null.";
+  }
+
+  // Không tới được đây — vòng lặp trên hoặc trả về hoặc ném lỗi
+  throw new Error("Không phân loại được sau hai lần thử.");
+}
+
+/** Gọi qua khoá API. */
+async function phanLoaiQuaApi(
+  noiDung: NoiDungCanPhanLoai,
+  model: string,
+): Promise<KetQuaGoiClaude> {
+  const phanHoi = await layKhachHangApi().messages.parse({
     model,
     max_tokens: 2_000,
     system: [
       {
         type: "text",
         text: HUONG_DAN,
-        // Đánh dấu để Claude ghi nhớ tạm phần hướng dẫn. Từ lần gọi thứ hai
-        // trở đi, phần này chỉ tốn khoảng một phần mười so với đọc lại từ đầu.
+        // Ghi nhớ tạm phần lời dặn: từ lần gọi thứ hai trở đi chỉ tốn khoảng
+        // một phần mười so với đọc lại từ đầu
         cache_control: { type: "ephemeral" },
       },
     ],
@@ -187,9 +337,23 @@ export async function phanLoaiMotNoiDung(
 
   return {
     ketQua: phanHoi.parsed_output,
+    cachGoi: "api",
     modelDaDung: phanHoi.model,
     tokenVao: phanHoi.usage.input_tokens,
     tokenRa: phanHoi.usage.output_tokens,
     tokenNhoLai: phanHoi.usage.cache_read_input_tokens ?? 0,
   };
+}
+
+/** Phân loại một nội dung, tự chọn đường gọi và model hợp với đường đó. */
+export async function phanLoaiMotNoiDung(
+  noiDung: NoiDungCanPhanLoai,
+): Promise<KetQuaGoiClaude> {
+  const cachGoi = chonCachGoi();
+  const model =
+    process.env.MODEL_PHAN_LOAI?.trim() || MODEL_THEO_DUONG[cachGoi];
+
+  return cachGoi === "cli"
+    ? await phanLoaiQuaCli(noiDung, model)
+    : await phanLoaiQuaApi(noiDung, model);
 }
