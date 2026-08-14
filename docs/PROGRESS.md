@@ -701,9 +701,39 @@ ngoài — một video mổ tái tạo dây chằng của kênh Khớp Việt Of
 nhóm, và nhận xét nói thẳng là *"lời bình rời rạc… chỉ phù hợp với người đã có
 nền tảng chuyên môn"*.
 
-**Chưa kiểm được**: ranh giới loại bỏ — tức là bài lý thuyết thuần tuý có bị đẩy
-sang nhóm "khác" đúng như thiết kế không. Mới phân loại 4/28 bài từ nguồn khoa
-học, chưa gặp ca nào để kiểm. Phải chạy hết mới nói được.
+### Ranh giới loại bỏ — đã kiểm, và nó chạy đúng
+
+Đây mới là phần đáng kiểm nhất: bài **lý thuyết thuần tuý** có bị đẩy sang nhóm
+"khác" không, hay Claude cứ thấy nguồn khoa học là xếp vào khoa học?
+
+Sau khi phân loại 13 bài từ bảy nguồn đó: **9 vào `khoa_hoc`, 2 sang `ai`, 2
+sang `other`.** Hai ca bị loại đúng như thiết kế mong đợi:
+
+> **"Have physicists finally discovered glueballs?"** (Ars Technica) → `other`
+> *"Tin khoa học thuần lý thuyết về khám phá glueball trong vật lý hạt, không
+> đề cập ứng dụng thực tế nào — thú vị với người quan tâm vật lý cơ bản nhưng
+> không thuộc nhóm khoa_hoc theo tiêu chí ứng dụng."*
+
+> **"NASA's Perseverance rover watches Earth vanish from Mars"** (ScienceDaily)
+> → `other` — *"chỉ là một sự kiện quan sát thiên văn đẹp mắt chứ không nói tới
+> ứng dụng thực tế nào — thuộc dạng tin khoa học giật gân/tò mò"*
+
+Ca thứ hai đúng y hệt kiểu ví dụ đã viết vào lời dẫn ("NASA vừa phát hiện điều
+gây sốc"). Một phát hiện vật lý hạt tầm cỡ vẫn bị loại vì không dùng được vào
+việc gì — đúng thứ chủ dự án yêu cầu.
+
+Hai bài sang `ai` cũng đúng luật đã đặt: nội dung về AI thì ở nhóm `ai`, không
+chuyển sang `khoa_hoc` dù AI cũng là công nghệ.
+
+### Ghi chú vận hành
+
+Hàng đợi phân loại xếp theo **ngày đăng mới nhất trước**, nên bài khoa học mới
+không bị 760 video tồn đọng chặn đường. Muốn chạy riêng phần bài viết (bỏ qua
+video) thì dùng cờ có sẵn:
+
+```bash
+npx tsx scripts/phan-loai.ts 30 --bai-viet
+```
 
 ## Lịch sử xem — mở ra là rời luồng chính (2026-08-15)
 
