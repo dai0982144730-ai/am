@@ -62,7 +62,14 @@ const TRUONG_THE = {
   contentGroup: true,
   narrationType: true,
   score: { select: { compositeScore: true } },
-  source: { select: { title: true, reputationTier: true } },
+  source: {
+    select: {
+      id: true,
+      title: true,
+      reputationTier: true,
+      subscriptionStatus: true,
+    },
+  },
   narrationAsset: { select: { id: true } },
   classification: {
     select: {
@@ -167,7 +174,9 @@ function dungThuTu(
 
 export interface KetQuaTim {
   cacThe: Awaited<
-    ReturnType<typeof prisma.contentItem.findMany<{ select: typeof TRUONG_THE }>>
+    ReturnType<
+      typeof prisma.contentItem.findMany<{ select: typeof TRUONG_THE }>
+    >
   >;
   tongSo: number;
   trang: number;

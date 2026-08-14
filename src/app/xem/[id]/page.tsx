@@ -112,7 +112,14 @@ export default async function TrangXem({
       contentGroup: true,
       narrationType: true,
       score: { select: { compositeScore: true } },
-      source: { select: { title: true, reputationTier: true } },
+      source: {
+        select: {
+          id: true,
+          title: true,
+          reputationTier: true,
+          subscriptionStatus: true,
+        },
+      },
       narrationAsset: { select: { id: true } },
       classification: {
         select: {
@@ -193,7 +200,9 @@ export default async function TrangXem({
                 {muc.source.title}
               </span>
               {muc.viewOrPlayCount !== null ? (
-                <span>· {muc.viewOrPlayCount.toLocaleString("vi-VN")} lượt xem</span>
+                <span>
+                  · {muc.viewOrPlayCount.toLocaleString("vi-VN")} lượt xem
+                </span>
               ) : null}
               {docThoiLuong(muc.durationSeconds) ? (
                 <span>· {docThoiLuong(muc.durationSeconds)}</span>
@@ -280,7 +289,8 @@ export default async function TrangXem({
                     chu: g.rawText,
                     giay: g.timestampSeconds,
                     // Nhãn người dùng sửa tay được ưu tiên hơn nhãn máy đoán
-                    nhan: docNhan(g.userCorrectedTags) ?? docNhan(g.autoTags) ?? [],
+                    nhan:
+                      docNhan(g.userCorrectedTags) ?? docNhan(g.autoTags) ?? [],
                     loai: g.noteType,
                     bangGiongNoi: g.inputType === "voice",
                     luc: g.createdAt,
@@ -315,7 +325,9 @@ export default async function TrangXem({
               Cùng chuyên mục {TEN_NHOM[muc.contentGroup] ?? ""}
             </h2>
             {lienQuan.length === 0 ? (
-              <p className="text-sm text-neutral-400">Chưa có nội dung nào khác.</p>
+              <p className="text-sm text-neutral-400">
+                Chưa có nội dung nào khác.
+              </p>
             ) : (
               <div className="grid gap-4">
                 {lienQuan.map((the) => (

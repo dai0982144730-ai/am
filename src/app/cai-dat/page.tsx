@@ -2,8 +2,10 @@ import Link from "next/link";
 
 import { KhungTrang } from "@/components/KhungTrang";
 import { ThanhTrongSo } from "@/components/ThanhTrongSo";
+import { ThanhTyLeNguonMoi } from "@/components/ThanhTyLeNguonMoi";
 import { prisma } from "@/lib/db/prisma";
 import { emailChuDuAn, laChuDuAn } from "@/lib/quyen";
+import { CHUYEN_MUC_CHINH_DUOC, docTyLeNguonMoi } from "@/lib/nguonMoi/tyLe";
 import { DEFAULT_WEIGHTS } from "@/lib/scoring/normalize";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +19,11 @@ const TEN_LOAI_NGUON: Record<string, string> = {
 };
 
 export default async function TrangCaiDat() {
-  const [email, laChu] = await Promise.all([emailChuDuAn(), laChuDuAn()]);
+  const [email, laChu, tyLeNguonMoi] = await Promise.all([
+    emailChuDuAn(),
+    laChuDuAn(),
+    docTyLeNguonMoi(),
+  ]);
 
   // Khách vẫn xem được trang này để biết hệ thống chấm điểm thế nào — chỉ không
   // sửa được. Minh bạch thì tốt hơn là giấu đi.
@@ -101,6 +107,14 @@ export default async function TrangCaiDat() {
             </div>
           )}
         </section>
+
+        <ThanhTyLeNguonMoi
+          laChu={laChu}
+          cacMuc={CHUYEN_MUC_CHINH_DUOC.map((m) => ({
+            ...m,
+            tyLe: tyLeNguonMoi[m.ma] ?? 30,
+          }))}
+        />
 
         <section className="mt-10">
           <h2 className="text-base font-semibold">Việc cần đăng nhập</h2>

@@ -12,6 +12,7 @@
 import type { ContentGroup } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { chuaLuotQua } from "@/lib/lichSu/loc";
+import { layTronTheoTyLe } from "@/lib/nguonMoi/tron";
 
 /** Các trường cần cho một thẻ nội dung trên trang chủ. */
 const TRUONG_CAN_LAY = {
@@ -25,7 +26,14 @@ const TRUONG_CAN_LAY = {
   contentGroup: true,
   narrationType: true,
   score: { select: { compositeScore: true } },
-  source: { select: { title: true, reputationTier: true } },
+  source: {
+    select: {
+      id: true,
+      title: true,
+      reputationTier: true,
+      subscriptionStatus: true,
+    },
+  },
   narrationAsset: { select: { id: true } },
   classification: {
     select: {
@@ -65,6 +73,10 @@ export interface MucTrangChu {
   ten: string;
   cacThe: NonNullable<TheNoiDung>[];
   tongSo: number;
+  /** Trong hàng này có mấy thẻ đến từ nguồn chưa theo dõi */
+  soTuNguonLa: number;
+  /** Tỉ lệ nguồn mới đã đặt cho chuyên mục này dành ra mấy suất */
+  suatDanhChoNguonLa: number;
 }
 
 /**
@@ -101,21 +113,20 @@ async function layMotMuc(
   // Thứ đã lướt qua rồi thì không bày lại — trừ khi đã cất vào thư viện
   const loc = chuaLuotQua(dieuKien);
 
-  const [cacThe, tongSo] = await Promise.all([
-    prisma.contentItem.findMany({
-      where: loc,
-      select: TRUONG_CAN_LAY,
-      orderBy: [
-        // Nội dung chưa chấm điểm xuống cuối, chứ không lên đầu
-        { score: { compositeScore: { sort: "desc", nulls: "last" } } },
-        { viewOrPlayCount: "desc" },
-      ],
-      take: soThe,
-    }),
+  // Trộn nguồn quen với nguồn lạ theo tỉ lệ chủ nhà đặt cho chuyên mục này
+  const [tron, tongSo] = await Promise.all([
+    layTronTheoTyLe<NonNullable<TheNoiDung>>(ma, loc, TRUONG_CAN_LAY, soThe),
     prisma.contentItem.count({ where: loc }),
   ]);
 
-  return { ma, ten, cacThe, tongSo };
+  return {
+    ma,
+    ten,
+    cacThe: tron.cacMuc,
+    tongSo,
+    soTuNguonLa: tron.soTuNguonLa,
+    suatDanhChoNguonLa: tron.suatDanhChoNguonLa,
+  };
 }
 
 /** Lấy toàn bộ nội dung cho trang chủ. Mục rỗng bị bỏ đi. */

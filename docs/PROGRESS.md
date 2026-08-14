@@ -19,6 +19,7 @@
 | **Khoa học** | ✅ chuyên mục thứ 5 + 7 nguồn báo/diễn đàn khoa học |
 | **Lịch sử xem** | ✅ mở ra là rời luồng chính, không bày lại |
 | **Tông màu** | ✅ nền be, điểm nhấn cam, menu trái đậm hơn |
+| **Tỉ lệ nguồn mới** | ✅ chỉnh riêng từng chuyên mục trong Cài đặt |
 | **5** — Trình phát & nhớ chỗ dở | ✅ xong, đồng bộ máy tính ↔ điện thoại |
 | **10** — Bản tin hằng sáng | ✅ xong, Claude viết bằng giọng trò chuyện |
 | **Tự chạy** | ✅ một lệnh làm đủ 8 bước, hẹn giờ 21:00 |
@@ -627,6 +628,73 @@ ra file thường — nay nằm ở `trangThai.ts`.
 Đây là cái bẫy chung, không riêng gì thư viện: đã gặp đúng kiểu này ở
 `quanTam/giaTuKhoa.ts` (tách hằng số cho trình duyệt đọc được mà không kéo theo
 prisma). Thêm hằng số vào file `"use server"` là hỏng ngay.
+
+## Tỉ lệ nguồn mới, đặt riêng từng chuyên mục (2026-08-15)
+
+File: `src/lib/nguonMoi/tyLe.ts` (đọc & mặc định), `tron.ts` (trộn),
+`src/components/ThanhTyLeNguonMoi.tsx`, thao tác `luuTyLeNguonMoi` trong
+`app/cai-dat/actions.ts`. Chỉnh tại `/cai-dat`.
+
+Chủ dự án chốt cách này thay cho một con số chung cho cả web: **mỗi chuyên mục
+một thanh trượt.** Ví dụ chính chủ nhà đưa ra: AI để 90%, khoa học 30%.
+
+Đúng hơn hẳn một con số chung, vì nhu cầu mở rộng khác nhau theo chủ đề. Mảng
+AI đổi từng tuần nên đáng ra ngoài vùng quen thật nhiều; mảng khoa học thì nguồn
+tốt vốn ít và ổn định, mở rộng nhiều chỉ tổ rước tin giật gân. Mảng truyện rủi
+ro nhất — nguồn lạ đầy truyện AI viết hàng loạt, để 0% cũng hợp lý.
+
+`other` và `new_search` cố ý **không có** thanh trượt: `other` là sọt chứa thứ
+không thuộc đâu, chẳng ai muốn mở rộng nó; còn `new_search` thì toàn bộ đã là
+nguồn mới theo đúng định nghĩa.
+
+### Ba quy tắc chống rác, đã cài vào `tron.ts`
+
+**1. Tỉ lệ là TRẦN, không phải chỉ tiêu.** Đặt 90% mà tối nay chỉ 1 bài nguồn
+lạ vượt chuẩn thì đưa 1 bài, phần còn lại trả về cho nguồn quen. Lấp cho đủ số
+là cách chắc chắn nhất để chủ nhà nhận về rác — và chỉ vài đêm như thế là họ
+thôi tin cả cái web. Câu này viết thẳng lên giao diện Cài đặt, kẻo kéo lên 90%
+rồi thắc mắc sao tối qua chỉ thấy hai bài.
+
+**2. Nguồn lạ phải qua cửa chặt hơn.** Điểm của nó không được thua **điểm trung
+vị của nhóm nguồn quen cùng chuyên mục**. Không dùng ngưỡng cố định, vì điểm
+được chuẩn hoá theo thứ hạng phần trăm nên ngưỡng cứng sẽ sai ngay khi kho đổi.
+
+**3. Mỗi nguồn lạ tối đa một suất.** Thiếu luật này thì một kênh chăm đăng
+chiếm sạch phần dành cho nguồn mới, và "mở rộng" hoá ra chỉ là đổi từ nhai lại
+kênh cũ sang nhai lại đúng một kênh mới.
+
+Thẻ từ nguồn chưa theo dõi được gắn nhãn cam **"nguồn mới"** để liếc một cái là
+biết nên soi kỹ hay tin ngay.
+
+### Đã kiểm phần chia suất
+
+Chạy thử `layNoiDungTrangChu` với hai cấu hình:
+
+| Cấu hình | AI | Triết học | Khoa học | Truyện | Music |
+|---|---|---|---|---|---|
+| Mặc định 30% | 1 suất | 1 | 1 | 1 | 1 |
+| AI 90% · KH 30% · Truyện 0% | **3 suất** | 1 | 1 | **0 suất** | 1 |
+
+Chia suất chạy đúng. Làm tròn xuống có chủ đích: 4 thẻ với tỉ lệ 90% ra 3 suất
+chứ không phải 4, để chuyên mục nào cũng còn ít nhất một suất cho nguồn quen.
+Đặt đúng 100% mới lấy hết — lúc đó là chủ nhà cố ý.
+
+### Chỗ chưa chạy được và vì sao
+
+Kho hiện có **0 nội dung từ nguồn lạ đã chấm điểm**, nên thực tế chưa thẻ nào
+được trộn vào. Hai lý do:
+
+1. Chín video từ nguồn lạ (do tìm từ khoá "AI agent") chưa qua phân loại và
+   chấm điểm.
+2. **Cả 13 nguồn blog/diễn đàn đều đang đánh dấu `subscribed`** — `quetBlog.ts`
+   gán cứng như vậy. Nghĩa là IEEE Spectrum, Nature, Ars Technica… đều bị coi
+   là "nguồn quen" dù chủ dự án chưa từng chọn chúng; chính máy thêm vào.
+
+Điểm 2 là một quyết định cần chủ dự án chốt, chưa tự sửa. Coi chúng là "quen"
+thì hợp lý ở chỗ đây là danh sách khởi đầu đóng vai trò xương sống cho hai
+chuyên mục AI và Khoa học — nếu tính là "lạ" thì cả 13 phải tranh nhau cái suất
+nhỏ của phần nguồn mới, và hai chuyên mục đó gần như rỗng. Nhưng nếu chủ dự án
+muốn tự mình duyệt từng nguồn thì đổi được.
 
 ## Chuyên mục thứ năm: Khoa học (2026-08-15)
 

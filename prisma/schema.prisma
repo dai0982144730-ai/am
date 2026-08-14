@@ -907,6 +907,27 @@ model UserAssistantSettings {
   updatedAt DateTime @updatedAt
 }
 
+/// Mỗi chuyên mục tự đặt bao nhiêu phần trăm nội dung đến từ nguồn mới.
+///
+/// VÌ SAO PHẢI ĐẶT RIÊNG TỪNG CHUYÊN MỤC: nhu cầu mở rộng khác nhau hẳn theo
+/// chủ đề. Mảng AI đổi từng tuần nên chủ nhà muốn ra ngoài vùng đã theo dõi
+/// thật nhiều; mảng khoa học thì nguồn tốt vốn ít và ổn định, mở rộng nhiều
+/// chỉ tổ rước tin giật gân về. Một con số chung cho cả web luôn sai ở đâu đó.
+///
+/// `newSourceRatio` là **TRẦN, không phải chỉ tiêu**. Đặt 90% không có nghĩa
+/// phải lấp cho đủ 90% — nếu tối nay chỉ có vài bài từ nguồn lạ vượt được
+/// chuẩn thì đưa bấy nhiêu, để trống phần còn lại. Lấp cho đủ số là cách chắc
+/// chắn nhất để nhận về rác.
+model CategoryDiscoverySetting {
+  id           String       @id @default(cuid())
+  contentGroup ContentGroup @unique
+
+  /// 0 = chỉ lấy từ nguồn đã theo dõi; 100 = ưu tiên tối đa nguồn lạ
+  newSourceRatio Int @default(30)
+
+  updatedAt DateTime @updatedAt
+}
+
 model FilterPreset {
   id           String        @id @default(cuid())
   name         String

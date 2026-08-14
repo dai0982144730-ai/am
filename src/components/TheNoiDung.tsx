@@ -173,6 +173,14 @@ export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
           {muc.title}
         </h3>
         <p className="mt-1 line-clamp-1 text-xs text-neutral-500 dark:text-neutral-400">
+          {/* Nói rõ đây là nguồn chưa theo dõi, để liếc một cái là biết nên
+              soi kỹ hay tin ngay — đúng thứ chủ nhà cần khi bật tỉ lệ nguồn
+              mới lên cao */}
+          {muc.source.subscriptionStatus !== "subscribed" ? (
+            <span className="mr-1.5 rounded bg-cam-100 px-1.5 py-0.5 text-[10px] font-medium text-cam-700 dark:bg-cam-700/30 dark:text-cam-300">
+              nguồn mới
+            </span>
+          ) : null}
           {muc.source.title}
           {phu.length > 0 ? ` · ${phu.join(" · ")}` : ""}
         </p>

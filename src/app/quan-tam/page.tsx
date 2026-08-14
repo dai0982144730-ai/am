@@ -42,7 +42,14 @@ export default async function TrangQuanTam() {
         contentGroup: true,
         narrationType: true,
         score: { select: { compositeScore: true } },
-        source: { select: { title: true, reputationTier: true } },
+        source: {
+          select: {
+            id: true,
+            title: true,
+            reputationTier: true,
+            subscriptionStatus: true,
+          },
+        },
         narrationAsset: { select: { id: true } },
         classification: {
           select: {
