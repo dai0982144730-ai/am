@@ -1,88 +1,88 @@
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
+import { KhungTrang } from "@/components/KhungTrang";
+import { TheNoiDungCard } from "@/components/TheNoiDung";
+import {
+  layNoiDungTrangChu,
+  layTinhHinhKho,
+} from "@/lib/nghiepVu/layNoiDungTrangChu";
 
-const PHASES = [
-  { id: 0, label: "Nền tảng — khung dự án, cấu trúc dữ liệu", done: true },
-  { id: 1, label: "Quét YouTube + lấy lời thoại + phân loại", done: false },
-  { id: 2, label: "Blog & diễn đàn AI, thuật lại tiếng Việt + giọng đọc", done: false },
-  { id: 3, label: "Nhạc — nhận diện BPM và thể loại", done: false },
-  { id: 4, label: "Chấm chất lượng theo từng nguồn + bộ lọc", done: false },
-  { id: 5, label: "Trình phát + theo dõi thói quen xem", done: false },
-];
+/** Không lưu bản dựng sẵn — kho thay đổi mỗi lần quét. */
+export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  const phien = await auth();
+function docThoiDiem(luc: Date | null): string {
+  if (!luc) return "chưa quét lần nào";
+  const soPhut = Math.floor((Date.now() - luc.getTime()) / 60_000);
+  if (soPhut < 60) return `${soPhut} phút trước`;
+  const soGio = Math.floor(soPhut / 60);
+  if (soGio < 24) return `${soGio} giờ trước`;
+  return `${Math.floor(soGio / 24)} ngày trước`;
+}
+
+export default async function TrangChu() {
+  const [phien, cacMuc, tinhHinh] = await Promise.all([
+    auth(),
+    layNoiDungTrangChu(4),
+    layTinhHinhKho(),
+  ]);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-16">
-      <h1 className="text-3xl font-bold tracking-tight">Am</h1>
-      <p className="mt-2 text-neutral-500 dark:text-neutral-400">
-        Trợ lý cá nhân tuyển chọn nội dung đáng xem
-      </p>
+    <KhungTrang emailNguoiDung={phien?.user?.email}>
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        {/* Dải thông tin về lần quét gần nhất — thay cho bản tin của trợ lý,
+            vốn là việc của Phase 10 */}
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+            Kho nội dung
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
+            Đang theo dõi <strong>{tinhHinh.soNguon}</strong> kênh YouTube, đã
+            quét về <strong>{tinhHinh.tongNoiDung}</strong> video (
+            {docThoiDiem(tinhHinh.quetGanNhat)}).{" "}
+            <strong>{tinhHinh.daPhanLoai}</strong> video đã được Claude đọc và
+            xếp vào chuyên mục
+            {tinhHinh.choPhanLoai > 0 ? (
+              <>
+                , còn <strong>{tinhHinh.choPhanLoai}</strong> đang chờ
+              </>
+            ) : null}
+            .
+          </p>
+          <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">
+            Bản tin trò chuyện hằng sáng và phần audio là việc của Phase 10.
+          </p>
+        </div>
 
-      <div className="mt-6 flex items-center gap-3 text-sm">
-        {phien?.user ? (
-          <>
-            <span className="text-neutral-500 dark:text-neutral-400">
-              Đang đăng nhập: {phien.user.email}
-            </span>
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/" });
-              }}
-            >
-              <button
-                type="submit"
-                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-              >
-                Đăng xuất
-              </button>
-            </form>
-          </>
-        ) : (
-          <a
-            href="/dang-nhap"
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90 dark:bg-neutral-100 dark:text-neutral-900"
-          >
-            Đăng nhập bằng Google
-          </a>
-        )}
-      </div>
+        {cacMuc.length === 0 ? (
+          <div className="mt-10 rounded-xl border border-dashed border-neutral-300 p-10 text-center dark:border-neutral-700">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              Chưa có nội dung nào được phân loại.
+            </p>
+            <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">
+              Chạy <code>npx tsx scripts/phan-loai.ts --so 20</code> để Claude
+              đọc và xếp nhóm.
+            </p>
+          </div>
+        ) : null}
 
-      <div className="mt-10 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-        <h2 className="text-sm font-semibold">Tiến độ</h2>
-        <ul className="mt-4 space-y-3">
-          {PHASES.map((phase) => (
-            <li key={phase.id} className="flex items-start gap-3 text-sm">
-              <span
-                aria-hidden
-                className={
-                  phase.done
-                    ? "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-xs text-white dark:bg-neutral-100 dark:text-neutral-900"
-                    : "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-neutral-300 text-xs text-neutral-400 dark:border-neutral-700"
-                }
-              >
-                {phase.done ? "✓" : phase.id}
+        {cacMuc.map((muc) => (
+          <section key={muc.ma} className="mt-10">
+            <div className="mb-4 flex items-baseline justify-between gap-4">
+              <h2 className="text-lg font-semibold tracking-tight">
+                {muc.ten}
+              </h2>
+              <span className="text-xs text-neutral-400 dark:text-neutral-500">
+                {muc.tongSo} mục
               </span>
-              <span
-                className={
-                  phase.done
-                    ? "text-neutral-900 dark:text-neutral-100"
-                    : "text-neutral-400 dark:text-neutral-500"
-                }
-              >
-                {phase.label}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+            </div>
 
-      <p className="mt-8 text-xs leading-relaxed text-neutral-400 dark:text-neutral-500">
-        Bản thiết kế đầy đủ nằm trong <code>docs/plan.md</code>, tiến độ chi tiết
-        trong <code>docs/PROGRESS.md</code>. Demo giao diện: mở{" "}
-        <code>docs/demo-ui.html</code> bằng trình duyệt.
-      </p>
-    </main>
+            <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+              {muc.cacThe.map((the) => (
+                <TheNoiDungCard key={the.id} muc={the} />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </KhungTrang>
   );
 }

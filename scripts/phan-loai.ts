@@ -36,6 +36,7 @@ const TEN_NHOM: Record<string, string> = {
 
 async function main() {
   const gioiHan = thamSo("so") ?? 20;
+  const uuTien = process.argv.includes("--uu-tien");
 
   const conCho = await prisma.contentItem.count({
     where: {
@@ -52,7 +53,7 @@ async function main() {
     return;
   }
 
-  const kq = await phanLoaiHangLoat(gioiHan, (dong) => console.log(dong));
+  const kq = await phanLoaiHangLoat(gioiHan, (dong) => console.log(dong), uuTien);
 
   console.log(`\nĐã xét ${kq.daXet} — thành công ${kq.thanhCong}, lỗi ${kq.loi}`);
 

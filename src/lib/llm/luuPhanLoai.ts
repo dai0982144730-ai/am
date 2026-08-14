@@ -39,6 +39,14 @@ const NGHI_GIUA_HAI_LAN_MS = 300;
 const HAN_GHI_MS = 60_000;
 
 /**
+ * Thời gian tối đa chờ để BẮT ĐẦU một lượt ghi — khác với hạn chạy ở trên.
+ * Prisma mặc định chỉ chờ 2 giây rồi bỏ cuộc với lỗi "Unable to start a
+ * transaction in the given time". Khi database ở xa và đang bận, ngần đó không
+ * đủ. Đã vấp thật lúc phân loại hàng loạt.
+ */
+const HAN_CHO_MS = 30_000;
+
+/**
  * Xếp số nhịp vào dải 5 nhịp, chỉ trong khoảng 140–180 mà người dùng quan tâm.
  *
  * Ngoài khoảng đó trả `null`: một bản nhạc 90 nhịp không dùng để chạy bộ được,
@@ -114,20 +122,55 @@ function nghi(ms: number): Promise<void> {
 }
 
 /**
+ * Từ khoá của những video *có triển vọng* thuộc bốn chuyên mục chính.
+ *
+ * Chỉ là bộ lọc thô ở bước chọn việc, không phải bộ phân loại — Claude vẫn là
+ * người quyết định cuối cùng, và vẫn thường xếp nhiều video trong số này vào
+ * nhóm "khác". Cái nó tiết kiệm là công đọc: phần lớn nội dung quét về hằng
+ * ngày là tin thời sự và giải trí, đọc hết cũng chỉ ra "khác".
+ */
+const TU_KHOA_TRIEN_VONG = [
+  // Triết học, tâm lý, Phật giáo
+  "thầy", "sư ", "pháp", "thiền", "phật", "kinh ", "tâm lý", "triết",
+  "khắc kỷ", "stoic", "hiện sinh", "giảng", "vấn đáp", "buông",
+  // AI
+  "AI", "Claude", "ChatGPT", "Gemini", "trí tuệ nhân tạo", "chatbot",
+  "lập trình", "code", "prompt", "agent",
+  // Truyện
+  "truyện", "kể chuyện", "kinh dị", "ma ", "quỷ", "linh hồn", "bí ẩn",
+  "viễn tưởng", "phiêu lưu", "tập ",
+  // Nhạc
+  "nhạc", "BPM", "mix", "playlist", "piano", "guitar", "lofi", "remix",
+  "bolero", "acoustic",
+];
+
+/**
  * Phân loại các nội dung đang chờ.
  *
  * Lấy cả video đã có lời thoại lẫn video không lấy được lời thoại — với video
  * không có lời thoại thì tiêu đề và mô tả cũng đủ để xếp nhóm, và bỏ hẳn chúng
  * ra ngoài kho sẽ làm mất nội dung tốt chỉ vì kênh không bật phụ đề.
+ *
+ * @param chiLayCoTrienVong Chỉ xét video có từ khoá gợi ý thuộc bốn chuyên mục
+ *   chính. Dùng khi muốn nhanh chóng có đủ dữ liệu mỗi nhóm để dựng giao diện,
+ *   thay vì đọc tuần tự cả kho mà phần lớn là tin thời sự.
  */
 export async function phanLoaiHangLoat(
   gioiHan = 50,
   bao?: (dong: string) => void,
+  chiLayCoTrienVong = false,
 ): Promise<KetQuaPhanLoaiHangLoat> {
   const cacMuc = await prisma.contentItem.findMany({
     where: {
       status: { in: ["pending_classification", "transcript_unavailable"] },
       classification: null,
+      ...(chiLayCoTrienVong
+        ? {
+            OR: TU_KHOA_TRIEN_VONG.map((tu) => ({
+              title: { contains: tu, mode: "insensitive" as const },
+            })),
+          }
+        : {}),
     },
     orderBy: { publishedAt: "desc" },
     take: gioiHan,
@@ -181,7 +224,7 @@ export async function phanLoaiHangLoat(
             },
           }),
         ],
-        { timeout: HAN_GHI_MS },
+        { timeout: HAN_GHI_MS, maxWait: HAN_CHO_MS },
       );
 
       thanhCong += 1;

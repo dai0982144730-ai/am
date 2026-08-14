@@ -1,0 +1,176 @@
+/**
+ * Thẻ một nội dung trên trang chủ — bám theo bản demo `docs/demo-ui.html`:
+ * ảnh 16:9, thời lượng ở góc, tiêu đề tối đa hai dòng, dòng dưới là nguồn và
+ * mấy thông tin phụ.
+ *
+ * Nhãn góc trái thay đổi theo chuyên mục: truyện hiện thể loại, nhạc hiện số
+ * nhịp. Đó là thứ giúp liếc qua là biết ngay, không phải đọc tiêu đề.
+ */
+
+import type { TheNoiDung } from "@/lib/nghiepVu/layNoiDungTrangChu";
+
+/** Đổi giây thành dạng "12:04" hoặc "1:02:40". */
+function docThoiLuong(giay: number | null): string | null {
+  if (!giay) return null;
+  const gio = Math.floor(giay / 3600);
+  const phut = Math.floor((giay % 3600) / 60);
+  const du = giay % 60;
+  const haiSo = (n: number) => String(n).padStart(2, "0");
+  return gio > 0
+    ? `${gio}:${haiSo(phut)}:${haiSo(du)}`
+    : `${phut}:${haiSo(du)}`;
+}
+
+/** Đổi 890000 thành "890 N", 1400000 thành "1,4 Tr" cho dễ liếc. */
+function docLuotXem(so: number | null): string | null {
+  if (so === null) return null;
+  if (so >= 1_000_000) return `${(so / 1_000_000).toFixed(1).replace(".", ",")} Tr`;
+  if (so >= 1_000) return `${Math.round(so / 1_000)} N`;
+  return String(so);
+}
+
+/** "hôm nay", "hôm qua", "3 ngày trước"… */
+function docThoiGian(luc: Date | null): string | null {
+  if (!luc) return null;
+  const soNgay = Math.floor((Date.now() - luc.getTime()) / 86_400_000);
+  if (soNgay <= 0) return "hôm nay";
+  if (soNgay === 1) return "hôm qua";
+  if (soNgay < 7) return `${soNgay} ngày trước`;
+  if (soNgay < 30) return `${Math.floor(soNgay / 7)} tuần trước`;
+  return `${Math.floor(soNgay / 30)} tháng trước`;
+}
+
+const TEN_THE_LOAI_TRUYEN: Record<string, string> = {
+  kinh_di: "KINH DỊ",
+  vien_tuong: "VIỄN TƯỞNG",
+  phieu_luu_mao_hiem: "PHIÊU LƯU",
+};
+
+const TEN_THE_LOAI_NHAC: Record<string, string> = {
+  workout_bpm: "TẬP LUYỆN",
+  dance: "DANCE",
+  piano: "PIANO",
+  guitar_rock: "GUITAR ROCK",
+  nhac_vang: "NHẠC VÀNG",
+};
+
+const TEN_DANG_TRINH_BAY: Record<string, string> = {
+  giang_phap: "giảng pháp",
+  van_dap: "vấn đáp",
+  ung_dung_thuc_hanh: "ứng dụng thực hành",
+  phan_tich_hoc_thuat: "phân tích học thuật",
+};
+
+const TEN_CHU_DE_AI: Record<string, string> = {
+  claude_news: "tin Claude",
+  ai_news_general: "tin AI",
+  ai_agent_enterprise: "AI cho doanh nghiệp",
+  coding_experience_howto: "kinh nghiệm viết code",
+  claude_usage_guide: "hướng dẫn dùng Claude",
+};
+
+/** Nhãn nổi ở góc trái ảnh — mỗi chuyên mục một kiểu thông tin. */
+function nhanGoc(muc: NonNullable<TheNoiDung>): string | null {
+  const pl = muc.classification;
+  if (!pl) return null;
+
+  if (muc.contentGroup === "truyen" && pl.storyGenre) {
+    return TEN_THE_LOAI_TRUYEN[pl.storyGenre] ?? null;
+  }
+  if (muc.contentGroup === "music") {
+    if (pl.bpm) return `${pl.bpm} BPM`;
+    if (pl.musicGenre) return TEN_THE_LOAI_NHAC[pl.musicGenre] ?? null;
+  }
+  if (muc.contentGroup === "ai" && pl.aiSubtopic) {
+    return (TEN_CHU_DE_AI[pl.aiSubtopic] ?? "").toUpperCase() || null;
+  }
+  return null;
+}
+
+/** Dòng phụ dưới tên nguồn — thông tin riêng của từng chuyên mục. */
+function thongTinPhu(muc: NonNullable<TheNoiDung>): string[] {
+  const pl = muc.classification;
+  const phan: string[] = [];
+  if (!pl) return phan;
+
+  if (pl.extractedAuthorNameRaw) phan.push(pl.extractedAuthorNameRaw);
+
+  if (muc.contentGroup === "triet_hoc") {
+    if (pl.philosophyContentForm) {
+      phan.push(TEN_DANG_TRINH_BAY[pl.philosophyContentForm] ?? "");
+    }
+    if (pl.listenerLevel) {
+      phan.push(pl.listenerLevel === "chuyen_sau" ? "chuyên sâu" : "mới bắt đầu");
+    }
+  }
+
+  if (muc.contentGroup === "truyen" && pl.storyIntensity) {
+    const doCang: Record<string, string> = {
+      nhe_nhang: "nhẹ nhàng",
+      cang_thang: "căng thẳng",
+      kinh_khung: "kinh khủng",
+    };
+    phan.push(doCang[pl.storyIntensity] ?? "");
+  }
+
+  if (muc.narrationType === "ai_tts") phan.push("giọng máy");
+
+  return phan.filter(Boolean);
+}
+
+export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
+  const thoiLuong = docThoiLuong(muc.durationSeconds);
+  const luotXem = docLuotXem(muc.viewOrPlayCount);
+  const khiNao = docThoiGian(muc.publishedAt);
+  const nhan = nhanGoc(muc);
+  const phu = thongTinPhu(muc);
+
+  return (
+    <a
+      href={muc.url ?? "#"}
+      target="_blank"
+      rel="noreferrer"
+      className="group flex flex-col gap-2"
+    >
+      <div className="relative aspect-video overflow-hidden rounded-xl bg-neutral-200 dark:bg-neutral-800">
+        {muc.thumbnailUrl ? (
+          // Ảnh từ YouTube, dùng thẻ img thường cho khỏi phải khai miền ảnh
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={muc.thumbnailUrl}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+          />
+        ) : null}
+
+        {nhan ? (
+          <span className="absolute left-2 top-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white">
+            {nhan}
+          </span>
+        ) : null}
+
+        {thoiLuong ? (
+          <span className="absolute bottom-2 right-2 rounded-md bg-black/80 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
+            {thoiLuong}
+          </span>
+        ) : null}
+      </div>
+
+      <div>
+        <h3 className="line-clamp-2 text-sm font-medium leading-snug text-neutral-900 group-hover:text-neutral-600 dark:text-neutral-100 dark:group-hover:text-neutral-300">
+          {muc.title}
+        </h3>
+        <p className="mt-1 line-clamp-1 text-xs text-neutral-500 dark:text-neutral-400">
+          {muc.source.title}
+          {phu.length > 0 ? ` · ${phu.join(" · ")}` : ""}
+        </p>
+        <p className="mt-0.5 text-xs text-neutral-400 dark:text-neutral-500">
+          {[luotXem ? `${luotXem} lượt xem` : null, khiNao]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      </div>
+    </a>
+  );
+}

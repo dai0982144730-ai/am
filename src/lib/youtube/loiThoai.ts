@@ -38,6 +38,12 @@ const NGHI_GIUA_HAI_LAN_MS = 1_200;
 const HAN_GHI_MS = 60_000;
 
 /**
+ * Thời gian tối đa chờ để BẮT ĐẦU một lượt ghi — khác với hạn chạy ở trên.
+ * Prisma mặc định chỉ chờ 2 giây rồi bỏ cuộc.
+ */
+const HAN_CHO_MS = 30_000;
+
+/**
  * Video dài quá thì lời thoại rất lớn (một video 2,5 tiếng cho ra ~127.000 ký
  * tự). Vẫn lưu đủ, nhưng cắt ở mức này để một video hỏng định dạng không làm
  * phình database vô hạn.
@@ -182,7 +188,7 @@ export async function layLoiThoaiHangLoat(
             data: { status: "pending_classification" },
           }),
         ],
-        { timeout: HAN_GHI_MS },
+        { timeout: HAN_GHI_MS, maxWait: HAN_CHO_MS },
       );
 
       layDuoc += 1;
@@ -207,7 +213,7 @@ export async function layLoiThoaiHangLoat(
             data: { status: "transcript_unavailable" },
           }),
         ],
-        { timeout: HAN_GHI_MS },
+        { timeout: HAN_GHI_MS, maxWait: HAN_CHO_MS },
       );
 
       khongCoPhuDe += 1;
