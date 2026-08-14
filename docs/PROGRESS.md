@@ -88,6 +88,19 @@ thật vì Phase 1 (quét YouTube) chưa chạy nên kho còn rỗng. `/hoi` cũ
 | Sinh `TOKEN_TRO_LY` điền vào `.env` | ⬜ chưa | Cần để gọi được Cổng API trợ lý |
 | Gửi repo `tiendo` / `phaply` khi có | ⬜ chưa | Để chép bộ `troLyChung` sang và đồng bộ chuẩn API |
 
+## Chỗ để dữ liệu — hiện tại và về sau
+
+**Hiện tại**: database đặt trên [Neon](https://neon.tech) (đám mây), code chạy
+trên máy. Lý do: chủ dự án làm trên **hai máy ở hai nơi** (PC ở nhà và máy văn
+phòng), nên database phải nằm trên mạng thì hai máy mới thấy chung dữ liệu.
+
+**Về sau, khi chạy thật**: đưa **cả dữ liệu lẫn code về chung một nơi**. Chưa
+chốt là nơi nào — quyết định sau, khi tới lúc triển khai thật.
+
+Điều này ảnh hưởng tới việc gì: `DATABASE_URL` và địa chỉ máy chủ trong
+`docs/API-TRO-LY.md` sẽ đổi khi triển khai. Không ảnh hưởng gì tới code, vì mọi
+địa chỉ đều đọc từ biến môi trường chứ không viết cứng.
+
 ## Chạy trên máy mới
 
 ```bash
