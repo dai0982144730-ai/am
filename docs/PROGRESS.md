@@ -540,6 +540,35 @@ nhường chỗ cho cái khác nổi lên. Chạy hằng ngày thì tốp đầu
 Không nên "cho điểm trung tính 0,5" khi chưa đọc — làm vậy là bịa ra dữ liệu
 không có, và video kém sẽ được nâng lên oan.
 
+### Kết quả chạy đủ 44 video
+
+| Chỉ số | Con số |
+|---|---|
+| Điểm thảo luận trung bình | **0,27** trên thang 1 |
+| Bình luận toàn emoji | **20 video** |
+| Bị tố tiêu đề sai nội dung | **3 video** |
+| Khen đúng chi tiết cụ thể | **5 video** |
+
+Điểm cao nhất toàn kho giảm từ **6,7 xuống 5,7** sau khi trụ thảo luận vào cuộc.
+
+Và engine phân biệt đúng hai chiều: video **"Vì sao AI Agent của anh em làm sai
+hoài?"** đạt thảo luận **0,70** — cao gấp đôi tin thời sự (0,30–0,35). Nội dung
+kỹ thuật kéo được thảo luận thực chất, tin giật gân thì không.
+
+### Một lần sửa sai, đo lại, rồi hoàn tác
+
+Thấy nhạc nổi lên tốp đầu dù bị loại khỏi vòng 2, đã thử cho nhạc **bộ trọng số
+riêng** (phổ biến 0,45 · tương tác 0,35 · uy tín 0,2). Đo lại: **tệ hơn** — nhạc
+leo từ hạng 2 lên **hạng 1**, vì dồn trọng số sang "phổ biến" khiến nó thiên về
+lượt xem thuần.
+
+Đã hoàn tác. Cách đúng là **để `compositeScore` tự chia lại** trọng số của trụ
+thiếu theo tỷ lệ gốc giữa các trụ còn lại — nó vốn đã làm vậy sẵn, bộ trọng số
+riêng chỉ phá đi.
+
+Cũng đã kiểm tra giả thuyết "video ngắn được lợi vì tỷ lệ tương tác cao" —
+**sai**: video 21 giây có tỷ lệ thích/xem 3,5%, *thấp hơn* video dài (4,2–7,9%).
+
 ### Chi phí rất rẻ
 
 Một lần chạy 20 video: **20 đơn vị hạn mức YouTube** (0,2% ngân sách ngày) và 20

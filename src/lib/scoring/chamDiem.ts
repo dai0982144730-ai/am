@@ -240,11 +240,19 @@ export async function chamDiemHangLoat(
         sourceAgeDays: tuoiNguonNgay,
       });
 
+      // Nhạc: bỏ hẳn trụ thảo luận, đúng bản thiết kế — "Music không có chất
+      // lượng nội dung do LLM chấm". Bình luận dưới video nhạc gần như luôn là
+      // "hay quá", đọc cũng không rút ra được gì.
+      //
+      // Không đặt bộ trọng số riêng cho nhạc: đã thử và ĐO THẤY TỆ HƠN. Dồn
+      // trọng số sang trụ "phổ biến" khiến nhạc thiên về lượt xem và leo từ
+      // hạng 2 lên hạng 1. Để  tự chia lại theo đúng tỷ lệ gốc
+      // giữa các trụ còn lại là cách công bằng hơn.
       let diem = compositeScore(
         {
           popularity: boonPhoBien,
           engagementDepth: boonTuongTac,
-          discussion: diemThaoLuan,
+          discussion: muc.contentGroup === "music" ? null : diemThaoLuan,
           authority: boonUyTin,
           contentQuality: null,
         },
