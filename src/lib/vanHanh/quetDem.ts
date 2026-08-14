@@ -1,20 +1,22 @@
 /**
- * Việc quét hằng đêm — gộp cả tám bước thành một lệnh.
+ * Việc quét hằng đêm — gộp cả chín bước thành một lệnh.
  *
  * VÌ SAO CẦN: trước đây mỗi tối phải mở terminal gõ sáu lệnh riêng lẻ, đúng thứ
  * tự, và tự nhớ bước nào chạy trước bước nào. Như vậy thì đây là một bộ công cụ
  * chứ chưa phải trợ lý. Bản thiết kế nói rõ: quét tự động một lần mỗi ngày lúc
  * 21:00 giờ Việt Nam, để sáng hôm sau đã có sẵn nội dung.
  *
- * THỨ TỰ TÁM BƯỚC — không đảo được, vì bước sau ăn kết quả bước trước:
+ * THỨ TỰ CÁC BƯỚC — không đảo được, vì bước sau ăn kết quả bước trước:
  *
  *   1. Quét video mới từ các kênh YouTube đã đăng ký
  *   2. Quét bài mới từ blog và diễn đàn AI
- *   3. Lấy lời thoại cho video mới (nhạc được bỏ qua từ bước 1)
- *   4. Nhờ Claude phân loại vào chuyên mục
- *   5. Chấm điểm chất lượng vòng 1 (bằng số liệu)
- *   6. Vòng 2 — Claude đọc bình luận của nhóm đứng đầu, rồi chấm lại
- *   7. Viết bản tin cho sáng mai — thứ người dùng thật sự đọc
+ *   3. Tìm theo từ khoá đang quan tâm (chuyên mục "New")
+ *   4. Lấy lời thoại cho video mới (nhạc được bỏ qua từ bước 1)
+ *   5. Nhờ Claude phân loại vào chuyên mục
+ *   6. Thuật lại bài nước ngoài sang tiếng Việt
+ *   7. Chấm điểm chất lượng vòng 1 (bằng số liệu)
+ *   8. Vòng 2 — Claude đọc bình luận của nhóm đứng đầu, rồi chấm lại
+ *   9. Viết bản tin cho sáng mai — thứ người dùng thật sự đọc
  *
  * NGUYÊN TẮC: **một bước hỏng không được làm chết cả đêm**. Mạng chập chờn,
  * YouTube đổi API, hết hạn mức — đều là chuyện thường. Mỗi bước tự bắt lỗi của
@@ -25,6 +27,7 @@ import { prisma } from "@/lib/db/prisma";
 import { phanLoaiHangLoat } from "@/lib/llm/luuPhanLoai";
 import { thuatLaiHangLoat } from "@/lib/llm/luuThuatLai";
 import { quetBlog } from "@/lib/nguon/quetBlog";
+import { quetTuKhoaQuanTam } from "@/lib/quanTam/quetTuKhoa";
 import { chamDiemHangLoat } from "@/lib/scoring/chamDiem";
 import { chayVongHai } from "@/lib/scoring/vongHaiBinhLuan";
 import { taoBanTin } from "@/lib/troLy/taoBanTin";
@@ -153,6 +156,28 @@ export async function quetDem(
           GIOI_HAN_MOI_DEM.soNgayGanDay,
         );
         return `${kq.soNguonQuet} nguồn, thêm ${kq.soBaiThemMoi} bài (${kq.soLayDuocToanVan} lấy được chữ)`;
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước 2b: tìm theo từ khoá quan tâm -----
+  //
+  // Đặt sau việc quét kênh có chủ đích: quét kênh là việc chính và rẻ, tìm kiếm
+  // thì đắt gấp 100 lần. Hết hạn mức thì thứ bị mất phải là phần tuỳ hứng, chứ
+  // không phải các kênh đã theo dõi.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Tìm theo từ khoá đang quan tâm",
+      async () => {
+        const kq = await quetTuKhoaQuanTam(GIOI_HAN_MOI_DEM.soNgayGanDay);
+        if (kq.cacTuKhoa.length === 0) return "chưa đặt từ khoá nào";
+        const hong = kq.cacTuKhoa.filter((t) => t.loi).length;
+        return (
+          `${kq.cacTuKhoa.length} từ khoá, thêm ${kq.tongThemMoi} nội dung, ` +
+          `tiêu ${kq.hanMucDaTieu} đơn vị hạn mức` +
+          (hong ? `, ${hong} từ lỗi` : "")
+        );
       },
       bao,
     ),

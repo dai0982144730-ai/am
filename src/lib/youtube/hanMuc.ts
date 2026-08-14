@@ -20,18 +20,11 @@
 
 import { prisma } from "@/lib/db/prisma";
 
-/** Giá của từng lệnh, tính bằng đơn vị hạn mức. */
-export const GIA_LENH = {
-  "search.list": 100,
-  "videos.list": 1,
-  "channels.list": 1,
-  "playlists.list": 1,
-  "playlistItems.list": 1,
-  "subscriptions.list": 1,
-  "commentThreads.list": 1,
-} as const;
+// Bảng giá nằm ở file riêng vì giao diện phía trình duyệt cũng cần đọc nó, mà
+// file này thì nạp prisma — xem lời giải thích trong `giaLenh.ts`
+export { GIA_LENH, type TenLenh } from "./giaLenh";
 
-export type TenLenh = keyof typeof GIA_LENH;
+import { GIA_LENH, type TenLenh } from "./giaLenh";
 
 /**
  * Lệnh nào thuộc nhóm "khám phá" — bị ngắt trước khi chạm ngưỡng an toàn.

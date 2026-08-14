@@ -394,7 +394,7 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 | **3** | Nhánh Music: metadata extractor, parse BPM + `bpmConfidence`, chuẩn hoá genre bằng Haiku — **xong 2026-08-14**, làm hoàn toàn bằng luật nên không tốn lần gọi mô hình nào |
 | **4** | **Engine chấm chất lượng theo nguồn**: 4 trụ tín hiệu chuẩn hoá percentile, `SourceQualityProfile` + UI chỉnh trọng số trong Cài đặt, `CommentAnalysis` vòng 2, `ExternalDiscussion` cho blog/podcast — **xong 2026-08-14** trừ UI chỉnh trọng số |
 | **4b** | Search/Filter API với toàn bộ trường lọc + 3 kiểu sắp xếp + UI duyệt — **xong 2026-08-15** |
-| **4c** | Chuyên mục **New**: `AdHocInterest` (ô nhập từ khoá, bật/tắt tự quét), tích hợp vào cron 21:00 + hiển thị chi phí quota |
+| **4c** | Chuyên mục **New**: `AdHocInterest` (ô nhập từ khoá, bật/tắt tự quét), tích hợp vào cron 21:00 + hiển thị chi phí quota — **xong 2026-08-15** |
 | **5** | Player + theo dõi hành vi + `ResumePoint` đồng bộ đa thiết bị + rating cảm xúc — **xong 2026-08-15** |
 | **6** | Xác thực tác giả nâng cao: LLM auto-discovery + `pendingReview` + tủ sách tác giả + full-text search |
 | **7** | Thư viện cá nhân + quản lý playlist YouTube: thêm/tạo tự động, di chuyển/gỡ chờ duyệt, không bao giờ xoá playlist |

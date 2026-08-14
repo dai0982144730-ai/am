@@ -12,6 +12,7 @@
 | **3** — Nhánh nhạc | ✅ xong, chạy hoàn toàn bằng luật |
 | **4** — Chấm chất lượng | ✅ xong trọn: hai vòng chấm + màn hình chỉnh trọng số |
 | **4b** — Tìm kiếm & bộ lọc | ✅ xong, tìm được cả trong nhận xét của Claude |
+| **4c** — Chuyên mục New | ✅ xong, gõ từ khoá là đêm tự tìm |
 | **5** — Trình phát & nhớ chỗ dở | ✅ xong, đồng bộ máy tính ↔ điện thoại |
 | **10** — Bản tin hằng sáng | ✅ xong, Claude viết bằng giọng trò chuyện |
 | **Tự chạy** | ✅ một lệnh làm đủ 8 bước, hẹn giờ 21:00 |
@@ -586,6 +587,56 @@ và bản thiết kế cũng nói nhạc không dùng điểm chất lượng n�
 
 Không còn thiếu gì — màn hình chỉnh trọng số đã làm xong, xem mục "Trang Cài
 đặt" bên dưới.
+
+## Phase 4c — Chuyên mục "New": XONG
+
+File: `src/lib/quanTam/quetTuKhoa.ts`, `actions.ts`, `giaTuKhoa.ts`,
+`src/components/BangTuKhoa.tsx`, `src/app/quan-tam/page.tsx`,
+`scripts/quet-tu-khoa.ts`. Xem tại `/quan-tam`.
+
+Bốn chuyên mục kia chỉ thấy được nội dung từ kênh đã theo dõi — tức là chỉ thấy
+thứ mình đã biết mà đăng ký. Phần này đi tìm ngoài vùng đó: hôm nay tự dưng quan
+tâm gì thì gõ vào, tối máy tự tìm, sáng mai có trong bản tin.
+
+### Vì sao giao diện phải nói thẳng giá tiền
+
+Lệnh tìm kiếm của YouTube **đắt gấp 100 lần** mọi lệnh khác — 100 đơn vị một
+lần, trong khi lấy chi tiết 50 video chỉ tốn 1. Cả ngày có 10.000 đơn vị. Mỗi từ
+khoá đang bật ăn 1% ngân sách ngày, và phần bị bóp lại chính là việc quét kênh.
+
+Giấu con số đó đi thì người dùng bật thoải mái, rồi một hôm ngồi nhìn lần quét
+đêm chết giữa chừng mà không hiểu vì sao. Nên bảng chi phí nằm **trên cùng
+trang, trước cả ô nhập**, và quá 10 từ khoá thì hiện cảnh báo vàng.
+
+Cùng lý do đó, bước tìm từ khoá được xếp **sau** bước quét kênh trong việc chạy
+đêm: hết hạn mức thì thứ mất đi phải là phần tuỳ hứng, không phải các kênh đã
+theo dõi.
+
+### Đã chạy thật (2026-08-15)
+
+Thêm từ khoá **"AI agent"** rồi chạy `npx tsx scripts/quet-tu-khoa.ts`:
+
+| | |
+|---|---|
+| Tìm thấy | 10 video |
+| Thêm mới vào kho | 9 (1 cái đã có sẵn) |
+| Hạn mức | 536 → 637, đúng **101 đơn vị** như tính toán |
+
+Trang `/quan-tam` hiện đúng: *"1 từ khoá đang bật = 100 đơn vị hạn mức mỗi đêm,
+tức 1.0% ngân sách ngày"*, kèm 9 thẻ kết quả.
+
+**Từ khoá "AI agent" đang được bật.** Nó sẽ tự quét mỗi đêm cho tới khi tắt.
+Không cần nữa thì vào `/quan-tam` bấm nút "Đang tự quét" một cái là xong.
+
+### Hai chỗ nhỏ nhưng đáng nhớ
+
+**Gỡ từ khoá không xoá nội dung đã tìm được.** Quan hệ chỉ được gỡ ra
+(`SetNull`). "Thôi không tìm nữa" khác với "xoá những gì đã tìm được".
+
+**Kênh gặp qua tìm kiếm được đánh dấu `not_subscribed`**, và gặp lại kênh đã có
+thì không đụng gì tới nó. Nếu không cẩn thận chỗ này, một kênh đã theo dõi nhiều
+năm mà tình cờ xuất hiện trong kết quả tìm kiếm sẽ bị hạ xuống thành "không theo
+dõi" — mà uy tín nguồn thì có trọng số trong công thức chấm điểm.
 
 ## Phase 5 — Trình phát, nhớ chỗ đang dở, đánh giá: XONG
 
