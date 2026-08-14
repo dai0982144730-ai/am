@@ -42,7 +42,7 @@ export function OViecCanLam({
             doiTrangThaiViec(id, moi ? "done" : "todo").then(() => undefined),
           );
         }}
-        className="mt-0.5 size-4 shrink-0 accent-neutral-900 dark:accent-white"
+        className="mt-0.5 size-4 shrink-0 accent-cam-600 dark:accent-cam-500"
       />
       <div className="min-w-0 flex-1">
         <p

@@ -150,7 +150,7 @@ export function ONhapGhiChu({
         onChange={(e) => setChu(e.target.value)}
         rows={3}
         placeholder={dangNghe ? "Đang nghe, cứ nói…" : "Nghĩ gì thì ghi lại…"}
-        className="mt-3 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-400"
+        className="mt-3 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-cam-500 dark:border-neutral-700 dark:focus:border-cam-500"
       />
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -158,7 +158,7 @@ export function ONhapGhiChu({
           type="button"
           onClick={ghi}
           disabled={dangChay || chu.trim().length < 2}
-          className="rounded-lg bg-neutral-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+          className="rounded-lg bg-cam-600 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-cam-500 dark:text-white"
         >
           Ghi lại
         </button>

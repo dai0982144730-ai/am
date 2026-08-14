@@ -50,10 +50,12 @@ export function DangXemDo({ cacMuc }: { cacMuc: MucDangDo[] }) {
                   className="size-full object-cover"
                 />
               ) : null}
-              {/* Thanh tiến độ đỏ, đúng chỗ mắt đã quen tìm */}
-              <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-900/40">
+              {/* Thanh tiến độ, đúng chỗ dưới đáy ảnh mà mắt đã quen tìm.
+                  Dùng màu cam của ứng dụng thay vì đỏ như YouTube — đỏ ở đây
+                  chỉ dành cho việc đang thu âm. */}
+              <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-900/25">
                 <div
-                  className="h-full bg-red-500"
+                  className="h-full bg-cam-500"
                   style={{ width: `${muc.phanTram}%` }}
                 />
               </div>

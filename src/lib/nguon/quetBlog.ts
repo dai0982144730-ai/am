@@ -64,7 +64,7 @@ export async function dungDanhSachNguon(): Promise<{
         url: nguon.trangChu,
         title: nguon.ten,
         reputationTier: nguon.tangUyTin as SourceReputationTier,
-        contentGroupHint: "ai",
+        contentGroupHint: nguon.nhomGoiY,
         subscriptionStatus: "subscribed",
       },
       update: {

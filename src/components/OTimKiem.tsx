@@ -50,7 +50,7 @@ export function OTimKiem() {
       <button
         type="submit"
         disabled={dangTim}
-        className="shrink-0 rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
+        className="shrink-0 rounded-full bg-cam-600 px-5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-cam-500 dark:text-white"
       >
         {dangTim ? "Đang tìm…" : "Tìm"}
       </button>

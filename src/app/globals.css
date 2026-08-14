@@ -1,21 +1,66 @@
 @import "tailwindcss";
 
+/**
+ * Tông màu: nền be nhạt, điểm nhấn cam.
+ *
+ * CÁCH LÀM: thay vì đi sửa hàng trăm chỗ trong code giao diện, ở đây **vẽ đè
+ * lên bảng màu `neutral` có sẵn của Tailwind** bằng dải be ấm. Mọi
+ * `bg-neutral-50`, `border-neutral-200`… đang rải khắp các trang tự động đổi
+ * theo. Đổi tông sau này cũng chỉ sửa đúng file này.
+ *
+ * Dải be được chọn hơi ngả vàng đỏ (sắc độ ~35°) chứ không xám trung tính, để
+ * đặt cạnh màu cam thì trông cùng một họ, không bị lệch thành hai gam rời nhau.
+ *
+ * Chỉ ba màu ngoài dải be: cam (nhấn), vàng hổ phách (cảnh báo, có sẵn của
+ * Tailwind), đỏ (đang thu âm). Thêm màu nữa thì giao diện bắt đầu ồn.
+ */
+
+@theme {
+  /* ----- Dải be, thay chỗ của neutral ----- */
+  --color-neutral-50: #fbf8f3;
+  --color-neutral-100: #f4eee4;
+  --color-neutral-200: #e7ddcd;
+  --color-neutral-300: #d6c8b2;
+  --color-neutral-400: #a4967f;
+  --color-neutral-500: #7a6f5d;
+  --color-neutral-600: #5a5142;
+  --color-neutral-700: #423a2e;
+  --color-neutral-800: #2c2720;
+  --color-neutral-900: #1d1913;
+  --color-neutral-950: #14110d;
+
+  /* ----- Cam: điểm nhấn ----- */
+  --color-cam-50: #fdf3ec;
+  --color-cam-100: #fae2d1;
+  --color-cam-300: #f0a878;
+  --color-cam-500: #dd6b20;
+  --color-cam-600: #c2551a;
+  --color-cam-700: #9c4415;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Nền khu vực nội dung — sáng hơn menu trái một bậc */
+  --background: #fdfbf7;
+  --foreground: #2c2720;
+  /* Nền menu trái: đậm hơn một chút để tách khỏi vùng nội dung */
+  --nen-menu: #f2ebdf;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-nen-menu: var(--nen-menu);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Chế độ tối cũng giữ sắc ấm, chỉ đảo sáng tối — nền nâu rất đậm chứ
+       không phải đen thuần, để vẫn cùng họ với màu cam */
+    --background: #17140f;
+    --foreground: #ede5d8;
+    --nen-menu: #100e0a;
   }
 }
 

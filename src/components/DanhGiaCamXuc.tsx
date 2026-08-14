@@ -27,6 +27,7 @@ const TAG_RIENG: Record<string, string[]> = {
   triet_hoc: ["an yên", "khó hiểu", "chạm tới mình"],
   truyen: ["sợ", "cuốn", "giọng đọc hay", "nghe như AI đọc"],
   music: ["thư giãn", "tăng năng lượng", "hợp lúc làm việc", "nghe lại được"],
+  khoa_hoc: ["làm thử được", "mới với mình", "còn lý thuyết quá"],
   new_search: ["đúng thứ đang tìm", "lạc đề"],
   other: ["hữu ích"],
 };
@@ -145,7 +146,7 @@ export function DanhGiaCamXuc({
                 aria-pressed={dangChon}
                 className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-50 ${
                   dangChon
-                    ? "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900"
+                    ? "border-cam-600 bg-cam-600 text-white dark:border-cam-500 dark:bg-cam-500 dark:text-white"
                     : "border-neutral-200 text-neutral-600 hover:border-neutral-400 dark:border-neutral-700 dark:text-neutral-300"
                 }`}
               >

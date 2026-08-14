@@ -16,12 +16,13 @@
 
 import * as z from "zod/v4";
 
-/** Năm chuyên mục cố định, khớp enum `ContentGroup` trong database. */
+/** Các chuyên mục cố định, khớp enum `ContentGroup` trong database. */
 export const NHOM_NOI_DUNG = [
   "ai",
   "triet_hoc",
   "truyen",
   "music",
+  "khoa_hoc",
   "other",
 ] as const;
 
@@ -35,7 +36,7 @@ export const KhungPhanLoai = z.object({
   nhom: z
     .enum(NHOM_NOI_DUNG)
     .describe(
-      "Chuyên mục của nội dung. Chọn 'other' nếu không thuộc bốn nhóm kia — " +
+      "Chuyên mục của nội dung. Chọn 'other' nếu không thuộc năm nhóm kia — " +
         "đây là lựa chọn đúng cho tin tức thời sự, giải trí, thể thao, ẩm thực.",
     ),
 

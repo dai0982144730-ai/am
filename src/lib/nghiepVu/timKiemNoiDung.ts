@@ -17,7 +17,7 @@ import { LoiTroLy } from "@/lib/troLyChung/phanHoi";
 
 export interface ThamSoTimKiem {
   tuKhoa: string;
-  /** ai | triet_hoc | truyen | music | new_search | other */
+  /** ai | triet_hoc | truyen | music | khoa_hoc | new_search | other */
   chuyenMuc?: string;
   /** Chỉ lấy nội dung đăng từ ngày này (yyyy-mm-dd) */
   tuNgay?: string;
@@ -33,6 +33,7 @@ const SO_LUONG_TOI_DA = 50;
 const CHUYEN_MUC_HOP_LE: ContentGroup[] = [
   "ai",
   "triet_hoc",
+  "khoa_hoc",
   "truyen",
   "music",
   "new_search",

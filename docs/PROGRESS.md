@@ -16,6 +16,9 @@
 | **7a** — Thư viện cá nhân | ✅ xong, thư mục tự đặt tên + trạng thái đọc |
 | **8** — Ghi chú khi xem | ✅ xong, gõ hoặc nói, Claude tự xếp ngăn |
 | **7b** — Playlist YouTube | ✅ xong phần đề xuất & duyệt; ghi thật cần cấp thêm quyền |
+| **Khoa học** | ✅ chuyên mục thứ 5 + 7 nguồn báo/diễn đàn khoa học |
+| **Lịch sử xem** | ✅ mở ra là rời luồng chính, không bày lại |
+| **Tông màu** | ✅ nền be, điểm nhấn cam, menu trái đậm hơn |
 | **5** — Trình phát & nhớ chỗ dở | ✅ xong, đồng bộ máy tính ↔ điện thoại |
 | **10** — Bản tin hằng sáng | ✅ xong, Claude viết bằng giọng trò chuyện |
 | **Tự chạy** | ✅ một lệnh làm đủ 8 bước, hẹn giờ 21:00 |
@@ -624,6 +627,107 @@ ra file thường — nay nằm ở `trangThai.ts`.
 Đây là cái bẫy chung, không riêng gì thư viện: đã gặp đúng kiểu này ở
 `quanTam/giaTuKhoa.ts` (tách hằng số cho trình duyệt đọc được mà không kéo theo
 prisma). Thêm hằng số vào file `"use server"` là hỏng ngay.
+
+## Chuyên mục thứ năm: Khoa học (2026-08-15)
+
+Chủ dự án đặt thêm: **khoa học và công nghệ ứng dụng đa lĩnh vực, nhưng phải là
+thứ áp dụng được vào đời sống, không phải lý thuyết thuần tuý.**
+
+### Ranh giới — chỗ khó nhất của chuyên mục này
+
+Lời dẫn phân loại (`llm/phanLoai.ts`, đã lên `v2`) nói rõ hai chiều:
+
+  - **Vào**: giải thích nguyên lý rồi chỉ ra nó đang dùng ở đâu; công nghệ mới
+    kèm việc nó thay đổi được chuyện gì; nghiên cứu kèm hệ quả thực tế.
+  - **Không vào**: lý thuyết thuần tuý (nghịch lý lượng tử kể cho vui); tin
+    công nghệ tiêu dùng kiểu ra mắt điện thoại; tin giật gân ("NASA vừa phát
+    hiện điều gây sốc").
+
+Câu hỏi để tự kiểm, viết thẳng vào lời dẫn: **xem xong có biết thêm thứ gì dùng
+được không?** Chỉ biết thêm một sự thật thú vị thì là 'other'.
+
+Nội dung AI vẫn ở nhóm `ai`, không chuyển sang `khoa_hoc` — chủ dự án theo dõi
+AI riêng và kỹ hơn.
+
+### Bảy nguồn mới — vì YouTube một mình không đủ
+
+Chủ dự án nói đúng: thứ đáng đọc về khoa học ứng dụng phần lớn nằm ở báo chuyên
+ngành và diễn đàn kỹ thuật, còn YouTube tiếng Việt mảng này chủ yếu là tin giật
+gân. Đã thử tải thật từng feed ngày 2026-08-15:
+
+| Nguồn | Số bài | Tầng uy tín | Ghi chú |
+|---|---|---|---|
+| IEEE Spectrum | 30 | expert | Hợp gu nhất — hội kỹ sư, bài nào cũng gắn ứng dụng thật |
+| Ars Technica Science | 20 | expert | Viết sâu, không giật gân |
+| Quanta Magazine | 5 | expert | Thưa nhưng chất; thiên lý thuyết nên nhiều bài sẽ rơi vào "khác" — đúng |
+| ScienceDaily | 60 | aggregator | Nhiều nhất, nhưng là tổng hợp thông cáo báo chí nên hay thổi phồng → xếp tầng thấp để bị trừ điểm |
+| Nature | 76 | official | Uy tín cao nhất, nhưng phần lớn nghiên cứu thuần |
+| Hacker News (≥150 điểm) | 20 | forum | Đám đông lọc giúp một lượt |
+| Lobste.rs /t/science | 25 | forum | Cộng đồng nhỏ, thiên kỹ thuật, ít rác |
+
+`phys.org` bị loại — trả về mã **451**, chặn truy cập theo vùng.
+
+Ngưỡng Hacker News đặt **150 điểm**, cao hơn feed AI (100), vì tin khoa học trên
+HN nhiều hơn hẳn và phần lớn là thứ đọc cho vui.
+
+Thêm trường `nhomGoiY` cho mỗi nguồn — trước đây `quetBlog.ts` gán cứng
+`contentGroupHint: "ai"` cho mọi thứ. Đây chỉ là **gợi ý**: Claude vẫn đọc từng
+bài rồi tự xếp, vì một trang khoa học vẫn có bài không thuộc khoa học ứng dụng.
+
+Toàn bộ nguồn này tiếng Anh nên đi qua bước thuật lại sang tiếng Việt trước khi
+tới tai người nghe. Phần đọc thành tiếng vẫn chờ khoá TTS.
+
+## Lịch sử xem — mở ra là rời luồng chính (2026-08-15)
+
+File: `src/lib/lichSu/actions.ts`, `loc.ts`,
+`src/components/GhiNhoDaMo.tsx`, `MucLichSu.tsx`, `src/app/lich-su/page.tsx`.
+
+Bấm vào xem là nội dung **chuyển sang Lịch sử và biến khỏi Trang chủ, Khám phá,
+New ngay**. Lần sau lướt là toàn thứ mới, và danh sách thật sự vơi đi — khác
+YouTube, nơi thứ đã xem cứ hiện lại mãi.
+
+**Ngoại lệ**: thứ đã cất vào thư viện vẫn ở lại luồng chính. Cất vào thư viện là
+nói "tôi còn muốn quay lại cái này"; giấu đi thì hoá ra phạt người dùng vì đã
+chủ động đánh dấu.
+
+### Ba chỗ phải nghĩ
+
+**Bảng riêng, không dùng lại `ConsumptionSession`.** Phiên xem chỉ tạo khi thật
+sự bấm phát và dùng để hiểu gu; `WatchHistory` ghi mọi lần **mở**, kể cả bài
+viết không có trình phát, kể cả bấm nhầm rồi thoát. Gộp một bảng thì hỏng cả
+hai: hoặc mỗi cú bấm nhầm thành một lượt xem làm sai hồ sơ gu, hoặc mở rồi
+thoát vẫn cứ hiện lại mãi.
+
+**Bộ lọc phải ghép bằng `AND`, không trải thẳng.** Điều kiện "chưa lướt qua"
+cần một `OR`, mà `timVaLoc.ts` cũng đã dùng `OR` cho ô tìm kiếm — trải thẳng
+vào thì cái sau đè mất cái trước và bộ lọc âm thầm biến mất. Kiểu lỗi không báo
+gì, chỉ lặng lẽ cho ra kết quả sai. Nên `chuaLuotQua()` là một hàm bọc, không
+phải hằng số.
+
+**Ô tìm kiếm thì KHÔNG giấu thứ đã xem.** Gõ vào ô tìm thường là để lần lại
+đúng cái vừa xem hôm qua. Chỉ lúc lướt không mục đích mới giấu.
+
+Có nút **"Trả lại trang chủ"** cho từng mục, vì cơ chế này rất dễ nuốt nhầm:
+bấm vào rồi nhận ra chưa muốn xem bây giờ, thế là mất hút.
+
+## Tông màu: nền be, điểm nhấn cam (2026-08-15)
+
+Thay vì sửa hàng trăm chỗ trong code giao diện, **vẽ đè lên bảng màu `neutral`
+của Tailwind** bằng một dải be ấm ngay trong `globals.css`. Mọi `bg-neutral-50`,
+`border-neutral-200`… đang rải khắp các trang tự đổi theo. Đổi tông lần sau cũng
+chỉ sửa đúng file đó.
+
+Dải be chọn hơi ngả vàng đỏ chứ không xám trung tính, để đặt cạnh màu cam thì
+cùng một họ, không lệch thành hai gam rời nhau.
+
+| Chỗ | Màu |
+|---|---|
+| Nền vùng nội dung | `#FDFBF7` |
+| Nền menu trái và thanh trên | `#F2EBDF` — đậm hơn một bậc |
+| Điểm nhấn (nút chính, chip đang chọn, chữ "Am") | `#C2551A` |
+
+Ba màu ngoài dải be: cam (nhấn), vàng hổ phách (cảnh báo), đỏ (đang thu âm).
+Thêm nữa thì giao diện bắt đầu ồn.
 
 ## Phase 7b — Playlist YouTube: XONG phần đề xuất, ghi thật chờ cấp quyền
 

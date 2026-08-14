@@ -28,7 +28,7 @@ export default async function TrangThuVien({
           </p>
           <Link
             href="/dang-nhap"
-            className="mt-6 inline-block rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+            className="mt-6 inline-block rounded-lg bg-cam-600 px-4 py-2 text-sm font-medium text-white dark:bg-cam-500 dark:text-white"
           >
             Đăng nhập
           </Link>
@@ -86,7 +86,7 @@ export default async function TrangThuVien({
   const kieuChip =
     "rounded-full border px-3 py-1 text-xs transition-colors";
   const kieuChonRoi =
-    "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900";
+    "border-cam-600 bg-cam-600 text-white dark:border-cam-500 dark:bg-cam-500 dark:text-white";
   const kieuChuaChon =
     "border-neutral-300 text-neutral-600 hover:border-neutral-500 dark:border-neutral-700 dark:text-neutral-300";
 

@@ -26,6 +26,7 @@ const NHOM_CHINH: MucDieuHuong[] = [
 ];
 
 const NHOM_CUA_BAN: MucDieuHuong[] = [
+  { ten: "Lịch sử xem", bieuTuong: "↺", duongDan: "/lich-su" },
   { ten: "Thư viện", bieuTuong: "☰", duongDan: "/thu-vien" },
   { ten: "Playlist", bieuTuong: "≡", duongDan: "/playlist" },
   { ten: "Ghi chú", bieuTuong: "✎", duongDan: "/ghi-chu" },
@@ -58,7 +59,7 @@ function MotMuc({ muc }: { muc: MucDieuHuong }) {
   return (
     <Link
       href={muc.duongDan}
-      className={`${kieuChung} text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800`}
+      className={`${kieuChung} text-neutral-700 hover:bg-cam-100 hover:text-cam-700 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:hover:text-cam-300`}
     >
       <span aria-hidden className="w-5 text-center text-base">
         {muc.bieuTuong}
@@ -91,9 +92,9 @@ export function KhungTrang({
   emailNguoiDung?: string | null;
 }) {
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950">
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-neutral-200 bg-white/90 px-4 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/90">
-        <Link href="/" className="text-lg font-bold tracking-tight">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-neutral-200 bg-nen-menu/90 px-4 backdrop-blur dark:border-neutral-800">
+        <Link href="/" className="text-lg font-bold tracking-tight text-cam-600 dark:text-cam-500">
           Am
         </Link>
 
@@ -102,7 +103,7 @@ export function KhungTrang({
             type="search"
             name="q"
             placeholder="Tìm trong nội dung đã quét…"
-            className="w-full rounded-full border border-neutral-200 bg-neutral-50 px-4 py-1.5 text-sm placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none dark:border-neutral-800 dark:bg-neutral-900"
+            className="w-full rounded-full border border-neutral-200 bg-background px-4 py-1.5 text-sm placeholder:text-neutral-400 focus:border-cam-500 focus:outline-none dark:border-neutral-800"
           />
         </form>
 
@@ -135,7 +136,7 @@ export function KhungTrang({
             </span>
             <Link
               href="/dang-nhap"
-              className="rounded-lg bg-neutral-900 px-3.5 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 dark:bg-neutral-100 dark:text-neutral-900"
+              className="rounded-lg bg-cam-600 px-3.5 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 dark:bg-cam-500 dark:text-white"
             >
               Đăng nhập
             </Link>
@@ -144,7 +145,7 @@ export function KhungTrang({
       </header>
 
       <div className="flex">
-        <nav className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-neutral-200 px-2 py-2 lg:block dark:border-neutral-800">
+        <nav className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-neutral-200 bg-nen-menu px-2 py-2 lg:block dark:border-neutral-800">
           <NhomMuc cacMuc={NHOM_CHINH} />
           <div className="border-t border-neutral-100 dark:border-neutral-900" />
           <NhomMuc nhan="Của bạn" cacMuc={NHOM_CUA_BAN} />

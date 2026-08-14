@@ -40,7 +40,7 @@ export function NutLuuThuVien({
         }
         className={`rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-40 ${
           dangLuu
-            ? "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900"
+            ? "border-cam-600 bg-cam-600 text-white dark:border-cam-500 dark:bg-cam-500 dark:text-white"
             : "border-neutral-300 hover:border-neutral-500 dark:border-neutral-700"
         }`}
       >

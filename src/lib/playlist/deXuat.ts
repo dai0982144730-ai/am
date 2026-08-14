@@ -31,7 +31,13 @@ import { chonCachGoi } from "@/lib/llm/phanLoai";
  * vào vì điểm thấp hơn — điểm được chuẩn hoá trong cùng loại nguồn nên video
  * chuyên môn ít lượt xem luôn thua video thời sự.
  */
-const CHUYEN_MUC_DE_XUAT = ["ai", "triet_hoc", "truyen", "music"] as const;
+const CHUYEN_MUC_DE_XUAT = [
+  "ai",
+  "triet_hoc",
+  "truyen",
+  "music",
+  "khoa_hoc",
+] as const;
 
 const KhungDeXuat = z.object({
   quyetDinh: z

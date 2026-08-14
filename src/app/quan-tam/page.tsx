@@ -5,6 +5,7 @@ import { BangTuKhoa } from "@/components/BangTuKhoa";
 import { KhungTrang } from "@/components/KhungTrang";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
 import { prisma } from "@/lib/db/prisma";
+import { chuaLuotQua } from "@/lib/lichSu/loc";
 import { nganSachMoiNgay } from "@/lib/youtube/hanMuc";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function TrangQuanTam() {
       },
     }),
     prisma.contentItem.findMany({
-      where: { contentGroup: "new_search" },
+      where: chuaLuotQua({ contentGroup: "new_search" }),
       orderBy: [
         { score: { compositeScore: { sort: "desc", nulls: "last" } } },
         { publishedAt: "desc" },

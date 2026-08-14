@@ -107,18 +107,18 @@ export function BangTuKhoa({
             value={tuKhoaMoi}
             onChange={(e) => setTuKhoaMoi(e.target.value)}
             placeholder="Hôm nay quan tâm gì?"
-            className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-neutral-400"
+            className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-cam-500 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-cam-500"
           />
           <input
             value={ghiChu}
             onChange={(e) => setGhiChu(e.target.value)}
             placeholder="Ghi chú (không bắt buộc)"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 sm:w-56 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-neutral-400"
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-cam-500 sm:w-56 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-cam-500"
           />
           <button
             type="submit"
             disabled={dangChay || tuKhoaMoi.trim().length < 2}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+            className="rounded-lg bg-cam-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-cam-500 dark:text-white"
           >
             Thêm
           </button>
@@ -164,7 +164,7 @@ export function BangTuKhoa({
                     disabled={dangChay}
                     className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40 ${
                       tu.autoScan
-                        ? "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900"
+                        ? "border-cam-600 bg-cam-600 text-white dark:border-cam-500 dark:bg-cam-500 dark:text-white"
                         : "border-neutral-300 text-neutral-500 dark:border-neutral-700"
                     }`}
                   >

@@ -34,7 +34,7 @@ export default async function TrangGhiChu() {
           </p>
           <Link
             href="/dang-nhap"
-            className="mt-6 inline-block rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+            className="mt-6 inline-block rounded-lg bg-cam-600 px-4 py-2 text-sm font-medium text-white dark:bg-cam-500 dark:text-white"
           >
             Đăng nhập
           </Link>

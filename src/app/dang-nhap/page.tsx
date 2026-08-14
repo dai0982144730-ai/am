@@ -51,7 +51,7 @@ export default async function TrangDangNhap({
       >
         <button
           type="submit"
-          className="w-full rounded-xl bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 dark:bg-neutral-100 dark:text-neutral-900"
+          className="w-full rounded-xl bg-cam-600 px-5 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 dark:bg-cam-500 dark:text-white"
         >
           Đăng nhập bằng Google
         </button>

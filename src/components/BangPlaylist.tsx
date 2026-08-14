@@ -128,7 +128,7 @@ export function BangPlaylist({
                       type="button"
                       disabled={dangChay}
                       onClick={() => chay(() => duyet(d.id))}
-                      className="rounded-lg border border-neutral-900 px-3 py-1.5 text-xs font-medium disabled:opacity-40 dark:border-white"
+                      className="rounded-lg border border-cam-600 px-3 py-1.5 text-xs font-medium disabled:opacity-40 dark:border-cam-500"
                     >
                       Duyệt
                     </button>
@@ -176,7 +176,7 @@ export function BangPlaylist({
                     type="button"
                     disabled={dangChay}
                     onClick={() => chay(() => ghiLenYouTube(d.id))}
-                    className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+                    className="rounded-lg bg-cam-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40 dark:bg-cam-500 dark:text-white"
                   >
                     Ghi lên YouTube
                   </button>
@@ -246,7 +246,7 @@ export function BangPlaylist({
                     onClick={() => chay(() => batTatChoSapXep(p.id, !p.choSapXep))}
                     className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40 ${
                       p.choSapXep
-                        ? "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900"
+                        ? "border-cam-600 bg-cam-600 text-white dark:border-cam-500 dark:bg-cam-500 dark:text-white"
                         : "border-neutral-300 text-neutral-500 dark:border-neutral-700"
                     }`}
                   >

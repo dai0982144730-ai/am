@@ -24,6 +24,7 @@ import type {
 } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { chuaLuotQua } from "@/lib/lichSu/loc";
 
 export type KieuSapXep = "phu_hop_nhat" | "chat_luong_cao_nhat" | "moi_nhat";
 
@@ -176,7 +177,13 @@ export interface KetQuaTim {
 /** Tìm và lọc nội dung. */
 export async function timNoiDung(loc: BoLoc): Promise<KetQuaTim> {
   const trang = Math.max(1, loc.trang ?? 1);
-  const dieuKien = dungDieuKien(loc);
+  // Đang tìm một thứ cụ thể thì KHÔNG giấu nội dung đã xem — người ta gõ vào
+  // ô tìm kiếm thường là để lần lại đúng cái vừa xem hôm qua. Chỉ lúc lướt
+  // không mục đích mới cần giấu.
+  const dangTimCuThe = Boolean(loc.tuKhoa?.trim());
+  const dieuKien = dangTimCuThe
+    ? dungDieuKien(loc)
+    : chuaLuotQua(dungDieuKien(loc));
 
   const [cacThe, tongSo] = await Promise.all([
     prisma.contentItem.findMany({

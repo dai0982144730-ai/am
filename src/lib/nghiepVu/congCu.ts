@@ -37,10 +37,19 @@ export const CONG_CU_AM: CongCuTroLy[] = [
         },
         chuyenMuc: {
           type: "string",
-          enum: ["ai", "triet_hoc", "truyen", "music", "new_search", "other"],
+          enum: [
+            "ai",
+            "triet_hoc",
+            "truyen",
+            "music",
+            "khoa_hoc",
+            "new_search",
+            "other",
+          ],
           description:
             "Giới hạn trong một chuyên mục. Bỏ trống để tìm khắp kho. " +
             "ai = tin và hướng dẫn AI; triet_hoc = triết học, tâm lý, Phật giáo; " +
+            "khoa_hoc = khoa học và công nghệ ứng dụng được vào đời sống; " +
             "truyen = truyện kể; music = nhạc; new_search = từ khoá quan tâm nhất thời",
         },
         tuNgay: {

@@ -14,6 +14,7 @@ const CAC_NHOM = [
   { ma: "", ten: "Tất cả" },
   { ma: "ai", ten: "AI" },
   { ma: "triet_hoc", ten: "Triết học" },
+  { ma: "khoa_hoc", ten: "Khoa học" },
   { ma: "truyen", ten: "Truyện" },
   { ma: "music", ten: "Music" },
   { ma: "other", ten: "Khác" },
@@ -56,7 +57,7 @@ export function ChipLoc({
 
   const kieuChip =
     "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors";
-  const kieuChon = "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900";
+  const kieuChon = "bg-cam-600 text-white dark:bg-cam-500 dark:text-white";
   const kieuThuong =
     "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700";
 

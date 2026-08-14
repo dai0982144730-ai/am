@@ -62,7 +62,8 @@ const MODEL_THEO_DUONG: Record<CachGoi, string> = {
 const TOI_DA_CHU_LOI_THOAI = 4_000;
 
 /** Phiên bản hướng dẫn — đổi hướng dẫn thì tăng số này để biết bản ghi cũ mới. */
-export const PHIEN_BAN_HUONG_DAN = "v1";
+// v2 (2026-08-15): thêm chuyên mục khoa_hoc
+export const PHIEN_BAN_HUONG_DAN = "v2";
 
 export type CachGoi = "cli" | "api";
 
@@ -76,7 +77,7 @@ const HUONG_DAN = `Bạn giúp một người Việt sắp xếp nội dung họ
 
 Nhiệm vụ: đọc thông tin một video rồi xếp vào đúng chuyên mục và điền các trường liên quan.
 
-## Năm chuyên mục
+## Các chuyên mục
 
 **ai** — tin tức và hướng dẫn về trí tuệ nhân tạo: tin về các hãng AI, cách dùng
 công cụ AI, kinh nghiệm viết code bằng AI, hệ thống AI cho doanh nghiệp.
@@ -91,16 +92,38 @@ kể chuyện đời mình.
 
 **music** — nhạc: nhạc tập thể thao theo nhịp, dance, piano, guitar rock, nhạc vàng.
 
+**khoa_hoc** — khoa học và công nghệ **ứng dụng được vào đời sống thật**. Không
+giới hạn lĩnh vực: vật lý, sinh học, y học, vật liệu, năng lượng, kỹ thuật, môi
+trường, nông nghiệp, vũ trụ — miễn là nói được nó dùng vào việc gì.
+
+Đây là chuyên mục **khó xếp nhất**, nên đọc kỹ ranh giới:
+
+  - VÀO nhóm này: giải thích một nguyên lý rồi chỉ ra nó đang được dùng ở đâu;
+    một công nghệ mới kèm việc nó thay đổi được chuyện gì; một nghiên cứu kèm
+    hệ quả thực tế; hướng dẫn tự làm dựa trên nguyên lý khoa học.
+  - KHÔNG vào nhóm này: lý thuyết thuần tuý không nói tới ứng dụng (bài giảng
+    về hình học đại số, video về nghịch lý lượng tử chỉ để gây tò mò); tin công
+    nghệ tiêu dùng kiểu ra mắt điện thoại mới; review sản phẩm; tin giật gân về
+    khoa học không có nội dung ("NASA vừa phát hiện điều gây sốc").
+
+Câu hỏi để tự kiểm: **xem xong có biết thêm thứ gì dùng được không?** Nếu chỉ
+biết thêm một sự thật thú vị thì đó là 'other', không phải 'khoa_hoc'.
+
+Riêng nội dung về AI thì vẫn vào nhóm 'ai', không vào 'khoa_hoc' — dù AI cũng là
+công nghệ. Người dùng theo dõi AI riêng và kỹ hơn.
+
 **other** — mọi thứ còn lại. Đây là lựa chọn ĐÚNG cho phần lớn nội dung: tin thời
 sự, chính trị, giải trí, hài, thể thao, ẩm thực, du lịch, công nghệ tiêu dùng,
-sức khoẻ, dạy nấu ăn, review sản phẩm, vlog đời thường.
+sức khoẻ thường thức, dạy nấu ăn, review sản phẩm, vlog đời thường.
 
 ## Nguyên tắc quan trọng nhất
 
-**Đừng cố nhét vào bốn nhóm đầu.** Người dùng cần bốn nhóm đó thật tinh, thà bỏ
+**Đừng cố nhét vào năm nhóm đầu.** Người dùng cần năm nhóm đó thật tinh, thà bỏ
 sót còn hơn lẫn tạp. Một video tin tức nhắc thoáng qua chữ "AI" thì vẫn là
 'other', không phải 'ai'. Một video kể chuyện ma có thật thì là 'other', không
-phải 'truyen'. Chỉ xếp vào bốn nhóm đầu khi nội dung CHÍNH thuộc về nhóm đó.
+phải 'truyen'. Một video khoa học chỉ kể sự thật thú vị mà không chỉ ra dùng
+được vào đâu thì vẫn là 'other', không phải 'khoa_hoc'. Chỉ xếp vào năm nhóm đầu
+khi nội dung CHÍNH thuộc về nhóm đó.
 
 ## Cạm bẫy
 

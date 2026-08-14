@@ -11,6 +11,7 @@
 
 import type { ContentGroup } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
+import { chuaLuotQua } from "@/lib/lichSu/loc";
 
 /** Các trường cần cho một thẻ nội dung trên trang chủ. */
 const TRUONG_CAN_LAY = {
@@ -54,6 +55,7 @@ export type TheNoiDung = Awaited<
 export const CHUYEN_MUC: { ma: ContentGroup; ten: string }[] = [
   { ma: "ai", ten: "AI" },
   { ma: "triet_hoc", ten: "Triết học" },
+  { ma: "khoa_hoc", ten: "Khoa học" },
   { ma: "truyen", ten: "Truyện" },
   { ma: "music", ten: "Music" },
 ];
@@ -96,9 +98,12 @@ async function layMotMuc(
       : {}),
   };
 
+  // Thứ đã lướt qua rồi thì không bày lại — trừ khi đã cất vào thư viện
+  const loc = chuaLuotQua(dieuKien);
+
   const [cacThe, tongSo] = await Promise.all([
     prisma.contentItem.findMany({
-      where: dieuKien,
+      where: loc,
       select: TRUONG_CAN_LAY,
       orderBy: [
         // Nội dung chưa chấm điểm xuống cuối, chứ không lên đầu
@@ -107,7 +112,7 @@ async function layMotMuc(
       ],
       take: soThe,
     }),
-    prisma.contentItem.count({ where: dieuKien }),
+    prisma.contentItem.count({ where: loc }),
   ]);
 
   return { ma, ten, cacThe, tongSo };

@@ -157,7 +157,7 @@ export function ThanhTrongSo({
             type="button"
             onClick={luu}
             disabled={!daDoi || dangLuu || tong <= 0}
-            className="rounded-lg bg-neutral-900 px-4 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-30 dark:bg-neutral-100 dark:text-neutral-900"
+            className="rounded-lg bg-cam-600 px-4 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-30 dark:bg-cam-500 dark:text-white"
           >
             {dangLuu ? "Đang lưu…" : "Lưu"}
           </button>

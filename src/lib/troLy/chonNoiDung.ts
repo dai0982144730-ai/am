@@ -24,6 +24,7 @@ import { prisma } from "@/lib/db/prisma";
 const CHUYEN_MUC_VAO_BAN_TIN: { ma: ContentGroup; ten: string }[] = [
   { ma: "ai", ten: "AI" },
   { ma: "triet_hoc", ten: "Triết học" },
+  { ma: "khoa_hoc", ten: "Khoa học" },
   { ma: "truyen", ten: "Truyện" },
   { ma: "music", ten: "Music" },
 ];

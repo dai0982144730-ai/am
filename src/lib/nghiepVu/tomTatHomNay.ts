@@ -23,6 +23,7 @@ import type { MucKetQua } from "@/lib/troLyChung/kieuDuLieu";
 const TEN_CHUYEN_MUC: Record<string, string> = {
   ai: "AI",
   triet_hoc: "Triết học",
+  khoa_hoc: "Khoa học",
   truyen: "Truyện",
   music: "Nhạc",
   new_search: "Từ khoá đang theo dõi",

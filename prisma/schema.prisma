@@ -30,6 +30,9 @@ enum ContentGroup {
   triet_hoc
   truyen
   music
+  /// Khoa học & công nghệ ứng dụng — đa lĩnh vực, nhưng phải là thứ áp dụng
+  /// được vào đời sống, không phải lý thuyết thuần tuý
+  khoa_hoc
   new_search /// Chuyên mục "New" — từ khoá người dùng tự nhập
   other
 }
@@ -342,6 +345,7 @@ model ContentItem {
   notes               Note[]
   actionItems         ActionItem[]
   libraryItem         LibraryItem?
+  watchHistory        WatchHistory?
   playlistSuggestions PlaylistOrganizationSuggestion[]
   representativeOf    DedupGroup?                     @relation("GroupRepresentative")
 
@@ -646,6 +650,26 @@ model ConsumptionSession {
   events ConsumptionEvent[]
 
   @@index([contentItemId, startedAt])
+}
+
+/// Đã mở ra xem — kể cả chỉ bấm vào rồi thoát ngay.
+///
+/// KHÁC `ConsumptionSession`: phiên xem chỉ được tạo khi thật sự bấm phát, và
+/// dùng để hiểu gu. Bảng này thì ghi mọi lần MỞ, kể cả bài viết không có trình
+/// phát, và dùng cho đúng một việc: **đã lướt qua rồi thì đừng bày ra nữa**.
+///
+/// Gộp hai thứ vào một bảng thì hỏng cả hai: hoặc là mỗi cú bấm nhầm thành một
+/// lượt xem làm sai hồ sơ gu, hoặc là mở rồi thoát vẫn cứ hiện lại mãi.
+model WatchHistory {
+  id            String      @id @default(cuid())
+  contentItemId String      @unique
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  firstOpenedAt DateTime @default(now())
+  lastOpenedAt  DateTime @default(now())
+  openCount     Int      @default(1)
+
+  @@index([lastOpenedAt])
 }
 
 /// Bỏ dở trên máy này, mở máy kia nghe tiếp đúng chỗ

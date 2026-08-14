@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { DanhGiaCamXuc } from "@/components/DanhGiaCamXuc";
 import { DanhSachGhiChu } from "@/components/DanhSachGhiChu";
+import { GhiNhoDaMo } from "@/components/GhiNhoDaMo";
 import { KhungTrang } from "@/components/KhungTrang";
 import { NutLuuThuVien } from "@/components/NutLuuThuVien";
 import { ONhapGhiChu } from "@/components/ONhapGhiChu";
@@ -47,6 +48,7 @@ const TEN_NHOM: Record<string, string> = {
   triet_hoc: "Triết học",
   truyen: "Truyện",
   music: "Music",
+  khoa_hoc: "Khoa học",
   new_search: "New",
   other: "Khác",
 };
@@ -143,6 +145,9 @@ export default async function TrangXem({
   return (
     <KhungTrang emailNguoiDung={phien?.user?.email}>
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        {/* Mở trang này ra là nội dung chuyển sang Lịch sử và rời luồng chính */}
+        <GhiNhoDaMo idNoiDung={muc.id} laChu={laChu} />
+
         <Link
           href="/"
           className="mb-4 inline-block text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200"
