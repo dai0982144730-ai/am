@@ -10,9 +10,10 @@
 | **1** — Quét YouTube (6/6 bước) | ✅ xong, đã chạy thật |
 | **2** — Blog & diễn đàn AI | ✅ xong phần chữ; phần giọng đọc chờ khoá TTS |
 | **3** — Nhánh nhạc | ✅ xong, chạy hoàn toàn bằng luật |
-| **4** — Chấm chất lượng | ✅ xong cả hai vòng, kể cả Claude đọc bình luận thật |
+| **4** — Chấm chất lượng | ✅ xong trọn: hai vòng chấm + màn hình chỉnh trọng số |
 | **15** — Cổng API trợ lý | ✅ xong, đã chạy thật |
-| Giao diện | Trang chủ thật đã chạy với dữ liệu thật |
+| Giao diện | Trang chủ, trang xem video, trang cài đặt — chạy với dữ liệu thật |
+| Phân quyền | Khách xem được; cấu hình và việc gọi Claude cần đăng nhập |
 
 Khung Next.js 16 + Tailwind 4, Prisma 7, database Neon với 38 bảng, pgvector đã
 bật. Kho hiện có **hơn 840 nội dung** (820 video YouTube + 28 bài blog/diễn đàn),
@@ -579,9 +580,44 @@ và bản thiết kế cũng nói nhạc không dùng điểm chất lượng n�
 
 ### Còn thiếu ở Phase 4
 
-**Màn hình chỉnh trọng số** trong Cài đặt. Bộ trọng số mặc định đã nằm trong
-database (`SourceQualityProfile`, 5 loại nguồn) và code đọc ưu tiên bản người
-dùng chỉnh — chỉ thiếu giao diện.
+Không còn thiếu gì — màn hình chỉnh trọng số đã làm xong, xem mục "Trang Cài
+đặt" bên dưới.
+
+## Phân quyền — khách xem được, không làm được
+
+**Chủ dự án chốt (2026-08-14)**: người lạ vào web vẫn xem được nội dung bình
+thường, nhưng không đụng được vào hai nhóm việc:
+
+| Nhóm | Ví dụ | Vì sao chặn |
+|---|---|---|
+| **Cấu hình** | chỉnh trọng số chấm điểm, thêm nguồn, duyệt tác giả | đổi cách cả hệ thống hoạt động |
+| **Việc gọi Claude** | phân loại, thuật lại, đọc bình luận | tiêu hạn mức gói Claude Pro đang trả tiền |
+
+File: `src/lib/quyen.ts`. Chỉ có **đúng hai trạng thái** — chủ dự án hoặc khách.
+Không dựng hệ thống nhiều vai trò, đúng dặn dò trong `CLAUDE.md`.
+
+**Chốt chặn nằm ở phía máy chủ, không phải chỉ giấu nút.** Mọi server action đều
+gọi `doiHoiChuDuAn()` ngay dòng đầu, nên gọi thẳng vào cũng bị chặn.
+
+**Đã kiểm chứng thật** ở chế độ khách: 25 thanh trượt trọng số đều bị khoá,
+không có nút Lưu, hiện cảnh báo "đang xem với tư cách khách". Trong khi vẫn xem
+được đủ 16 thẻ nội dung, bốn chuyên mục, trang xem video kèm nhận xét của Claude.
+
+Thanh trên cùng nay có nút **Đăng xuất** (trước đó chỉ hiện email), và khi chưa
+đăng nhập thì có dòng "Đang xem với tư cách khách" cạnh nút Đăng nhập.
+
+## Trang Cài đặt — hoàn tất nốt Phase 4
+
+`src/app/cai-dat/page.tsx` + `src/components/ThanhTrongSo.tsx`. Đây là mảnh cuối
+còn thiếu của Phase 4.
+
+Năm loại nguồn, mỗi loại một thẻ với năm thanh trượt. Người dùng cứ kéo thoải
+mái, **không phải tự tính cho tròn 100%** — phần chuẩn hoá về tổng bằng 1 làm ở
+phía máy chủ, nhưng phần trăm thực tế vẫn hiện ngay cạnh để thấy mình đang cho
+trụ nào nặng hơn.
+
+Khách vẫn xem được trang này để biết hệ thống chấm điểm ra sao — minh bạch thì
+tốt hơn giấu đi. Chỉ là không kéo được.
 
 ## Giao diện — đã có trang chủ thật
 

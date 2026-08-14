@@ -8,6 +8,8 @@
 
 import Link from "next/link";
 
+import { signOut } from "@/auth";
+
 interface MucDieuHuong {
   ten: string;
   bieuTuong: string;
@@ -32,7 +34,7 @@ const NHOM_CUA_BAN: MucDieuHuong[] = [
 
 const NHOM_TRO_LY: MucDieuHuong[] = [
   { ten: "Trò chuyện", bieuTuong: "☁", seLamO: "Phase 13" },
-  { ten: "Cài đặt", bieuTuong: "⚙", seLamO: "Phase 4" },
+  { ten: "Cài đặt", bieuTuong: "⚙", duongDan: "/cai-dat" },
 ];
 
 function MotMuc({ muc }: { muc: MucDieuHuong }) {
@@ -105,19 +107,39 @@ export function KhungTrang({
         </div>
 
         {emailNguoiDung ? (
-          <span
-            title={emailNguoiDung}
-            className="hidden shrink-0 text-xs text-neutral-500 sm:block dark:text-neutral-400"
-          >
-            {emailNguoiDung}
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span
+              title={emailNguoiDung}
+              className="hidden max-w-[180px] truncate text-xs text-neutral-500 sm:block dark:text-neutral-400"
+            >
+              {emailNguoiDung}
+            </span>
+            <form
+              action={async () => {
+                "use server";
+                await signOut({ redirectTo: "/" });
+              }}
+            >
+              <button
+                type="submit"
+                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                Đăng xuất
+              </button>
+            </form>
+          </div>
         ) : (
-          <Link
-            href="/dang-nhap"
-            className="shrink-0 rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
-          >
-            Đăng nhập
-          </Link>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="hidden text-xs text-neutral-400 md:block dark:text-neutral-500">
+              Đang xem với tư cách khách
+            </span>
+            <Link
+              href="/dang-nhap"
+              className="rounded-lg bg-neutral-900 px-3.5 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 dark:bg-neutral-100 dark:text-neutral-900"
+            >
+              Đăng nhập
+            </Link>
+          </div>
         )}
       </header>
 
