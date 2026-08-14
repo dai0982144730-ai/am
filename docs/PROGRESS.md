@@ -733,6 +733,33 @@ nào, đúng thứ cần bù nhất. Không báo lỗi gì cả, chỉ lặng l�
 Đã sửa: lấy blog và diễn đàn thành một lượt truy vấn riêng, không xếp thứ tự
 rồi cắt. Cứ phải dựa vào thứ tự enum là sớm muộn cũng sai.
 
+### Kết quả sau khi bù đúng nhóm
+
+Bài blog khoa học **hết cảnh hoà nhau ở 2,5 điểm**:
+
+| Điểm | Chất lượng | Bài |
+|---|---|---|
+| 4,9 | 0,85 | Why Aging May Be a Program, Not a Breakdown |
+| 4,5 | 0,75 | Scientists detect a nuclear reactor's ghostly afterglow |
+| 4,5 | 0,75 | Introducing OlmoEarth embeddings |
+| 4,1 | 0,65 | World's first superconducting quantum heat engine |
+| 3,7 | 0,55 | Neptune's tiny moons may be the wreckage |
+| 3,3 | 0,45 | Predict Antenna Coupling on Electrically Large Platforms |
+| 3,1 | 0,40 | JWST spots a bizarre "black hole star" |
+
+Thứ tự này đọc vào thấy hợp lý: bài có giả thuyết mới kèm hướng can thiệp đứng
+đầu, bài quảng cáo whitepaper và tin thiên văn ngắm cho vui xuống cuối.
+
+Với Khoa học để 90%, hàng thẻ giờ lấy đúng ba bài đầu bảng — trước khi sửa thì
+lấy nhầm hai bài cuối bảng, vì tất cả cùng 2,5 điểm nên thứ tự là ngẫu nhiên.
+
+**Một chỗ chưa hoàn hảo, ghi lại để sau xem**: nguồn diễn đàn (`forum_community`)
+có trọng số `contentQuality` bằng 0 nên điểm chất lượng mới không ảnh hưởng gì
+tới chúng — bài Hacker News được chấm 0,82 vẫn xếp dưới bài blog 0,75. Hiện
+chấp nhận được vì diễn đàn đã có trụ "thảo luận" (điểm và số bình luận) làm
+thước đo thay thế, đúng thiết kế. Nếu sau này thấy xếp sai thì chỗ cần sửa là
+`DEFAULT_WEIGHTS.forum_community` trong `scoring/normalize.ts`.
+
 ## Quyền sửa playlist — đã bật, chờ chủ dự án làm hai bước
 
 Đã thêm `.../auth/youtube` vào `QUYEN_XIN` trong `auth.ts`. Xin trong code là
