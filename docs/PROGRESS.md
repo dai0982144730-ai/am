@@ -17,9 +17,11 @@ pgvector đã bật, logic chấm điểm chất lượng đã viết. `npm run 
 3. Client gọi YouTube Data API kèm đếm quota (`QuotaUsageLog`)
 4. Lấy lời thoại video + phân loại bằng Claude
 
-## Phase 15 — Cổng API trợ lý: XONG (phần của `am`)
+## Phase 15 — Cổng API trợ lý: XONG và ĐÃ XÁC NHẬN CHẠY THẬT (phần của `am`)
 
-Sáu endpoint dưới `/api/v1/tro-ly/` đã viết xong, build sạch, đã thử chạy thật.
+Sáu endpoint dưới `/api/v1/tro-ly/` đã viết xong, build sạch, và **ngày
+2026-08-14 đã gọi thật cả sáu bằng token thật, kết nối database Neon thật** —
+xem mục "Xác nhận chạy thật" bên dưới.
 Tài liệu đầy đủ: **`docs/API-TRO-LY.md`** — kể cả mục "Ghi chú cho phiên làm app
 Android", là cầu nối sang giai đoạn 2.
 
@@ -70,10 +72,35 @@ thứ rất ít thay đổi) và không gộp monorepo (chủ dự án đã ch�
 - Chuẩn hoá giọng đọc: "AI" viết hoa → "ây ai", nhưng "ai" viết thường (từ tiếng
   Việt) giữ nguyên — đúng như thiết kế
 
-**Chưa kiểm chứng được**: `/tim-kiem`, `/noi-dung/{id}`, `/hoi`,
-`/tom-tat-hom-nay` mới chỉ chạy qua build và typecheck, chưa gọi với dữ liệu
-thật vì Phase 1 (quét YouTube) chưa chạy nên kho còn rỗng. `/hoi` cũng cần
-`ANTHROPIC_API_KEY` mà hiện chưa có.
+### Xác nhận chạy thật — 2026-08-14, máy văn phòng
+
+Đây là bước nghiệm thu cuối của Phase 15, phiên trước bị ngắt quãng chưa làm được.
+Đã chạy `npx prisma migrate deploy` (bảng `AssistantApiLog` có trên Neon), sinh
+`TOKEN_TRO_LY` điền vào `.env`, chạy `npm run dev` rồi gọi thật cả sáu endpoint:
+
+| Endpoint | Kết quả |
+|---|---|
+| `GET /suc-khoe` | 200, **`"database":"ok"`** — kết nối Neon thật thành công |
+| `GET /cong-cu` | 200, trả đúng định dạng `tools` của Claude API |
+| `POST /tim-kiem` | 200, `{"ketQua":[],"tongSo":0}` — kho rỗng, đúng như mong đợi |
+| `GET /noi-dung/{id}` | 404 + mã `khong_tim_thay` với id không tồn tại |
+| `POST /hoi` | 200, trả lời "kho chưa có nội dung nào liên quan" |
+| `GET /tom-tat-hom-nay` | 200, `tongSo: 0`, `tuBanTinDaSoan: false` |
+
+Xác thực: không token → 401 `thieu_token`; token bịa → 401 `token_sai`.
+
+Bảng `AssistantApiLog` đã ghi đúng mọi lần gọi, **nhãn token được che**
+(`9247a8…`) chứ không lưu nguyên giá trị.
+
+**Vẫn còn chưa kiểm chứng được**: đường gọi Claude API thật trong `/hoi`. Kho
+đang rỗng nên endpoint trả lời ngay mà không cần gọi Claude — nhánh code gọi
+Anthropic chỉ chạy khi có nội dung để đọc, tức là sau Phase 1.
+
+**Cạm bẫy gặp phải**: `src/generated/` không có trong Git (đúng thiết kế), nên
+sau khi clone hoặc khi thư mục đó bị mất, `npm run dev` lên được trang chủ nhưng
+mọi route API đều 500 với lỗi `Can't resolve '@/generated/prisma/client'`. Chạy
+`npx prisma generate` là hết. Đổi `.env` cũng phải khởi động lại dev server thì
+biến mới có hiệu lực.
 
 ## Cần chủ dự án chuẩn bị
 
@@ -84,8 +111,8 @@ thật vì Phase 1 (quét YouTube) chưa chạy nên kho còn rỗng. `/hoi` cũ
 | Khoá YouTube Data API v3 | ⬜ chưa | [console.cloud.google.com](https://console.cloud.google.com) → bật YouTube Data API v3 |
 | Google OAuth (đăng nhập) | ⬜ chưa | Cùng trang trên → Credentials → OAuth client ID. **Cần cho Phase 1** |
 | Whitelist tác giả/nguồn ban đầu | ⬜ chưa | Tác giả truyện, giảng sư, blog AI uy tín bạn đã biết |
-| Chạy `npx prisma migrate deploy` để tạo bảng `AssistantApiLog` | ⬜ chưa | **Đừng dùng `migrate dev`** — xem `docs/API-TRO-LY.md` |
-| Sinh `TOKEN_TRO_LY` điền vào `.env` | ⬜ chưa | Cần để gọi được Cổng API trợ lý |
+| Chạy `npx prisma migrate deploy` để tạo bảng `AssistantApiLog` | ✅ xong | Đã chạy trên máy văn phòng 2026-08-14 |
+| Sinh `TOKEN_TRO_LY` điền vào `.env` | ✅ xong | Đã có trên máy văn phòng. **Máy ở nhà phải tự sinh riêng** (`.env` không lên Git) |
 | Gửi repo `tiendo` / `phaply` khi có | ⬜ chưa | Để chép bộ `troLyChung` sang và đồng bộ chuẩn API |
 
 ## Chỗ để dữ liệu — hiện tại và về sau
@@ -202,6 +229,14 @@ xoá các dòng `DROP INDEX ..._vector_idx` → `migrate deploy`. Đã ghi rõ t
 - `docs/API-TRO-LY.md` + `docs/vi-du-goi-api.http`.
 - Đã chạy thật và kiểm chứng — chi tiết ở mục "Phase 15" phía trên.
 
+**Nghiệm thu Phase 15 — gọi thật cả sáu endpoint** *(phiên Claude Code desktop,
+tiếp nối phiên trên web bị ngắt quãng)*
+- Chạy `prisma migrate deploy`, sinh `TOKEN_TRO_LY`, khởi động lại dev server,
+  gọi thật cả sáu endpoint bằng token thật với database Neon — chi tiết ở mục
+  "Xác nhận chạy thật" phía trên. `"database":"ok"`.
+- Kiểm tra bảng `AssistantApiLog` trên Neon: ghi đủ mọi lần gọi, nhãn token
+  được che.
+
 **Ghi chú kỹ thuật mới học được**
 - Prisma 7 sinh enum thành kiểu union chặt (`ContentGroup`), truyền chuỗi thường
   vào là TypeScript báo lỗi. Cách sạch: viết hàm kiểm tra dạng "type guard" rồi
@@ -215,3 +250,10 @@ xoá các dòng `DROP INDEX ..._vector_idx` → `migrate deploy`. Đã ghi rõ t
   không phân biệt hoa thường thì câu "ai cũng biết" bị đọc thành "ây ai cũng
   biết". Và `\b` của biểu thức chính quy không hiểu nguyên âm có dấu, nên phải
   tự liệt kê bảng chữ cái tiếng Việt.
+- Thiếu `src/generated/` thì trang chủ vẫn lên nhưng **mọi route API 500**. Chạy
+  `npx prisma generate` là xong. Đây là hệ quả cố ý của việc không đưa code
+  Prisma tự sinh lên Git.
+- Script chạy bằng `npx tsx` phải tự `import "dotenv/config"` ở dòng đầu, khác
+  với code trong Next.js được framework nạp `.env` sẵn. Và `tsx` ở dự án này
+  biên dịch ra CommonJS nên **không dùng được `await` ở cấp cao nhất** — phải
+  bọc trong `async function main()`.
