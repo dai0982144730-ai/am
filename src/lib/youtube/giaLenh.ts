@@ -19,6 +19,13 @@ export const GIA_LENH = {
   "playlistItems.list": 1,
   "subscriptions.list": 1,
   "commentThreads.list": 1,
+
+  // Lệnh ghi — đắt gấp 50 lần lệnh đọc. Đây là một lý do nữa để mọi thao tác
+  // ghi phải qua duyệt: bấm bừa mười cái là mất 500 đơn vị, bằng năm lần tìm
+  // kiếm, trong khi kết quả lại là thay đổi thật trên tài khoản YouTube.
+  "playlists.insert": 50,
+  "playlistItems.insert": 50,
+  "playlistItems.delete": 50,
 } as const;
 
 export type TenLenh = keyof typeof GIA_LENH;

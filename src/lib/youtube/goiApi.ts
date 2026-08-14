@@ -150,6 +150,80 @@ export async function goiYouTube<T>(
   return (await phanHoi.json()) as T;
 }
 
+/**
+ * Gọi một lệnh **ghi** — tạo playlist, thêm/gỡ video khỏi playlist.
+ *
+ * TÁCH RIÊNG KHỎI `goiYouTube` CÓ CHỦ ĐÍCH. Đây là những lệnh thay đổi thật
+ * tài khoản YouTube của chủ nhà, không phải chỉ đọc về. Để chung một hàm với
+ * lệnh đọc thì rất dễ có ngày gọi nhầm mà không ai nhận ra khi đọc code.
+ *
+ * Luôn dùng token đăng nhập — không có kiểu ghi bằng khoá API.
+ *
+ * **Chỉ được gọi từ `playlist/apDung.ts`**, tức là sau khi người dùng đã bấm
+ * duyệt từng việc một. Không gọi thẳng từ chỗ nào khác.
+ */
+export async function ghiYouTube<T>(
+  lenh: TenLenh,
+  duongDan: string,
+  thamSo: Record<string, string | number | undefined>,
+  than: unknown,
+  phuongThuc: "POST" | "DELETE" = "POST",
+): Promise<T> {
+  const kiemTra = await conGoiDuoc(lenh);
+  if (!kiemTra.duoc) throw new HetHanMuc(lenh, kiemTra.tinhHinh);
+
+  const url = new URL(`${GOC}/${duongDan}`);
+  for (const [ten, giaTri] of Object.entries(thamSo)) {
+    if (giaTri !== undefined && giaTri !== "") {
+      url.searchParams.set(ten, String(giaTri));
+    }
+  }
+
+  const phanHoi = await fetch(url, {
+    method: phuongThuc,
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${await layAccessToken()}`,
+      ...(than ? { "Content-Type": "application/json" } : {}),
+    },
+    ...(than ? { body: JSON.stringify(than) } : {}),
+  });
+
+  void ghiNhanDaDung(lenh).catch((loi) =>
+    console.error("[youtube] Không ghi được hạn mức đã dùng:", loi),
+  );
+
+  if (!phanHoi.ok) {
+    let loi: LoiTuGoogle = {};
+    try {
+      loi = (await phanHoi.json()) as LoiTuGoogle;
+    } catch {
+      // Google thỉnh thoảng trả HTML khi lỗi hạ tầng
+    }
+
+    // Thiếu quyền ghi là lỗi hay gặp nhất ở đây, và thông báo gốc của Google
+    // ("Request had insufficient authentication scopes") không giúp gì cho
+    // người không phải lập trình viên
+    if (phanHoi.status === 403 || phanHoi.status === 401) {
+      const lyDo = loi.error?.errors?.[0]?.reason;
+      if (lyDo === "insufficientPermissions" || lyDo === "forbidden") {
+        throw new LoiYouTube(
+          "Tài khoản chưa cấp quyền sửa playlist. Vào trang Playlist bấm " +
+            "'Cấp quyền sửa playlist' rồi đăng nhập lại.",
+          phanHoi.status,
+          lyDo,
+        );
+      }
+    }
+
+    throw dichLoi(phanHoi.status, loi);
+  }
+
+  // Lệnh xoá trả về thân rỗng
+  if (phuongThuc === "DELETE") return undefined as T;
+  return (await phanHoi.json()) as T;
+}
+
 /** Khung phản hồi chung của mọi lệnh "list". */
 export interface TrangKetQua<T> {
   items?: T[];

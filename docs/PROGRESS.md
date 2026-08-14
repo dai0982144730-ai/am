@@ -15,6 +15,7 @@
 | **4c** — Chuyên mục New | ✅ xong, gõ từ khoá là đêm tự tìm |
 | **7a** — Thư viện cá nhân | ✅ xong, thư mục tự đặt tên + trạng thái đọc |
 | **8** — Ghi chú khi xem | ✅ xong, gõ hoặc nói, Claude tự xếp ngăn |
+| **7b** — Playlist YouTube | ✅ xong phần đề xuất & duyệt; ghi thật cần cấp thêm quyền |
 | **5** — Trình phát & nhớ chỗ dở | ✅ xong, đồng bộ máy tính ↔ điện thoại |
 | **10** — Bản tin hằng sáng | ✅ xong, Claude viết bằng giọng trò chuyện |
 | **Tự chạy** | ✅ một lệnh làm đủ 8 bước, hẹn giờ 21:00 |
@@ -623,6 +624,86 @@ ra file thường — nay nằm ở `trangThai.ts`.
 Đây là cái bẫy chung, không riêng gì thư viện: đã gặp đúng kiểu này ở
 `quanTam/giaTuKhoa.ts` (tách hằng số cho trình duyệt đọc được mà không kéo theo
 prisma). Thêm hằng số vào file `"use server"` là hỏng ngay.
+
+## Phase 7b — Playlist YouTube: XONG phần đề xuất, ghi thật chờ cấp quyền
+
+File: `src/lib/playlist/dongBo.ts` (đọc), `deXuat.ts` (Claude đề xuất),
+`apDung.ts` (**chỗ duy nhất ghi thật**), `actions.ts`,
+`src/components/BangPlaylist.tsx`, `src/app/playlist/page.tsx`,
+`scripts/de-xuat-playlist.ts`.
+
+### Một chỗ lệch với bản thiết kế — đã chọn theo CLAUDE.md
+
+`plan.md` (nguyên tắc 3) từng nói thêm video và tạo playlist mới thì **cho tự
+động** vì gỡ ra dễ; chỉ di chuyển và gỡ bỏ mới chờ duyệt.
+
+`CLAUDE.md` thì nói **"Không bao giờ tự động"** với mọi thao tác ghi ra thế
+giới thật. Chú thích trong `schema.prisma` cũng vậy: *"Trợ lý CHỈ đề xuất."*
+
+Đã làm theo `CLAUDE.md`: **mọi thao tác ghi đều chờ duyệt.** Lý do thực tế:
+"gỡ ra dễ" chỉ đúng khi biết là nó đã thêm vào. Trợ lý tự thêm mười video vào
+playlist lúc 21:00 thì sáng hôm sau mở YouTube ra thấy playlist lạ hoắc, phải
+đi tìm xem cái nào là của mình.
+
+### Duyệt và ghi là hai nút khác nhau
+
+Bấm **"Duyệt"** chỉ ghi lại ý định — chưa có gì thay đổi trên YouTube. Phải bấm
+tiếp **"Ghi lên YouTube"** mới thật sự chạm vào tài khoản. Gộp lại một nút thì
+một cú bấm nhầm là xong chuyện, mà đây là thứ duy nhất trong cả web này chạm
+được ra thế giới thật.
+
+`apDung.ts` cố ý viết ngắn và khó gọi nhầm: chỉ nhận id của một đề xuất **đang
+ở trạng thái đã duyệt**, mỗi lần làm đúng một việc, không có chế độ hàng loạt.
+Trong file đó **không có hàm nào gọi `playlists.delete`, và đừng thêm vào** —
+thêm video hay tạo playlist thì gỡ ra được, xoá cả playlist thì không.
+
+Playlist do trợ lý tạo luôn để **riêng tư**. Playlist máy tạo mà công khai thì
+hoá ra trợ lý tự đăng thứ gì đó lên trang cá nhân của chủ nhà.
+
+### Chưa ghi thật được — thiếu quyền, và đó là cố ý
+
+Tài khoản hiện chỉ cấp `youtube.readonly`. Ghi playlist cần thêm
+`https://www.googleapis.com/auth/youtube` (đã khai sẵn ở
+`tokenGoogle.ts` là `QUYEN_SUA_PLAYLIST`, **chưa bật** trong `auth.ts`).
+
+Muốn bật, ba bước, và bước giữa phải làm bằng tay:
+
+1. Thêm `QUYEN_SUA_PLAYLIST` vào `QUYEN_XIN` trong `src/auth.ts`
+2. Vào Google Cloud → màn hình xin quyền của dự án → khai thêm quyền đó.
+   **Google chỉ cấp những quyền đã khai sẵn ở đây**, code có xin thêm cũng bị
+   bỏ qua — đây là cái bẫy đã vấp một lần hồi Phase 1
+3. Đăng xuất rồi đăng nhập lại
+
+Trang `/playlist` tự biết đang thiếu quyền và hiện cảnh báo vàng trước, thay vì
+để người dùng bấm rồi mới gặp lỗi khó hiểu của Google.
+
+### Đã chạy thật (2026-08-15)
+
+Đọc về **27 playlist thật**. Có sẵn mấy cái khớp hẳn với bốn chuyên mục:
+`0 AI` (57 video), `Truyện`, `1 NHẠC BPM`, `2 GUITAR`.
+
+**Lần chạy đầu lộ ra một lỗi thiết kế.** Khâu chọn ứng viên lọc theo điểm ≥ 6
+trên toàn kho, và cả ba ứng viên lọt ra đều là video chính trị/tôn giáo nhóm
+"khác", trong khi 12 video AI đã phân loại thì trượt vì điểm thấp hơn. Đây
+đúng cái bẫy mà bản tin hằng sáng đã tránh: điểm được chuẩn hoá **trong cùng
+loại nguồn**, nên video chuyên môn ít lượt xem luôn thua video thời sự nhiều
+view. Đã sửa: chỉ lấy bốn chuyên mục chính (cộng thứ đã cất thư viện), bỏ hẳn
+nhóm "khác".
+
+Sau khi sửa — xét 10 video, **đề xuất 3, bỏ qua 7**:
+
+| Video | Đề xuất | Lý do Claude viết |
+|---|---|---|
+| Trần Quốc Huy — AI Agent làm sai | `0 AI` | *"đúng trọng tâm playlist AI, nội dung có chiều sâu thực tế"* |
+| Tổ điều tra bí ẩn — Hồng môn yến 2 | `Truyện` | *"khớp thẳng… Điểm chất lượng khá thấp (4.9/10) do văn phong rập khuôn nên chủ nhà có thể cân nhắc khi duyệt"* |
+| HỒN MẸ GIỮ ĐẤT | `Truyện` | *"Điểm chỉ 4.8/10 và tình tiết mòn nên nếu muốn có thể cân nhắc bỏ qua"* |
+
+Đáng chú ý: nó **tự nói ra điểm yếu của thứ chính nó đề xuất**, chứ không cố
+bán. Và bỏ qua 7/10 — không đề xuất bừa.
+
+**Ba playlist đang bật cho trợ lý sắp xếp** (`0 AI`, `Truyện`, `1 NHẠC BPM`) và
+**ba đề xuất đang chờ duyệt**. Chưa có gì được ghi lên YouTube. Không muốn thì
+vào `/playlist` bấm tắt hoặc bấm "Bỏ".
 
 ## Phase 8 — Ghi chú khi xem: XONG
 

@@ -29,6 +29,19 @@ export class ChuaKetNoiYouTube extends Error {
 export const QUYEN_YOUTUBE = "https://www.googleapis.com/auth/youtube.readonly";
 
 /**
+ * Quyền để **sửa** playlist thật — tạo playlist, thêm/gỡ video.
+ *
+ * TÁCH RIÊNG KHỎI QUYỀN ĐỌC CÓ CHỦ ĐÍCH. Đọc thì vô hại; sửa thì thay đổi tài
+ * khoản YouTube thật của chủ nhà. Xin gộp một lần ngay từ đầu thì tiện cho code
+ * nhưng người dùng mất khả năng nói "cho đọc thôi, đừng đụng vào".
+ *
+ * Chưa được bật trong `auth.ts`. Muốn bật thì thêm hằng số này vào `QUYEN_XIN`,
+ * khai thêm quyền tương ứng trong màn hình xin quyền của dự án trên Google
+ * Cloud, rồi đăng nhập lại — Google chỉ cấp những quyền đã khai sẵn ở đó.
+ */
+export const QUYEN_SUA_PLAYLIST = "https://www.googleapis.com/auth/youtube";
+
+/**
  * Lời nhắc khi đăng nhập được nhưng Google không cấp quyền YouTube.
  *
  * Đây là cái bẫy đã vấp một lần: Google chỉ cấp những quyền đã khai sẵn trong
