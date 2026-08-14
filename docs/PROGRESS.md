@@ -713,6 +713,26 @@ Nội dung phân loại từ trước không có trường này. `scripts/bu-die
 bù dần, ưu tiên blog và diễn đàn — chỗ thiếu nó thì hỏng hẳn, còn video YouTube
 vẫn còn ba trụ kia nên chỉ hơi kém chính xác.
 
+Claude chấm có phân biệt thật, dải rộng từ 0,10 tới 0,72 trong một lượt 16 mục:
+
+| Điểm | Nội dung |
+|---|---|
+| 0,72 | *"CÁCH CHỌN NGƯỜI CÓ ĐỨC ĐỂ KẾT GIAO – Nhìn 5 Điều Này"* |
+| 0,50 | *"LBMA dự báo sốc: Vàng cuối năm quanh 4.500 USD"* |
+| 0,25 | *"Gan nhiễm mỡ nên ăn gì?"* |
+| 0,10 | *"MHN Phản Tố Chuyên Án Măng Đen… Dũng Mẹt Tuyên Bố"* |
+
+### Một cái bẫy của Postgres, vấp ngay lượt chạy đầu
+
+Bản đầu của script bù dùng `orderBy: { source: { type: "asc" } }`, tưởng sẽ đưa
+`blog_feed` lên trước `youtube_channel` theo bảng chữ cái. **Postgres sắp xếp
+kiểu enum theo thứ tự KHAI BÁO trong schema**, mà `youtube_channel` khai đầu
+tiên — nên lượt chạy đầu bù cho 16 video YouTube và không đụng tới bài blog
+nào, đúng thứ cần bù nhất. Không báo lỗi gì cả, chỉ lặng lẽ làm sai việc.
+
+Đã sửa: lấy blog và diễn đàn thành một lượt truy vấn riêng, không xếp thứ tự
+rồi cắt. Cứ phải dựa vào thứ tự enum là sớm muộn cũng sai.
+
 ## Quyền sửa playlist — đã bật, chờ chủ dự án làm hai bước
 
 Đã thêm `.../auth/youtube` vào `QUYEN_XIN` trong `auth.ts`. Xin trong code là

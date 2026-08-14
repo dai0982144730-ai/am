@@ -23,26 +23,52 @@ import { phanLoaiMotNoiDung } from "../src/lib/llm/phanLoai";
 async function main() {
   const soToiDa = Number(process.argv[2]) || 20;
 
-  const canBu = await prisma.contentItem.findMany({
+  // Lấy blog và diễn đàn thành MỘT LƯỢT RIÊNG, không xếp thứ tự rồi cắt.
+  //
+  // Đã vấp: bản đầu dùng `orderBy: { source: { type: "asc" } }` tưởng sẽ đưa
+  // "blog_feed" lên trước "youtube_channel" theo bảng chữ cái. Nhưng Postgres
+  // sắp xếp kiểu enum theo **thứ tự khai báo trong schema**, mà
+  // `youtube_channel` khai đầu tiên — nên nó chạy 16 video YouTube và không
+  // đụng tới bài blog nào, đúng thứ cần bù nhất.
+  const dieuKienThieu = {
+    status: "classified" as const,
+    classification: { isNot: null, is: { contentQualityScore: null } },
+  };
+
+  const truongCanLay = {
+    id: true,
+    title: true,
+    description: true,
+    durationSeconds: true,
+    source: { select: { title: true, type: true } },
+    transcript: { select: { rawText: true, fetchStatus: true } },
+  };
+
+  const uuTien = await prisma.contentItem.findMany({
     where: {
-      status: "classified",
-      classification: { isNot: null, is: { contentQualityScore: null } },
+      ...dieuKienThieu,
+      source: { type: { in: ["blog_feed", "forum_community"] } },
     },
-    orderBy: [
-      // Blog và diễn đàn trước — đó là chỗ thiếu điểm này thì hỏng hẳn
-      { source: { type: "asc" } },
-      { publishedAt: "desc" },
-    ],
+    orderBy: { publishedAt: "desc" },
     take: soToiDa,
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      durationSeconds: true,
-      source: { select: { title: true, type: true } },
-      transcript: { select: { rawText: true, fetchStatus: true } },
-    },
+    select: truongCanLay,
   });
+
+  const conThieu = soToiDa - uuTien.length;
+  const phanConLai =
+    conThieu > 0
+      ? await prisma.contentItem.findMany({
+          where: {
+            ...dieuKienThieu,
+            source: { type: { notIn: ["blog_feed", "forum_community"] } },
+          },
+          orderBy: { publishedAt: "desc" },
+          take: conThieu,
+          select: truongCanLay,
+        })
+      : [];
+
+  const canBu = [...uuTien, ...phanConLai];
 
   if (canBu.length === 0) {
     console.log("Mọi nội dung đã có điểm chất lượng.");
