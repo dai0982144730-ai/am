@@ -29,6 +29,15 @@ const QUYEN_XIN = [
   "email",
   "profile",
   "https://www.googleapis.com/auth/youtube.readonly",
+  // Quyền SỬA playlist — chủ dự án bật 2026-08-15 để phần đề xuất playlist
+  // ghi được lên tài khoản thật.
+  //
+  // Xin thêm quyền ở đây là CHƯA ĐỦ: Google chỉ cấp những quyền đã khai sẵn
+  // trong màn hình xin quyền của dự án trên Google Cloud. Thiếu bước khai đó
+  // thì đăng nhập vẫn thành công nhưng token không có quyền, và mãi tới lúc
+  // bấm "Ghi lên YouTube" mới lộ ra. Đã vấp đúng kiểu này hồi Phase 1 với
+  // quyền đọc.
+  "https://www.googleapis.com/auth/youtube",
 ].join(" ");
 
 /** Id cố định của dòng duy nhất trong bảng `GoogleAccount`. */

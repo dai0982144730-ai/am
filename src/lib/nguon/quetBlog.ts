@@ -65,7 +65,14 @@ export async function dungDanhSachNguon(): Promise<{
         title: nguon.ten,
         reputationTier: nguon.tangUyTin as SourceReputationTier,
         contentGroupHint: nguon.nhomGoiY,
-        subscriptionStatus: "subscribed",
+        // "Chưa theo dõi" — chủ dự án chốt 2026-08-15. Mười ba nguồn khởi đầu
+        // này do máy thêm vào chứ chủ nhà chưa từng chọn, nên chúng phải cạnh
+        // tranh trong phần dành cho nguồn mới như mọi nguồn lạ khác, chứ không
+        // được mặc nhiên coi là đáng tin.
+        //
+        // Chỉ đặt lúc TẠO. Nguồn nào chủ nhà tự tay nâng lên "đã theo dõi" thì
+        // lần quét sau không được hạ xuống lại.
+        subscriptionStatus: "not_subscribed",
       },
       update: {
         title: nguon.ten,

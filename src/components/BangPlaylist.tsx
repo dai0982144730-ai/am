@@ -75,8 +75,22 @@ export function BangPlaylist({
           </p>
           <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
             Vẫn xem được playlist và đọc đề xuất, nhưng bấm &ldquo;Ghi lên
-            YouTube&rdquo; sẽ báo lỗi. Muốn ghi thật thì phải cấp thêm quyền sửa
-            playlist rồi đăng nhập lại — xem `docs/PROGRESS.md`, mục Phase 7b.
+            YouTube&rdquo; sẽ báo lỗi. Ứng dụng <strong>đã xin</strong> quyền
+            sửa playlist rồi, còn thiếu hai bước bạn phải tự làm:
+          </p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-amber-700 dark:text-amber-400">
+            <li>
+              Vào <code>console.cloud.google.com</code> → APIs &amp; Services →
+              OAuth consent screen → Data Access → Add or Remove Scopes, lọc
+              theo <code>youtube</code> và tick dòng{" "}
+              <code>.../auth/youtube</code> (dòng không có đuôi{" "}
+              <code>.readonly</code>), rồi Update và Save.
+            </li>
+            <li>Đăng xuất khỏi Am rồi đăng nhập lại.</li>
+          </ol>
+          <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+            Google chỉ cấp những quyền đã khai sẵn ở màn hình đó — thiếu bước 1
+            thì đăng nhập lại bao nhiêu lần cũng không có quyền.
           </p>
         </div>
       ) : null}

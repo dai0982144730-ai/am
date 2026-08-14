@@ -11,6 +11,7 @@
  *   1. Quét video mới từ các kênh YouTube đã đăng ký
  *   2. Quét bài mới từ blog và diễn đàn AI
  *   3. Tìm theo từ khoá đang quan tâm (chuyên mục "New")
+ *   3b. Đi tìm ngoài vùng đã theo dõi, theo chủ đề rút từ thứ chấm điểm cao
  *   4. Lấy lời thoại cho video mới (nhạc được bỏ qua từ bước 1)
  *   5. Nhờ Claude phân loại vào chuyên mục
  *   6. Thuật lại bài nước ngoài sang tiếng Việt
@@ -28,6 +29,7 @@ import { phanLoaiHangLoat } from "@/lib/llm/luuPhanLoai";
 import { thuatLaiHangLoat } from "@/lib/llm/luuThuatLai";
 import { quetBlog } from "@/lib/nguon/quetBlog";
 import { ganNhanHangLoat } from "@/lib/ghiChu/ganNhan";
+import { timNguonMoi } from "@/lib/khamPha/timNguonMoi";
 import { quetTuKhoaQuanTam } from "@/lib/quanTam/quetTuKhoa";
 import { chamDiemHangLoat } from "@/lib/scoring/chamDiem";
 import { chayVongHai } from "@/lib/scoring/vongHaiBinhLuan";
@@ -59,6 +61,8 @@ export const GIOI_HAN_MOI_DEM = {
   soDocBinhLuan: 20,
   /** Số ghi chú được Claude gắn nhãn */
   soGanNhan: 30,
+  /** Số chủ đề đem đi tìm ngoài vùng đã theo dõi. Mỗi chủ đề tốn 101 đơn vị. */
+  soChuDeTuTim: 6,
 } as const;
 
 export interface KetQuaMotBuoc {
@@ -180,6 +184,31 @@ export async function quetDem(
           `${kq.cacTuKhoa.length} từ khoá, thêm ${kq.tongThemMoi} nội dung, ` +
           `tiêu ${kq.hanMucDaTieu} đơn vị hạn mức` +
           (hong ? `, ${hong} từ lỗi` : "")
+        );
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước 2c: đi tìm ngoài vùng đã theo dõi -----
+  //
+  // Xếp SAU cả quét kênh lẫn từ khoá chủ nhà tự gõ, và đó là thứ tự đúng khi
+  // hạn mức eo hẹp: kênh đã theo dõi là việc chính, từ khoá chủ nhà gõ là thứ
+  // họ chủ động muốn, còn phần máy tự đi tìm là thứ hy sinh được.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Tìm nội dung ngoài vùng đã theo dõi",
+      async () => {
+        const kq = await timNguonMoi(GIOI_HAN_MOI_DEM.soChuDeTuTim);
+        if (kq.cacChuDe.length === 0) {
+          return "chưa đủ nội dung điểm cao để rút ra chủ đề";
+        }
+        const loc = kq.cacChuDe.reduce((t, c) => t + c.soBiLoc, 0);
+        return (
+          `${kq.cacChuDe.length} chủ đề, thêm ${kq.tongThemMoi} nội dung từ ` +
+          `${kq.tongKenhMoi} kênh mới, lọc bỏ ${loc}, ` +
+          `tiêu ${kq.hanMucDaTieu} đơn vị hạn mức` +
+          (kq.soNguonBiBo ? `, bỏ qua ${kq.soNguonBiBo} nguồn từng bị chê` : "")
         );
       },
       bao,

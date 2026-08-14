@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { BangPlaylist } from "@/components/BangPlaylist";
 import { KhungTrang } from "@/components/KhungTrang";
 import { prisma } from "@/lib/db/prisma";
-import { QUYEN_SUA_PLAYLIST } from "@/lib/youtube/tokenGoogle";
+import { coQuyenSuaPlaylist } from "@/lib/youtube/tokenGoogle";
 import { ID_TAI_KHOAN } from "@/auth";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +61,7 @@ export default async function TrangPlaylist() {
     }),
   ]);
 
-  const coQuyenGhi = Boolean(taiKhoan?.scope?.includes(QUYEN_SUA_PLAYLIST));
+  const coQuyenGhi = coQuyenSuaPlaylist(taiKhoan?.scope ?? null);
 
   return (
     <KhungTrang emailNguoiDung={phien?.user?.email}>

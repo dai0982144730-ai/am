@@ -35,11 +35,29 @@ export const QUYEN_YOUTUBE = "https://www.googleapis.com/auth/youtube.readonly";
  * khoản YouTube thật của chủ nhà. Xin gộp một lần ngay từ đầu thì tiện cho code
  * nhưng người dùng mất khả năng nói "cho đọc thôi, đừng đụng vào".
  *
- * Chưa được bật trong `auth.ts`. Muốn bật thì thêm hằng số này vào `QUYEN_XIN`,
- * khai thêm quyền tương ứng trong màn hình xin quyền của dự án trên Google
- * Cloud, rồi đăng nhập lại — Google chỉ cấp những quyền đã khai sẵn ở đó.
+ * **Đã bật trong `auth.ts` ngày 2026-08-15** theo quyết định của chủ dự án.
+ * Nhưng xin trong code là chưa đủ: phải khai thêm quyền này trong màn hình xin
+ * quyền của dự án trên Google Cloud rồi đăng nhập lại — Google chỉ cấp những
+ * quyền đã khai sẵn ở đó, code có xin thêm cũng bị bỏ qua trong im lặng.
  */
 export const QUYEN_SUA_PLAYLIST = "https://www.googleapis.com/auth/youtube";
+
+/**
+ * Token có quyền sửa playlist không.
+ *
+ * PHẢI TÁCH CHUỖI RỒI SO TỪNG PHẦN, KHÔNG ĐƯỢC DÙNG `includes`. Chuỗi quyền
+ * Google trả về là các quyền nối nhau bằng dấu cách, mà quyền đọc
+ * `.../auth/youtube.readonly` **chứa nguyên** chuỗi `.../auth/youtube` bên
+ * trong. Dùng `includes` thì tài khoản chỉ có quyền đọc vẫn bị báo là có quyền
+ * ghi — và cảnh báo trên trang Playlist không bao giờ hiện ra, người dùng bấm
+ * rồi mới gặp lỗi khó hiểu của Google.
+ *
+ * Đã dính đúng lỗi này lúc mới viết trang Playlist.
+ */
+export function coQuyenSuaPlaylist(chuoiQuyen: string | null): boolean {
+  if (!chuoiQuyen) return false;
+  return chuoiQuyen.split(/\s+/).includes(QUYEN_SUA_PLAYLIST);
+}
 
 /**
  * Lời nhắc khi đăng nhập được nhưng Google không cấp quyền YouTube.
