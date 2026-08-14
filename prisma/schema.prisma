@@ -244,6 +244,8 @@ enum DigestTrigger {
 enum RunStatus {
   running
   success
+  /// Vài bước hỏng nhưng phần còn lại vẫn chạy — kho vẫn đầy thêm
+  partial
   failed
 }
 

@@ -20,7 +20,7 @@ interface MucDieuHuong {
 
 const NHOM_CHINH: MucDieuHuong[] = [
   { ten: "Trang chủ", bieuTuong: "⌂", duongDan: "/" },
-  { ten: "Khám phá", bieuTuong: "⌕", seLamO: "Phase 4b" },
+  { ten: "Khám phá", bieuTuong: "⌕", duongDan: "/kham-pha" },
   { ten: "New", bieuTuong: "✦", seLamO: "Phase 4c" },
   { ten: "Đang phát", bieuTuong: "▶", seLamO: "Phase 5" },
 ];
@@ -97,14 +97,14 @@ export function KhungTrang({
           Am
         </Link>
 
-        <div className="mx-auto w-full max-w-xl">
+        <form action="/kham-pha" className="mx-auto w-full max-w-xl">
           <input
             type="search"
-            disabled
-            placeholder="Tìm trong nội dung đã quét… (Phase 4b)"
-            className="w-full rounded-full border border-neutral-200 bg-neutral-50 px-4 py-1.5 text-sm text-neutral-500 placeholder:text-neutral-400 dark:border-neutral-800 dark:bg-neutral-900"
+            name="q"
+            placeholder="Tìm trong nội dung đã quét…"
+            className="w-full rounded-full border border-neutral-200 bg-neutral-50 px-4 py-1.5 text-sm placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none dark:border-neutral-800 dark:bg-neutral-900"
           />
-        </div>
+        </form>
 
         {emailNguoiDung ? (
           <div className="flex shrink-0 items-center gap-2">

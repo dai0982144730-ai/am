@@ -1,0 +1,21 @@
+-- Thêm trạng thái "chạy được một phần" cho job nền.
+--
+-- Việc quét đêm gồm bảy bước. Nguyên tắc là một bước hỏng không được làm chết
+-- cả đêm — mạng chập chờn, YouTube đổi API, hết hạn mức đều là chuyện thường.
+-- Nên cần phân biệt ba tình huống khác nhau:
+--
+--   success  — cả bảy bước đều xong
+--   partial  — vài bước hỏng nhưng phần còn lại vẫn chạy, kho vẫn đầy thêm
+--   failed   — hỏng hẳn, không làm được gì
+--
+-- Gộp "partial" vào "failed" sẽ khiến mỗi sáng nhìn nhật ký tưởng đêm qua công
+-- cốc, trong khi thực ra chỉ một bước vấp.
+--
+-- Migration này viết tay thay vì để `prisma migrate dev` sinh ra, vì lệnh đó
+-- luôn kèm hai dòng DROP INDEX xoá mất chỉ mục HNSW của pgvector. Xem CLAUDE.md,
+-- mục "Cạm bẫy đã gặp".
+--
+-- Chỉ thêm một giá trị vào enum, không đụng bảng nào — chạy `migrate deploy`
+-- an toàn tuyệt đối.
+
+ALTER TYPE "RunStatus" ADD VALUE IF NOT EXISTS 'partial';
