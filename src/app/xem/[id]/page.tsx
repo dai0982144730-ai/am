@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
 import { DanhGiaCamXuc } from "@/components/DanhGiaCamXuc";
+import { DanhSachGhiChu } from "@/components/DanhSachGhiChu";
 import { KhungTrang } from "@/components/KhungTrang";
 import { NutLuuThuVien } from "@/components/NutLuuThuVien";
+import { ONhapGhiChu } from "@/components/ONhapGhiChu";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
 import { TrinhPhatYouTube } from "@/components/TrinhPhatYouTube";
 import { prisma } from "@/lib/db/prisma";
@@ -25,6 +27,19 @@ function docThoiLuong(giay: number | null): string | null {
   const phut = Math.floor((giay % 3600) / 60);
   const haiSo = (n: number) => String(n).padStart(2, "0");
   return gio > 0 ? `${gio} giờ ${haiSo(phut)} phút` : `${phut} phút`;
+}
+
+/**
+ * Đọc mảng nhãn ra khỏi cột JSON.
+ *
+ * Cột `autoTags` khai kiểu `Json` nên Prisma trả về `unknown` — có thể là mảng
+ * chuỗi, có thể là bất cứ thứ gì nếu ai đó từng ghi nhầm vào. Kiểm tra thật
+ * thay vì ép kiểu, vì một bản ghi hỏng không được làm chết cả trang xem.
+ */
+function docNhan(tho: unknown): string[] | null {
+  if (!Array.isArray(tho)) return null;
+  const nhan = tho.filter((n): n is string => typeof n === "string");
+  return nhan.length > 0 ? nhan : null;
 }
 
 const TEN_NHOM: Record<string, string> = {
@@ -54,6 +69,19 @@ export default async function TrangXem({
         transcript: { select: { rawText: true, fetchStatus: true } },
         externalDiscussions: true,
         libraryItem: { select: { id: true } },
+        notes: {
+          orderBy: [{ timestampSeconds: "asc" }, { createdAt: "asc" }],
+          select: {
+            id: true,
+            rawText: true,
+            timestampSeconds: true,
+            autoTags: true,
+            userCorrectedTags: true,
+            noteType: true,
+            inputType: true,
+            createdAt: true,
+          },
+        },
       },
     }),
   ]);
@@ -235,6 +263,25 @@ export default async function TrangXem({
                   nguyên văn. Phần giọng đọc sẽ có khi cấu hình xong TTS.
                 </p>
               </section>
+            ) : null}
+
+            {laChu ? (
+              <>
+                <ONhapGhiChu idNoiDung={muc.id} laChu={laChu} />
+                <DanhSachGhiChu
+                  laChu={laChu}
+                  cacGhiChu={muc.notes.map((g) => ({
+                    id: g.id,
+                    chu: g.rawText,
+                    giay: g.timestampSeconds,
+                    // Nhãn người dùng sửa tay được ưu tiên hơn nhãn máy đoán
+                    nhan: docNhan(g.userCorrectedTags) ?? docNhan(g.autoTags) ?? [],
+                    loai: g.noteType,
+                    bangGiongNoi: g.inputType === "voice",
+                    luc: g.createdAt,
+                  }))}
+                />
+              </>
             ) : null}
 
             <DanhGiaCamXuc

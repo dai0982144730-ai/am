@@ -25,6 +25,7 @@ import {
   ghiSuKien,
   moPhien,
 } from "@/lib/tieuThu/actions";
+import { dangKyNguonViTri } from "@/lib/tieuThu/viTriHienTai";
 
 /** Bao lâu ghi tiến độ một lần, tính bằng mili giây. */
 const NHIP_GHI_MS = 10_000;
@@ -33,6 +34,8 @@ const NHIP_GHI_MS = 10_000;
 interface TrinhPhat {
   getCurrentTime(): number;
   getDuration(): number;
+  seekTo(giay: number, chinhXac: boolean): void;
+  playVideo(): void;
   destroy(): void;
 }
 
@@ -169,6 +172,15 @@ export function TrinhPhatYouTube({
       const yt = await napThuVien();
       if (daHuy || !oChua.current) return;
 
+      // Cho ô ghi chú hỏi giờ và tua — hai nửa của việc gắn mốc thời gian
+      dangKyNguonViTri(
+        () => trinhPhat.current?.getCurrentTime() ?? 0,
+        (giay) => {
+          trinhPhat.current?.seekTo(giay, true);
+          trinhPhat.current?.playVideo();
+        },
+      );
+
       trinhPhat.current = new yt.Player(oChua.current, {
         videoId: maVideo,
         host: "https://www.youtube-nocookie.com",
@@ -264,6 +276,7 @@ export function TrinhPhatYouTube({
       window.clearInterval(nhip);
       window.removeEventListener("pagehide", luocRoiTrang);
       luocRoiTrang();
+      dangKyNguonViTri(null);
       trinhPhat.current?.destroy();
       trinhPhat.current = null;
     };

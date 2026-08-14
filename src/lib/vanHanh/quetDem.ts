@@ -27,6 +27,7 @@ import { prisma } from "@/lib/db/prisma";
 import { phanLoaiHangLoat } from "@/lib/llm/luuPhanLoai";
 import { thuatLaiHangLoat } from "@/lib/llm/luuThuatLai";
 import { quetBlog } from "@/lib/nguon/quetBlog";
+import { ganNhanHangLoat } from "@/lib/ghiChu/ganNhan";
 import { quetTuKhoaQuanTam } from "@/lib/quanTam/quetTuKhoa";
 import { chamDiemHangLoat } from "@/lib/scoring/chamDiem";
 import { chayVongHai } from "@/lib/scoring/vongHaiBinhLuan";
@@ -56,6 +57,8 @@ export const GIOI_HAN_MOI_DEM = {
   soThuatLai: 5,
   /** Số ứng viên đứng đầu được đọc bình luận */
   soDocBinhLuan: 20,
+  /** Số ghi chú được Claude gắn nhãn */
+  soGanNhan: 30,
 } as const;
 
 export interface KetQuaMotBuoc {
@@ -250,7 +253,27 @@ export async function quetDem(
     ),
   );
 
-  // ----- Bước 8: viết bản tin cho sáng mai -----
+  // ----- Bước 8b: gắn nhãn ghi chú mới -----
+  //
+  // Đặt sau mọi bước lấy nội dung: ghi chú cần đọc lời thoại quanh mốc thời
+  // gian, mà lời thoại thì bước 4 mới lấy về.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Gắn nhãn cho ghi chú mới",
+      async () => {
+        const kq = await ganNhanHangLoat(GIOI_HAN_MOI_DEM.soGanNhan);
+        if (kq.daXet === 0) return "không có ghi chú mới";
+        return (
+          `xong ${kq.thanhCong}/${kq.daXet}` +
+          (kq.soViecCanLam ? `, ${kq.soViecCanLam} việc cần làm` : "") +
+          (kq.boSuuTapMoi.length ? `, ${kq.boSuuTapMoi.length} ngăn mới` : "")
+        );
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước 9: viết bản tin cho sáng mai -----
   cacBuoc.push(
     await chayMotBuoc(
       "Viết bản tin cho sáng mai",

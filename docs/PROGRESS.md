@@ -14,6 +14,7 @@
 | **4b** — Tìm kiếm & bộ lọc | ✅ xong, tìm được cả trong nhận xét của Claude |
 | **4c** — Chuyên mục New | ✅ xong, gõ từ khoá là đêm tự tìm |
 | **7a** — Thư viện cá nhân | ✅ xong, thư mục tự đặt tên + trạng thái đọc |
+| **8** — Ghi chú khi xem | ✅ xong, gõ hoặc nói, Claude tự xếp ngăn |
 | **5** — Trình phát & nhớ chỗ dở | ✅ xong, đồng bộ máy tính ↔ điện thoại |
 | **10** — Bản tin hằng sáng | ✅ xong, Claude viết bằng giọng trò chuyện |
 | **Tự chạy** | ✅ một lệnh làm đủ 8 bước, hẹn giờ 21:00 |
@@ -622,6 +623,70 @@ ra file thường — nay nằm ở `trangThai.ts`.
 Đây là cái bẫy chung, không riêng gì thư viện: đã gặp đúng kiểu này ở
 `quanTam/giaTuKhoa.ts` (tách hằng số cho trình duyệt đọc được mà không kéo theo
 prisma). Thêm hằng số vào file `"use server"` là hỏng ngay.
+
+## Phase 8 — Ghi chú khi xem: XONG
+
+File: `src/lib/ghiChu/actions.ts`, `ganNhan.ts`,
+`src/lib/tieuThu/viTriHienTai.ts`, `src/components/ONhapGhiChu.tsx`,
+`DanhSachGhiChu.tsx`, `OViecCanLam.tsx`, `src/app/ghi-chu/page.tsx`,
+`scripts/gan-nhan-ghi-chu.ts`.
+
+**Điều làm nó khác một ứng dụng ghi chú thường**: mỗi ghi chú gắn đúng giây
+trong clip. Nghe tới phút 23 thấy ý hay, ghi lại; sau này bấm vào mốc giờ là
+video nhảy thẳng về phút 23. Ghi chú rời khỏi ngữ cảnh thì vài tháng sau đọc
+lại chẳng hiểu mình định nói gì.
+
+Ô ghi chú và trình phát là hai thành phần nằm cạnh nhau trong một trang server,
+không truyền state cho nhau được. Cách giải: trình phát **gửi vào một chỗ chung
+hai cái hàm** — một để hỏi giờ, một để tua; ô ghi chú gọi khi cần
+(`viTriHienTai.ts`).
+
+**Gõ hoặc nói.** Phần nhận giọng dùng thẳng bộ nhận dạng có sẵn trong trình
+duyệt: không gửi âm thanh đi đâu, không tốn tiền, không cần chỗ lưu file. Bản
+thiết kế nói rõ chỗ này quan trọng — nghe podcast lúc lái xe mà phải dừng lại
+gõ thì không ai ghi chú cả.
+
+**Lưu xong là xong, không gọi Claude ngay.** Người dùng đang xem dở; bắt chờ
+mười lăm giây cho Claude gắn nhãn thì lần sau họ không ghi nữa. Việc gắn nhãn
+để dành cho lượt chạy gộp, giống hệt cách phân loại nội dung.
+
+### Claude gắn nhãn — đã chạy thật (2026-08-15)
+
+Thử với hai ghi chú viết cụt như người ta vẫn viết khi đang xem:
+
+| Ghi chú | Claude gắn |
+|---|---|
+| *"chỗ này hay, thử áp dụng vào am xem sao"* | nhãn: tiêu chí đầu ra · định nghĩa đạt/không đạt · bản chất LLM — ngăn **"Xây dựng AI Agent"** — **việc cần làm** |
+| *"ý này ngược với cái mình vẫn nghĩ"* | nhãn: rollback · kiểm duyệt agent · rủi ro tự động hoá — ngăn **"Quản lý AI Agent trong doanh nghiệp"** — freeform |
+
+Việc cần làm nó tách ra: *"Thử áp dụng vào dự án Am: định nghĩa rõ tiêu chí đầu
+ra thế nào là đạt/không đạt cho các bước xử lý bằng AI, thay vì chỉ mô tả các
+bước cần làm."*
+
+Không câu nào trong hai ghi chú nói được nội dung gì. **Nhãn cụ thể được là nhờ
+Claude đọc đoạn lời thoại quanh mốc thời gian** — đây chính là chỗ ăn thua của
+thiết kế này.
+
+Và câu thứ hai **không** bị đánh dấu là việc cần làm, đúng như lời dặn: nghĩ về
+một chuyện không phải là việc cần làm. Đánh dấu bừa thì danh sách việc đầy thứ
+không phải việc, và chủ nhà sẽ thôi nhìn nó.
+
+Dữ liệu thử đã dọn sạch sau khi kiểm.
+
+### Ba chỗ đáng nhớ
+
+**Cắt lời thoại quanh mốc bằng ước lượng tỉ lệ.** Lời thoại lưu thành một khối
+chữ liền, không có mốc giờ từng câu. Ghi chú ở phút 23 của video 46 phút thì
+lấy đoạn khoảng giữa bài. Thô, nhưng mục đích chỉ là cho Claude biết đang bàn
+chuyện gì.
+
+**Nhãn người dùng sửa lưu riêng, không đè lên nhãn máy.** Giữ cả hai mới so
+được máy đoán gì và người sửa thành gì — nguyên liệu để sau này cải thiện. Đè
+lên thì mất sạch dấu vết máy đã sai chỗ nào.
+
+**Lọc cột JSON rỗng phải dùng `Prisma.DbNull`, không phải `null`.** Prisma phân
+biệt "ô trống trong database" với "giá trị JSON null được ghi vào". Dùng nhầm
+thì lọc không ra gì cả.
 
 ## Phase 4c — Chuyên mục "New": XONG
 
