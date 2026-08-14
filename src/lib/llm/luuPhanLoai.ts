@@ -77,6 +77,7 @@ function dichSangDatabase(kq: KetQuaPhanLoai, thoiLuongGiay: number | null) {
     extractedAuthorNameRaw: kq.tenTacGiaThoNhat,
     authorCreditedInDescription: kq.tacGiaDuocGhiTrongMoTa,
     contentQualityNotes: kq.nhanXetChatLuong,
+    contentQualityScore: kq.diemChatLuong,
 
     aiSubtopic: (kq.aiChuDeCon as AiSubtopic | null) ?? null,
 

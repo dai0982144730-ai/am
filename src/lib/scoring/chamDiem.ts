@@ -177,6 +177,7 @@ export async function chamDiemHangLoat(
           select: {
             misleadingContentFlag: true,
             aiGeneratedSuspicionScore: true,
+            contentQualityScore: true,
           },
         },
         externalDiscussions: { select: { score: true, commentCount: true } },
@@ -254,7 +255,18 @@ export async function chamDiemHangLoat(
           engagementDepth: boonTuongTac,
           discussion: muc.contentGroup === "music" ? null : diemThaoLuan,
           authority: boonUyTin,
-          contentQuality: null,
+          // Điểm Claude chấm sau khi đọc. Với blog và podcast đây là trụ tín
+          // hiệu DUY NHẤT dùng được — chúng không có lượt xem, lượt thích hay
+          // bình luận công khai nào. Trước đây chỗ này gán cứng `null`, hậu
+          // quả là mọi bài blog cùng tầng uy tín ra đúng một điểm như nhau:
+          // đo thật thấy 9 bài từ 5 báo khoa học khác nhau đều 2,5 điểm.
+          //
+          // Nhạc thì bỏ, cùng lý do như trụ thảo luận: đánh giá nhạc bằng chữ
+          // là vô nghĩa.
+          contentQuality:
+            muc.contentGroup === "music"
+              ? null
+              : (muc.classification?.contentQualityScore ?? null),
         },
         trongSo,
       );

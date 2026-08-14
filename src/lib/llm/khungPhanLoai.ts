@@ -63,6 +63,19 @@ export const KhungPhanLoai = z.object({
         "hoặc dở ở điểm nào.",
     ),
 
+  diemChatLuong: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe(
+      "Điểm chất lượng 0–1 sau khi đọc nội dung. 0,2 = hời hợt hoặc câu view; " +
+        "0,5 = ổn nhưng không có gì đặc biệt; 0,8 = có chiều sâu thật, người " +
+        "viết hiểu việc mình nói; 0,95 trở lên chỉ dành cho thứ xuất sắc hiếm " +
+        "gặp. Đây là trụ tín hiệu DUY NHẤT dùng được cho blog và podcast — " +
+        "những nguồn không có lượt xem hay bình luận công khai — nên hãy chấm " +
+        "thật, đừng dồn hết vào quãng giữa.",
+    ),
+
   // ----- Riêng nhóm AI -----
   aiChuDeCon: z
     .enum([

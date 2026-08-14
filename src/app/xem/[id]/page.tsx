@@ -115,6 +115,7 @@ export default async function TrangXem({
       source: {
         select: {
           id: true,
+          type: true,
           title: true,
           reputationTier: true,
           subscriptionStatus: true,

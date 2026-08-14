@@ -29,6 +29,7 @@ const TRUONG_CAN_LAY = {
   source: {
     select: {
       id: true,
+      type: true,
       title: true,
       reputationTier: true,
       subscriptionStatus: true,

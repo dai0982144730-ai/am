@@ -436,6 +436,13 @@ model ContentClassification {
   extractedAuthorNameRaw   String?
   authorCreditedInDescription Boolean @default(false)
   contentQualityNotes      String?  @db.Text
+  /// Điểm chất lượng 0–1 do Claude chấm sau khi đọc nội dung.
+  ///
+  /// Đây là trụ tín hiệu DUY NHẤT dùng được cho blog và podcast — những nguồn
+  /// không có lượt xem, lượt thích hay bình luận công khai nào. Thiếu nó thì
+  /// mọi bài blog cùng tầng uy tín đều ra đúng một điểm như nhau, không xếp
+  /// hạng được. Đã đo thật: 9 bài từ 5 báo khoa học khác nhau đều 2,5 điểm.
+  contentQualityScore      Float?
 
   authorId String?
   author   Author? @relation(fields: [authorId], references: [id], onDelete: SetNull)

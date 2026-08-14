@@ -65,6 +65,7 @@ const TRUONG_THE = {
   source: {
     select: {
       id: true,
+      type: true,
       title: true,
       reputationTier: true,
       subscriptionStatus: true,

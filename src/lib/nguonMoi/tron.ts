@@ -12,11 +12,18 @@
  * đủ số là cách chắc chắn nhất để chủ nhà nhận về rác — và chỉ cần vài đêm như
  * thế là họ thôi tin cả cái web.
  *
- * **2. Nguồn lạ phải qua cửa chặt hơn.** Với kênh đã theo dõi, việc chủ nhà bấm
- * đăng ký tự nó là một phần điểm uy tín. Nguồn lạ không có phần đó nên phải bù:
- * điểm của nó phải **không thua điểm trung vị của nhóm nguồn quen cùng chuyên
- * mục**. Không so với một ngưỡng cố định, vì điểm được chuẩn hoá theo thứ hạng
- * phần trăm nên ngưỡng cứng sẽ sai ngay khi kho thay đổi.
+ * **2. Nguồn lạ phải qua cửa chặt hơn — nhưng so với ĐÚNG NHÓM.** Điểm của nó
+ * phải không thua **điểm trung vị của những nội dung CÙNG LOẠI NGUỒN trong cùng
+ * chuyên mục**. Không so với ngưỡng cố định, vì điểm đã chuẩn hoá theo thứ hạng
+ * phần trăm nên ngưỡng cứng sai ngay khi kho đổi.
+ *
+ * Chữ "cùng loại nguồn" là chỗ đã làm sai một lần và phải sửa. Bản đầu so điểm
+ * nguồn lạ với điểm nguồn quen bất kể loại, hậu quả đo được ngay: bài blog khoa
+ * học được 2,5 điểm, video YouTube cùng chuyên mục được 4,4–5,9, nên **không
+ * một bài blog nào lọt nổi vào chuyên mục Khoa học** — kéo tỉ lệ lên 90% vẫn ra
+ * 0 suất dùng được. Blog không có lượt xem hay lượt thích, đem so với video là
+ * so hai thứ khác hẳn nhau, đúng cái sai mà nguyên tắc "chuẩn hoá trong cùng
+ * loại nguồn" của bản thiết kế sinh ra để tránh.
  *
  * **3. Mỗi nguồn lạ tối đa một suất.** Không có luật này thì một kênh chăm đăng
  * sẽ chiếm sạch phần dành cho nguồn mới, và "mở rộng" hoá ra chỉ là đổi từ nhai
@@ -39,6 +46,42 @@ const SUAT_MOI_NGUON_LA = 1;
  */
 const LAY_DU_RA = 5;
 
+/**
+ * Điểm trung vị của từng loại nguồn trong một chuyên mục.
+ *
+ * Tính trên **toàn bộ** nội dung của loại nguồn đó, cả quen lẫn lạ. Vì hiện tại
+ * mọi blog và diễn đàn đều là "lạ" — nếu chỉ lấy nhóm quen làm mốc thì với loại
+ * nguồn ấy chẳng có mốc nào, và cửa chặn thành vô nghĩa.
+ */
+async function tinhCuaChanTheoLoai(
+  dieuKienChung: Prisma.ContentItemWhereInput,
+  cacLoai: Set<string>,
+): Promise<Map<string, number>> {
+  const ketQua = new Map<string, number>();
+
+  for (const loai of cacLoai) {
+    const cungLoai = await prisma.contentItem.findMany({
+      where: {
+        AND: [
+          dieuKienChung,
+          { source: { type: loai as never } },
+          { score: { isNot: null } },
+        ],
+      },
+      select: { score: { select: { compositeScore: true } } },
+    });
+
+    const diem = cungLoai
+      .map((m) => m.score?.compositeScore)
+      .filter((d): d is number => typeof d === "number");
+
+    const giua = trungVi(diem);
+    if (giua !== null) ketQua.set(loai, giua);
+  }
+
+  return ketQua;
+}
+
 export interface KetQuaTron<T> {
   cacMuc: T[];
   /** Trong đó bao nhiêu mục đến từ nguồn chưa theo dõi */
@@ -60,7 +103,7 @@ function trungVi(cacDiem: number[]): number | null {
 interface CoDiemVaNguon {
   id: string;
   score: { compositeScore: number | null } | null;
-  source: { id: string; subscriptionStatus: string };
+  source: { id: string; subscriptionStatus: string; type: string };
 }
 
 /**
@@ -99,33 +142,40 @@ export async function layTronTheoTyLe<T extends CoDiemVaNguon>(
     return { cacMuc: quen, soTuNguonLa: 0, suatDanhChoNguonLa: 0 };
   }
 
-  // ----- Cửa chặn: điểm trung vị của nhóm nguồn quen -----
-  const diemQuen = quen
-    .map((m) => m.score?.compositeScore)
-    .filter((d): d is number => typeof d === "number");
-  const cuaChan = trungVi(diemQuen);
-
-  // ----- Nguồn lạ -----
+  // ----- Ứng viên nguồn lạ -----
+  //
+  // Lấy về trước rồi mới chặn, vì cửa chặn tính theo TỪNG LOẠI NGUỒN nên không
+  // viết thành một điều kiện SQL duy nhất được.
   const la = (await prisma.contentItem.findMany({
     where: {
       AND: [
         dieuKienChung,
         { source: { subscriptionStatus: { not: "subscribed" } } },
-        // Chưa chấm điểm thì chưa đủ căn cứ để chen vào chỗ của nguồn quen
-        cuaChan !== null
-          ? { score: { compositeScore: { gte: cuaChan } } }
-          : { score: { isNot: null } },
+        // Chưa chấm điểm thì chưa đủ căn cứ để chen vào
+        { score: { isNot: null } },
       ],
     },
     select: truongCanLay,
     orderBy: xepTheoDiem,
-    take: suatChoLa + LAY_DU_RA,
+    take: (suatChoLa + LAY_DU_RA) * 3,
   })) as unknown as T[];
+
+  // ----- Cửa chặn: điểm trung vị của CÙNG LOẠI NGUỒN trong chuyên mục -----
+  const cuaChanTheoLoai = await tinhCuaChanTheoLoai(
+    dieuKienChung,
+    new Set(la.map((m) => m.source.type)),
+  );
 
   // Mỗi nguồn lạ tối đa một suất
   const daLayTuNguon = new Map<string, number>();
   const laDaLoc: T[] = [];
   for (const muc of la) {
+    const diem = muc.score?.compositeScore;
+    if (typeof diem !== "number") continue;
+
+    const cua = cuaChanTheoLoai.get(muc.source.type);
+    if (cua !== undefined && diem < cua) continue;
+
     const dem = daLayTuNguon.get(muc.source.id) ?? 0;
     if (dem >= SUAT_MOI_NGUON_LA) continue;
     daLayTuNguon.set(muc.source.id, dem + 1);

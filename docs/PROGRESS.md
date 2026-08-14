@@ -20,6 +20,8 @@
 | **Lịch sử xem** | ✅ mở ra là rời luồng chính, không bày lại |
 | **Tông màu** | ✅ nền be, điểm nhấn cam, menu trái đậm hơn |
 | **Tỉ lệ nguồn mới** | ✅ chỉnh riêng từng chuyên mục trong Cài đặt |
+| **Tự tìm nguồn mới** | ✅ theo chủ đề rút từ thứ chấm điểm cao |
+| **Điểm chất lượng** | ✅ Claude chấm số, trụ tín hiệu duy nhất dùng được cho blog |
 | **5** — Trình phát & nhớ chỗ dở | ✅ xong, đồng bộ máy tính ↔ điện thoại |
 | **10** — Bản tin hằng sáng | ✅ xong, Claude viết bằng giọng trò chuyện |
 | **Tự chạy** | ✅ một lệnh làm đủ 8 bước, hẹn giờ 21:00 |
@@ -628,6 +630,104 @@ ra file thường — nay nằm ở `trangThai.ts`.
 Đây là cái bẫy chung, không riêng gì thư viện: đã gặp đúng kiểu này ở
 `quanTam/giaTuKhoa.ts` (tách hằng số cho trình duyệt đọc được mà không kéo theo
 prisma). Thêm hằng số vào file `"use server"` là hỏng ngay.
+
+## Tự đi tìm nguồn mới (2026-08-15)
+
+File: `src/lib/khamPha/timNguonMoi.ts`, `locSoBo.ts`, `uyTinNguon.ts`,
+`scripts/tim-nguon-moi.ts`. Là bước 2c của việc quét đêm.
+
+**Cách tìm — đi theo gu đã bộc lộ, không tìm mò.** Lấy chủ đề Claude đã rút ra
+từ những nội dung điểm cao rồi dùng làm từ khoá. Khác chuyên mục "New" ở chỗ
+New là chủ nhà tự gõ; đây là máy suy ra từ thứ đã được chấm điểm cao.
+
+**Ba chốt chặn, xếp theo thứ tự tiêu tiền từ rẻ tới đắt:**
+
+1. Nguồn đã bị chê thì thôi lấy — miễn phí
+2. Lọc sơ bộ bằng số liệu — miễn phí
+3. Claude đọc và chấm — đắt, chỉ dành cho thứ qua hai cửa trên
+
+Thứ tìm được **không vào thẳng trang chủ**: nó vào kho ở trạng thái chờ rồi đi
+qua đúng dây chuyền như mọi nội dung khác. Không có đường tắt nào cho nguồn lạ.
+
+### Phần học từ phản hồi (`uyTinNguon.ts`)
+
+Tính **ngay lúc hỏi**, không dựng bảng riêng — mọi thứ cần thiết đã nằm trong
+`ConsumptionSession`. Thêm một bảng điểm uy tín nữa thì phải lo giữ cho nó khớp
+với sự thật; tính lại mỗi lần thì rẻ và không bao giờ lệch.
+
+Hai tín hiệu, trọng số khác hẳn nhau. **Số sao** là lời nói thẳng: dưới 2,5 sao
+qua từ 3 lượt chấm là thôi lấy. **Bỏ ngang** là lời nói ngầm, một mình chưa đủ
+kết tội — mở ra rồi có việc phải đi cũng là bỏ ngang — nên chỉ tính khi nguồn
+đó **chưa từng được chấm sao tử tế** và đã bỏ ngang từ 4 lần.
+
+### Đã chạy thật
+
+| | |
+|---|---|
+| Chủ đề đem đi tìm | 5 (rút từ nội dung chấm cao) |
+| Tìm được | 50 kết quả |
+| **Tầng lọc rẻ gạt** | **25** — quá ngắn, quá ít lượt xem, đang phát trực tiếp, tỉ lệ thích thấp, đủ số cho kênh đó |
+| Thêm vào kho | 23 nội dung từ **21 kênh chưa từng gặp** |
+| Hạn mức | 741 → 1246, đúng 5×101 |
+
+Tầng lọc gạt đúng một nửa **trước khi tốn chữ nào của Claude**.
+
+Chất lượng chủ đề hiện còn yếu ("grok bot", "đánh giá subscription") vì kho mới
+có ít nội dung điểm cao, chủ đề nào cũng chỉ xuất hiện một lần. Luật ưu tiên
+chủ đề lặp lại nhiều lần đã có sẵn, nó sẽ phát huy khi kho dày lên.
+
+## Hai lỗi lộ ra khi kiểm phần trộn — đều đã sửa
+
+### Lỗi 1: cửa chặn so nhầm loại nguồn
+
+Bật Khoa học lên 90% mà vẫn ra **0 suất dùng được**. Đo ra ngay:
+
+| | Điểm |
+|---|---|
+| Video YouTube khoa học (nguồn quen) | 5,9 · 4,4 · 1,4 |
+| Bài blog khoa học (nguồn lạ) | tất cả đúng **2,5** |
+
+Cửa chặn bắt nguồn lạ phải bằng điểm trung vị của nguồn quen — mà blog không có
+lượt xem, lượt thích nào nên không đời nào đuổi kịp video. **Không một bài blog
+nào lọt nổi.** Đây đúng cái sai mà nguyên tắc "chuẩn hoá trong cùng loại nguồn"
+của bản thiết kế sinh ra để tránh, thế mà vẫn tái phạm ở chỗ khác.
+
+Đã sửa: cửa chặn tính **theo từng loại nguồn** — blog so với blog, video so với
+video. Sau khi sửa, Khoa học 90% ra đủ 3/3 suất.
+
+### Lỗi 2: trụ "chất lượng nội dung" chưa bao giờ được điền
+
+Lỗi trên chỉ là phần nổi. Đào tiếp thì thấy `chamDiem.ts` gán cứng
+`contentQuality: null`. Trụ tín hiệu mà bản thiết kế dựng ra **đúng cho trường
+hợp blog không có chỉ số công khai** thì chưa bao giờ có dữ liệu.
+
+Hậu quả: bài blog chỉ còn trụ uy tín, ra một hằng số theo tầng nguồn — **9 bài
+từ 5 báo khoa học khác nhau đều đúng 2,5 điểm.** Không xếp hạng được gì.
+
+Đã sửa: thêm trường `contentQualityScore` (0–1), Claude chấm ngay khi phân loại
+với thang mô tả rõ (0,2 hời hợt · 0,5 ổn · 0,8 có chiều sâu thật · 0,95 xuất
+sắc hiếm gặp), và lời dặn nói thẳng rằng với blog thì đây là trụ duy nhất nên
+đừng dồn hết vào quãng giữa.
+
+Nội dung phân loại từ trước không có trường này. `scripts/bu-diem-chat-luong.ts`
+bù dần, ưu tiên blog và diễn đàn — chỗ thiếu nó thì hỏng hẳn, còn video YouTube
+vẫn còn ba trụ kia nên chỉ hơi kém chính xác.
+
+## Quyền sửa playlist — đã bật, chờ chủ dự án làm hai bước
+
+Đã thêm `.../auth/youtube` vào `QUYEN_XIN` trong `auth.ts`. Xin trong code là
+chưa đủ, còn hai bước phải làm tay, nay viết thẳng lên trang `/playlist`:
+
+1. `console.cloud.google.com` → APIs & Services → OAuth consent screen → Data
+   Access → Add or Remove Scopes → lọc `youtube`, tick dòng `.../auth/youtube`
+   (**không** phải dòng có đuôi `.readonly`) → Update → Save
+2. Đăng xuất khỏi Am rồi đăng nhập lại
+
+**Một lỗi thật bắt được khi làm việc này**: phép kiểm quyền dùng `includes()`
+trên chuỗi scope, mà `.../auth/youtube.readonly` **chứa nguyên** chuỗi
+`.../auth/youtube`. Tài khoản chỉ có quyền đọc vẫn bị báo là có quyền ghi, nên
+cảnh báo vàng không bao giờ hiện — người dùng bấm rồi mới gặp lỗi khó hiểu của
+Google. Nay tách chuỗi rồi so từng phần (`coQuyenSuaPlaylist`).
 
 ## Tỉ lệ nguồn mới, đặt riêng từng chuyên mục (2026-08-15)
 

@@ -55,6 +55,7 @@ export default async function TrangQuanTam() {
         source: {
           select: {
             id: true,
+            type: true,
             title: true,
             reputationTier: true,
             subscriptionStatus: true,
