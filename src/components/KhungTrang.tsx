@@ -20,6 +20,7 @@ interface MucDieuHuong {
 
 const NHOM_CHINH: MucDieuHuong[] = [
   { ten: "Trang chủ", bieuTuong: "⌂", duongDan: "/" },
+  { ten: "Am nói với bạn", bieuTuong: "◈", duongDan: "/ban-tin" },
   { ten: "Khám phá", bieuTuong: "⌕", duongDan: "/kham-pha" },
   { ten: "New", bieuTuong: "✦", seLamO: "Phase 4c" },
   { ten: "Đang phát", bieuTuong: "▶", seLamO: "Phase 5" },

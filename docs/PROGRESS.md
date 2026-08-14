@@ -11,6 +11,9 @@
 | **2** — Blog & diễn đàn AI | ✅ xong phần chữ; phần giọng đọc chờ khoá TTS |
 | **3** — Nhánh nhạc | ✅ xong, chạy hoàn toàn bằng luật |
 | **4** — Chấm chất lượng | ✅ xong trọn: hai vòng chấm + màn hình chỉnh trọng số |
+| **4b** — Tìm kiếm & bộ lọc | ✅ xong, tìm được cả trong nhận xét của Claude |
+| **10** — Bản tin hằng sáng | ✅ xong, Claude viết bằng giọng trò chuyện |
+| **Tự chạy** | ✅ một lệnh làm đủ 8 bước, hẹn giờ 21:00 |
 | **15** — Cổng API trợ lý | ✅ xong, đã chạy thật |
 | Giao diện | Trang chủ, trang xem video, trang cài đặt — chạy với dữ liệu thật |
 | Phân quyền | Khách xem được; cấu hình và việc gọi Claude cần đăng nhập |
@@ -582,6 +585,87 @@ và bản thiết kế cũng nói nhạc không dùng điểm chất lượng n�
 
 Không còn thiếu gì — màn hình chỉnh trọng số đã làm xong, xem mục "Trang Cài
 đặt" bên dưới.
+
+## Tự chạy hằng đêm — XONG
+
+Trước đây mỗi tối phải gõ **sáu lệnh riêng lẻ đúng thứ tự**. Giờ còn một:
+
+```bash
+npx tsx scripts/quet-dem.ts
+```
+
+Hướng dẫn hẹn giờ lúc 21:00 nằm ở **`docs/tu-chay-hang-dem.md`**.
+
+Tám bước, thứ tự không đảo được vì bước sau ăn kết quả bước trước: quét YouTube
+→ quét blog → lấy lời thoại → phân loại → thuật lại → chấm điểm → đọc bình luận
+→ **viết bản tin cho sáng mai**.
+
+**Một bước hỏng không làm chết cả đêm.** Mỗi bước tự bắt lỗi, ghi lại, các bước
+sau vẫn chạy tiếp. Đã thêm trạng thái `partial` vào `JobRun` để phân biệt "hỏng
+vài bước nhưng kho vẫn đầy thêm" với "hỏng hẳn" — gộp hai thứ lại thì mỗi sáng
+nhìn nhật ký tưởng đêm qua công cốc.
+
+### Đã chạy thật trọn vẹn (2026-08-15, 00:33)
+
+| Bước | Kết quả | Thời gian |
+|---|---|---|
+| Quét YouTube | 224 kênh, **+133 video** | 208s |
+| Quét blog | 6 nguồn, +4 bài | 26s |
+| Lấy lời thoại | 117/120 | 351s |
+| Phân loại | 80/80 | 1.085s |
+| Thuật lại | 5 bài | 305s |
+| Chấm điểm | 191 nội dung, 0,3–7,1 | 52s |
+| Đọc bình luận | 19 video | 190s |
+
+**Cả bảy bước đều xong, 37 phút.** Kho từ 848 lên **985 nội dung**.
+
+## Phase 10 — Bản tin hằng sáng: XONG phần chữ
+
+File: `src/lib/troLy/chonNoiDung.ts` (chắt lọc), `vietBanTin.ts` (Claude viết),
+`taoBanTin.ts` (lưu). Xem tại `/ban-tin`.
+
+**Vấn đề cần giải**: mỗi đêm quét ra hơn trăm nội dung. Đưa cả danh sách ra là
+vô dụng — đúng thứ người dùng đang gặp với YouTube.
+
+**Cách chọn**: tối đa 2 mục nổi bật mỗi chuyên mục + 4 mục "xem thêm nếu rảnh".
+Và **bỏ hẳn nhóm "khác"** khỏi bản tin — kho hằng đêm phần lớn là tin thời sự và
+giải trí, để chúng vào thì bản tin thành tin giật gân, đúng thứ cần tránh.
+
+**Claude được đưa nhận xét chính nó đã viết khi phân loại**, kèm điểm chất lượng
+và điểm thảo luận. Đủ căn cứ để nói có trọng lượng chứ không khen suông.
+
+### Bản tin thật nó viết
+
+> *"Đáng chú ý nhất là video của Trần Quốc Huy về AI Agent — cái này không phải
+> kiểu lý thuyết chung chung, mà tác giả chia sẻ thẳng cách viết tiêu chí đạt/
+> không đạt cho agent dựa trên kinh nghiệm thật… Có thêm video về dùng Claude để
+> phân tích crypto, nhưng **nên xem như cách đặt câu hỏi cho AI hơn là tin theo
+> con số lãi 10% trong 10 ngày họ demo — dễ gây ảo tưởng**."*
+>
+> *"Truyện đêm khuya… cả hai đều ổn để nghe giải trí nhưng **tình tiết khá mòn,
+> không có gì bất ngờ**. Còn lại toàn video dance trend, **bỏ qua được**."*
+
+Đây đúng là "trợ lý biết chắt lọc" — nó **cảnh báo** và **bảo bỏ qua**, chứ
+không khen đều tất cả.
+
+Còn thiếu: phần đọc thành tiếng, cần khoá TTS.
+
+## Phase 4b — Tìm kiếm và bộ lọc: XONG
+
+Trang `/kham-pha`: ô tìm kiếm, chip lọc theo chuyên mục kèm số đếm, bốn bộ lọc
+nhanh, ba kiểu sắp xếp, phân trang. Mọi lựa chọn ghi vào địa chỉ trang nên bấm
+quay lại về đúng bộ lọc cũ.
+
+**Điểm đáng giá nhất**: tìm kiếm quét cả **nhận xét và chủ đề Claude rút ra**,
+không chỉ tiêu đề. Gõ *"nhân quả"* ra hai video mà tiêu đề **không hề có chữ
+đó** — *"Phước Báu của mình nằm ở CÁCH MÌNH SỐNG"* và *"Bốc Mộ Chồng Lấy Xương
+Người Chửa"*. Đây là thứ ô tìm kiếm của YouTube không làm được.
+
+Không gọi Claude trên đường đi của người dùng — gõ tìm là thấy kết quả ngay.
+
+Hai kiểu sắp xếp đầu ("phù hợp nhất" và "chất lượng cao nhất") hiện cho kết quả
+giống nhau, vì hệ số cá nhân hoá là việc của Phase 9. Vẫn tách sẵn để lúc đó chỉ
+phải sửa một chỗ.
 
 ## Phân quyền — khách xem được, không làm được
 

@@ -393,14 +393,14 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 | **2** | Blog/Diễn đàn AI + TTS tiếng Việt *(ưu tiên sớm)*: adapter 4 tier nguồn, `NarrationAsset`, tích hợp TTS — **đã xong phần chữ 2026-08-14**, phần TTS chờ khoá |
 | **3** | Nhánh Music: metadata extractor, parse BPM + `bpmConfidence`, chuẩn hoá genre bằng Haiku — **xong 2026-08-14**, làm hoàn toàn bằng luật nên không tốn lần gọi mô hình nào |
 | **4** | **Engine chấm chất lượng theo nguồn**: 4 trụ tín hiệu chuẩn hoá percentile, `SourceQualityProfile` + UI chỉnh trọng số trong Cài đặt, `CommentAnalysis` vòng 2, `ExternalDiscussion` cho blog/podcast — **xong 2026-08-14** trừ UI chỉnh trọng số |
-| **4b** | Search/Filter API với toàn bộ trường lọc + 3 kiểu sắp xếp + UI duyệt |
+| **4b** | Search/Filter API với toàn bộ trường lọc + 3 kiểu sắp xếp + UI duyệt — **xong 2026-08-15** |
 | **4c** | Chuyên mục **New**: `AdHocInterest` (ô nhập từ khoá, bật/tắt tự quét), tích hợp vào cron 21:00 + hiển thị chi phí quota |
 | **5** | Player + theo dõi hành vi + `ResumePoint` đồng bộ đa thiết bị + rating cảm xúc |
 | **6** | Xác thực tác giả nâng cao: LLM auto-discovery + `pendingReview` + tủ sách tác giả + full-text search |
 | **7** | Thư viện cá nhân + quản lý playlist YouTube: thêm/tạo tự động, di chuyển/gỡ chờ duyệt, không bao giờ xoá playlist |
 | **8** | Trợ lý ghi chú: `Note` (text/voice), auto-tag, `KnowledgeCollection` + wiki, `ActionItem` |
 | **9** | Personalization engine: taste profile, embeddings, mood-theo-giờ, cold-start onboarding |
-| **10** | Trợ lý chủ động: `DigestRun`, `AssistantBriefing` + audio briefing, dedup, checklist AI |
+| **10** | Trợ lý chủ động: `DigestRun`, `AssistantBriefing` + audio briefing, dedup, checklist AI — **xong phần chữ 2026-08-15**, audio chờ khoá TTS |
 | **11** | Mở rộng nguồn: Podcast RSS → SoundCloud |
 | **12** | Audio-only & smart queue (kể cả hàng đợi theo BPM) |
 | **13** | Chat agent tool-use tích hợp toàn bộ API |

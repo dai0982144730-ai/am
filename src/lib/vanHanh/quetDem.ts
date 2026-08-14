@@ -1,12 +1,12 @@
 /**
- * Việc quét hằng đêm — gộp cả sáu bước thành một lệnh.
+ * Việc quét hằng đêm — gộp cả tám bước thành một lệnh.
  *
  * VÌ SAO CẦN: trước đây mỗi tối phải mở terminal gõ sáu lệnh riêng lẻ, đúng thứ
  * tự, và tự nhớ bước nào chạy trước bước nào. Như vậy thì đây là một bộ công cụ
  * chứ chưa phải trợ lý. Bản thiết kế nói rõ: quét tự động một lần mỗi ngày lúc
  * 21:00 giờ Việt Nam, để sáng hôm sau đã có sẵn nội dung.
  *
- * THỨ TỰ SÁU BƯỚC — không đảo được, vì bước sau ăn kết quả bước trước:
+ * THỨ TỰ TÁM BƯỚC — không đảo được, vì bước sau ăn kết quả bước trước:
  *
  *   1. Quét video mới từ các kênh YouTube đã đăng ký
  *   2. Quét bài mới từ blog và diễn đàn AI
@@ -14,6 +14,7 @@
  *   4. Nhờ Claude phân loại vào chuyên mục
  *   5. Chấm điểm chất lượng vòng 1 (bằng số liệu)
  *   6. Vòng 2 — Claude đọc bình luận của nhóm đứng đầu, rồi chấm lại
+ *   7. Viết bản tin cho sáng mai — thứ người dùng thật sự đọc
  *
  * NGUYÊN TẮC: **một bước hỏng không được làm chết cả đêm**. Mạng chập chờn,
  * YouTube đổi API, hết hạn mức — đều là chuyện thường. Mỗi bước tự bắt lỗi của
@@ -26,6 +27,7 @@ import { thuatLaiHangLoat } from "@/lib/llm/luuThuatLai";
 import { quetBlog } from "@/lib/nguon/quetBlog";
 import { chamDiemHangLoat } from "@/lib/scoring/chamDiem";
 import { chayVongHai } from "@/lib/scoring/vongHaiBinhLuan";
+import { taoBanTin } from "@/lib/troLy/taoBanTin";
 import { layLoiThoaiHangLoat } from "@/lib/youtube/loiThoai";
 import { dongBoNguonTuKenhDaDangKy, quetVideoMoi } from "@/lib/youtube/quetKenh";
 
@@ -218,6 +220,18 @@ export async function quetDem(
           `đọc ${kq.daCham} video, thảo luận trung bình ${kq.diemTrungBinh.toFixed(2)}` +
           `, ${kq.toanEmoji} video toàn emoji, ${kq.toClickbait} bị tố tiêu đề sai`
         );
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước 8: viết bản tin cho sáng mai -----
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Viết bản tin cho sáng mai",
+      async () => {
+        const kq = await taoBanTin(true);
+        return `chắt ${kq.soNoiBat} mục nổi bật + ${kq.soXemThem} mục xem thêm từ ${kq.tongMoi} nội dung`;
       },
       bao,
     ),
