@@ -19,13 +19,13 @@ Chia thành sáu bước để dễ kiểm chứng từng chặng:
 | 1a | Đăng nhập Google, lưu token, chặn email lạ | ✅ xong, **đã đăng nhập thật** |
 | 1b | Gọi YouTube API + đếm hạn mức + ngắt ở 80% | ✅ xong, đã chạy thật |
 | 1c | Nhập kênh đã đăng ký / video đã thích / playlist | ✅ xong, **đã nhập 1.029 mục thật** |
-| 1d | Quét video về thành `ContentItem` | ⬜ chưa |
+| 1d | Quét video về thành `ContentItem` | ✅ xong, **kho có 820 video thật** |
 | 1e | Lấy lời thoại video | ⬜ chưa, phải cài thư viện |
 | 1f | Phân loại bằng Claude | ⬜ chưa, **cần `ANTHROPIC_API_KEY` thật** |
 
-**Việc kế tiếp**: bước 1d — quét video mới từ các kênh đã đăng ký về thành
-`ContentItem`. Không cần chủ dự án chuẩn bị gì thêm, trừ `ANTHROPIC_API_KEY`
-cho bước 1f.
+**Việc kế tiếp**: bước 1e — lấy lời thoại video. Phải cài thư viện ngoài vì
+YouTube không có API chính thức đọc lời thoại video của người khác.
+`ANTHROPIC_API_KEY` cần cho bước 1f.
 
 ### 1a — Đăng nhập Google
 
@@ -146,6 +146,45 @@ Hai chi tiết đã xử lý:
 mấy mảng rõ nét (AI, đạo & đời, chạy bộ đường dài). Nghĩa là tới Phase 9 khi
 dựng `UserTasteProfile` sẽ phải cân nhắc lọc bớt nhiễu, chứ lấy thẳng tần suất
 kênh làm trọng số thì mảng giải trí ngắn sẽ lấn át.
+
+### 1d — Quét video mới từ các kênh
+
+File: `src/lib/youtube/quetKenh.ts`, chạy bằng `npx tsx scripts/quet-youtube.ts`
+(có `--kenh N` để chạy thử vài kênh, `--ngay N`, `--video N`).
+
+**Chỗ tiết kiệm quan trọng nhất**: mỗi kênh YouTube có sẵn một playlist ngầm
+chứa toàn bộ video của kênh (playlist "uploads"). Đọc playlist đó tốn **1 đơn
+vị**, trong khi dùng lệnh tìm kiếm lấy đúng ngần ấy video tốn **100 đơn vị**.
+Id playlist uploads lấy một lần rồi cất vào `Source.uploadsPlaylistId` dùng mãi.
+Thêm một chỗ nữa: lấy chi tiết video gộp 50 id một lệnh, tốn 1 đơn vị thay vì 50.
+
+**Đã chạy thật ngày 2026-08-14** trên toàn bộ 224 kênh:
+
+| Chỉ số | Con số |
+|---|---|
+| Kênh dựng thành `Source` | 224 |
+| Video đã xét | 2.215 |
+| Video lưu vào kho (đăng trong 7 ngày) | 759 |
+| Hạn mức tiêu tốn | **240 đơn vị** (2,4% ngân sách ngày) |
+| Kênh lỗi | 1 — *FM - Bí Ẩn*, playlist không đọc được |
+
+Tổng kho hiện có **820 video**: 137 video dưới 60 giây (shorts), 318 video trên
+20 phút, 706 tiếng Việt / 88 tiếng Anh. Quét toàn bộ chỉ tốn 240 đơn vị nên
+chạy hằng đêm rất thoải mái.
+
+**Cạm bẫy gặp phải — livestream chưa phát**: lần chạy thử lưu nhầm một buổi phát
+trực tiếp *sắp diễn ra*. Google trả về `duration: "P0D"`, 0 lượt xem,
+`liveBroadcastContent: "upcoming"`. Video chưa diễn ra thì không có lời thoại để
+lấy, không có lượt xem để chấm điểm — lưu vào chỉ làm rác kho. Nay lọc bỏ cả
+`upcoming` lẫn `live`; lần quét sau, khi buổi phát đã xong, video được lấy về
+bình thường.
+
+**Xác nhận cơ chế tính hạn mức theo múi giờ Thái Bình Dương chạy đúng**: giữa
+phiên làm việc, bộ đếm tự reset từ 117 về 0 — đúng lúc qua nửa đêm giờ Thái Bình
+Dương (khoảng 14h giờ Việt Nam). Nếu tính theo giờ Việt Nam thì đã sai một ngày.
+
+Một kênh hỏng không làm chết cả lần quét — với vài trăm kênh thì kênh bị khoá
+hoặc playlist riêng tư là chuyện thường. Lỗi được gom lại báo cuối cùng.
 
 ## Phase 15 — Cổng API trợ lý: XONG và ĐÃ XÁC NHẬN CHẠY THẬT (phần của `am`)
 
@@ -376,6 +415,8 @@ tiếp nối phiên trên web bị ngắt quãng)*
 - Vấp cạm bẫy thiếu quyền YouTube (đăng nhập được nhưng Google không cấp
   `youtube.readonly`), đã sửa và ghi lại cách xử lý.
 - Nhập thật 1.029 tín hiệu từ tài khoản YouTube của chủ dự án.
+- Quét thật 224 kênh, đưa 759 video mới vào kho (tổng 820), tốn 240 đơn vị hạn
+  mức. Vấp và sửa cạm bẫy livestream chưa phát.
 
 **Ghi chú kỹ thuật mới học được**
 - Auth.js v5 trả về `handlers` (một object), không trả `GET`/`POST` rời. Trong
