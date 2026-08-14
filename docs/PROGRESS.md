@@ -4,13 +4,19 @@
 
 ## Đang ở đâu
 
-**Phase 0 — Nền tảng: XONG.** **Phase 15 — Cổng API trợ lý: XONG, đã chạy thật.**
-**Phase 1 — đang làm, xong 2/6 bước.**
+| Phase | Tình trạng |
+|---|---|
+| **0** — Nền tảng | ✅ xong |
+| **1** — Quét YouTube (6/6 bước) | ✅ xong, đã chạy thật |
+| **2** — Blog & diễn đàn AI | ✅ xong phần chữ; phần giọng đọc chờ khoá TTS |
+| **15** — Cổng API trợ lý | ✅ xong, đã chạy thật |
+| Giao diện | Trang chủ thật đã chạy với dữ liệu thật |
 
-Khung Next.js 16 + Tailwind 4, Prisma 7, database Neon đã chạy thật với 38 bảng,
-pgvector đã bật, logic chấm điểm chất lượng đã viết. `npm run dev` lên được trang.
+Khung Next.js 16 + Tailwind 4, Prisma 7, database Neon với 38 bảng, pgvector đã
+bật. Kho hiện có **hơn 840 nội dung** (820 video YouTube + 28 bài blog/diễn đàn),
+trong đó ~110 đã được Claude đọc và xếp nhóm.
 
-## Phase 1 — Quét YouTube: đang làm
+## Phase 1 — Quét YouTube: XONG
 
 Chia thành sáu bước để dễ kiểm chứng từng chặng:
 
@@ -27,7 +33,8 @@ Chia thành sáu bước để dễ kiểm chứng từng chặng:
 chuyển sang gọi Claude qua CLI dùng gói Claude Pro sẵn có — xem mục "Gọi Claude
 qua CLI" bên dưới.
 
-**Việc kế tiếp**: Phase 2 (blog & diễn đàn AI) hoặc làm dày thêm giao diện.
+**Việc kế tiếp**: Phase 3 (nhánh nhạc) hoặc Phase 4 (chấm chất lượng), hoặc lấy
+khoá TTS để khép nốt phần giọng đọc của Phase 2.
 
 **Về 760 nội dung chưa phân loại**: chủ dự án chốt không chạy hết — quá nhiều và
 không cần cho việc dựng giao diện. Đã phân loại có chọn lọc ~90 video *có triển
@@ -360,6 +367,76 @@ terminated unexpectedly`; chạy lại ngay sau đó thì trôi bình thường.
 chạy hàng giờ thì không thể để cả mẻ hỏng vì mạng chớp một cái, nên mọi lượt ghi
 nay tự thử lại tối đa hai lần (chờ 2 rồi 5 giây) khi gặp lỗi *đứt kết nối* —
 những lỗi khác vẫn ném ra ngay, không giấu.
+
+## Phase 2 — Blog & diễn đàn AI: XONG phần chữ, còn phần giọng đọc
+
+Đây là phần **bù độ trễ tin AI**: tin trên YouTube tiếng Việt chậm hơn nhiều so
+với blog phương Tây, nên đọc thẳng nguồn gốc rồi thuật lại bằng tiếng Việt.
+
+File: `src/lib/nguon/` (đọc feed, lấy toàn văn, quét), `src/lib/llm/thuatLai.ts`
+(thuật lại). Chạy bằng `scripts/quet-blog.ts` và `scripts/thuat-lai.ts`.
+
+### Nguyên tắc "thêm nguồn mới = thêm một adapter" đã được kiểm chứng
+
+Bài viết dùng **chung `Source`/`ContentItem`** với video. Chữ trong bài lưu vào
+đúng bảng `Transcript` mà video dùng, chỉ khác nhãn nguồn (`blog_article_text`).
+Nhờ vậy **bước phân loại bằng Claude chạy y nguyên, không sửa một dòng nào** —
+chạy thật trên 10 bài, 6 bài được xếp vào nhóm AI. Nguyên tắc số một của bản
+thiết kế đứng vững.
+
+### Khảo sát nguồn thật — kết quả khác dự đoán
+
+| Nguồn | Tầng | Đọc feed | Lấy toàn văn |
+|---|---|---|---|
+| Simon Willison | chuyên gia | ✅ 30 mục | ✅ tốt nhất — feed đã gần đủ toàn văn |
+| Hugging Face | hãng | ✅ 842 mục | ✅ 9–27 nghìn chữ |
+| Google DeepMind | hãng | ✅ 100 mục | ✅ 8–10 nghìn chữ |
+| Hacker News | diễn đàn | ✅ kèm **điểm số + số bình luận** | tuỳ trang đích |
+| Lobste.rs | diễn đàn | ✅ 25 mục | tuỳ trang đích |
+| OpenAI | hãng | ✅ 1.129 mục | ❌ **chặn truy cập tự động (403)** |
+
+Hai bất ngờ: DeepMind và Hugging Face tưởng chỉ có tóm tắt, hoá ra **trang từng
+bài** lấy được toàn văn (chỉ trang *danh sách* mới dựng bằng JavaScript). Còn
+OpenAI thì chặn hẳn — không cố vượt rào, chuyển sang dùng tóm tắt trong feed,
+đúng tinh thần "xử lý duyên dáng khi bị chặn" ở mục rủi ro.
+
+**Anthropic không còn RSS công khai** — thử bốn đường dẫn đều 404.
+
+Món hời ngoài dự kiến: **feed Hacker News kèm sẵn điểm số và số bình luận**, lưu
+thẳng vào `ExternalDiscussion`. Đây đúng là thước đo thay thế mà bản thiết kế
+cần cho blog — loại nội dung vốn "không có chỉ số công khai nào".
+
+### Thuật lại tiếng Việt — phần cốt lõi
+
+Dùng **Sonnet** chứ không phải Haiku: đây là việc viết lách thật sự, cần giữ
+giọng văn tự nhiên. Khác hẳn việc xếp nhóm ở bước phân loại.
+
+Ràng buộc quan trọng nhất là **bản quyền**: lời dặn nói thẳng "thuật lại bằng
+lời văn riêng, không dịch nguyên văn" — đúng yêu cầu trong mục rủi ro. Và
+"đầy đủ" chứ không phải tóm tắt: giữ đủ số liệu, tên riêng, ví dụ để đọc xong
+không cần mở bài gốc.
+
+**Đã chạy thật, chất lượng tốt**: bài 17.586 chữ tiếng Anh → 18.127 chữ tiếng
+Việt. Bản thuật lại giữ nguyên thuật ngữ (dependency, smoke test, CLI), giữ tên
+lệnh và tên package, diễn đạt bằng lời riêng — ví dụ dùng chữ *"ăn ké"* thay vì
+dịch máy móc. Tự thêm dòng `Ghi chú:` khi bài gốc ngắn, đúng như đã dặn.
+
+Trên giao diện, bài đã thuật lại mang nhãn **ĐÃ THUẬT LẠI** ở góc ảnh.
+
+### Ba lỗi vấp khi dựng
+
+1. **Tiêu đề HTTP chỉ nhận ASCII.** Chuỗi tự giới thiệu viết "trợ lý đọc tin cá
+   nhân" làm **cả sáu nguồn** hỏng với `Invalid character in header content`.
+2. **Một trang khổng lồ làm chết cả mẻ.** Bài PDF 12MB khiến cheerio tràn bộ nhớ
+   (`Maximum call stack size exceeded`), và vì lỗi ở tầng sâu nên script chết
+   hẳn. Nay bỏ qua trang trên 3MB, và bọc từng bài trong lớp bắt lỗi riêng.
+3. Không lấy được toàn văn thì dùng tóm tắt trong feed thay vì bỏ bài.
+
+### Còn thiếu ở Phase 2
+
+**Giọng đọc (TTS)** — cần `TTS_PROVIDER` và `TTS_API_KEY` mà `.env` chưa có.
+Phần chữ đã xong nên khi có khoá chỉ việc đọc `NarrationAsset.scriptText` lên
+thành audio.
 
 ## Giao diện — đã có trang chủ thật
 

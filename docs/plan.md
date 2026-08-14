@@ -390,7 +390,7 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 |---|---|
 | **0** | Repo mới, schema `Source`/`ContentItem`/`Author`, Postgres+pgvector, auth 1 tài khoản, YouTube client + `QuotaUsageLog` |
 | **1** | YouTube pipeline lõi: đăng nhập Google + **nhập kênh đã đăng ký, video đã thích, playlist hiện có** (`YouTubeAccountSignal` — giải cold start), ingestion, transcript fetcher, classification 4 nhóm + trường mở rộng, CRUD whitelist thủ công |
-| **2** | Blog/Diễn đàn AI + TTS tiếng Việt *(ưu tiên sớm)*: adapter 4 tier nguồn, `NarrationAsset`, tích hợp TTS |
+| **2** | Blog/Diễn đàn AI + TTS tiếng Việt *(ưu tiên sớm)*: adapter 4 tier nguồn, `NarrationAsset`, tích hợp TTS — **đã xong phần chữ 2026-08-14**, phần TTS chờ khoá |
 | **3** | Nhánh Music: metadata extractor, parse BPM + `bpmConfidence`, chuẩn hoá genre bằng Haiku |
 | **4** | **Engine chấm chất lượng theo nguồn**: 4 trụ tín hiệu chuẩn hoá percentile, `SourceQualityProfile` + UI chỉnh trọng số trong Cài đặt, `CommentAnalysis` vòng 2, `ExternalDiscussion` cho blog/podcast |
 | **4b** | Search/Filter API với toàn bộ trường lọc + 3 kiểu sắp xếp + UI duyệt |

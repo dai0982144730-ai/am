@@ -71,6 +71,10 @@ const TEN_CHU_DE_AI: Record<string, string> = {
 
 /** Nhãn nổi ở góc trái ảnh — mỗi chuyên mục một kiểu thông tin. */
 function nhanGoc(muc: NonNullable<TheNoiDung>): string | null {
+  // Bài nước ngoài đã có bản tiếng Việt — thông tin quan trọng nhất với người
+  // dùng, nên ưu tiên hiện trước mọi nhãn khác
+  if (muc.narrationAsset) return "ĐÃ THUẬT LẠI";
+
   const pl = muc.classification;
   if (!pl) return null;
 

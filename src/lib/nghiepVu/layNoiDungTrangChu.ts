@@ -22,7 +22,8 @@ const TRUONG_CAN_LAY = {
   viewOrPlayCount: true,
   contentGroup: true,
   narrationType: true,
-  source: { select: { title: true } },
+  source: { select: { title: true, reputationTier: true } },
+  narrationAsset: { select: { id: true } },
   classification: {
     select: {
       contentQualityNotes: true,

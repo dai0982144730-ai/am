@@ -184,11 +184,15 @@ export async function phanLoaiHangLoat(
   gioiHan = 50,
   bao?: (dong: string) => void,
   chiLayCoTrienVong = false,
+  chiLayBaiViet = false,
 ): Promise<KetQuaPhanLoaiHangLoat> {
   const cacMuc = await prisma.contentItem.findMany({
     where: {
       status: { in: ["pending_classification", "transcript_unavailable"] },
       classification: null,
+      ...(chiLayBaiViet
+        ? { type: { in: ["blog_article" as const, "forum_post" as const] } }
+        : {}),
       ...(chiLayCoTrienVong
         ? {
             OR: TU_KHOA_TRIEN_VONG.map((tu) => ({
