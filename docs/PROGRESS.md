@@ -16,17 +16,16 @@ Chia thành sáu bước để dễ kiểm chứng từng chặng:
 
 | Bước | Nội dung | Tình trạng |
 |---|---|---|
-| 1a | Đăng nhập Google, lưu token, chặn email lạ | ✅ xong, đã thử tới màn hình Google |
+| 1a | Đăng nhập Google, lưu token, chặn email lạ | ✅ xong, **đã đăng nhập thật** |
 | 1b | Gọi YouTube API + đếm hạn mức + ngắt ở 80% | ✅ xong, đã chạy thật |
-| 1c | Nhập kênh đã đăng ký / video đã thích / playlist | ⬜ **chờ chủ dự án đăng nhập một lần** |
+| 1c | Nhập kênh đã đăng ký / video đã thích / playlist | ✅ xong, **đã nhập 1.029 mục thật** |
 | 1d | Quét video về thành `ContentItem` | ⬜ chưa |
 | 1e | Lấy lời thoại video | ⬜ chưa, phải cài thư viện |
 | 1f | Phân loại bằng Claude | ⬜ chưa, **cần `ANTHROPIC_API_KEY` thật** |
 
-**Việc kế tiếp cần chủ dự án làm**: mở http://localhost:3000 bấm "Đăng nhập bằng
-Google" đúng một lần. Không có bước này thì 1c trở đi không chạy được, vì kênh
-đã đăng ký và video đã thích là dữ liệu riêng của tài khoản, khoá API không đọc
-được.
+**Việc kế tiếp**: bước 1d — quét video mới từ các kênh đã đăng ký về thành
+`ContentItem`. Không cần chủ dự án chuẩn bị gì thêm, trừ `ANTHROPIC_API_KEY`
+cho bước 1f.
 
 ### 1a — Đăng nhập Google
 
@@ -51,6 +50,47 @@ File: `src/auth.ts`, `src/app/api/auth/[...nextauth]/route.ts`,
 với `access_type=offline`, `prompt=consent` (hai thứ bắt buộc để Google chịu cấp
 refresh token), đúng scope `youtube.readonly`, đúng redirect URI, và có
 `code_challenge` (Auth.js tự bật PKCE).
+
+### Cạm bẫy: đăng nhập được nhưng không có quyền YouTube
+
+**Đã vấp thật ngày 2026-08-14.** Đăng nhập thành công, token lưu vào database
+đầy đủ, nhưng `scope` chỉ có `userinfo.profile`, `userinfo.email`, `openid` —
+thiếu hẳn `youtube.readonly`. Gọi API thì nhận `403 Request had insufficient
+authentication scopes`.
+
+**Nguyên nhân**: Google **chỉ cấp những quyền đã khai sẵn trong màn hình xin
+quyền của dự án trên Google Cloud**. Code có xin thêm cũng bị bỏ qua trong im
+lặng — không hề báo lỗi lúc đăng nhập, mãi tới lúc gọi API mới lộ ra.
+
+**Cách sửa**, trong [console.cloud.google.com](https://console.cloud.google.com):
+
+1. Chọn đúng project chứa OAuth client ID đang dùng
+2. **APIs & Services** → **OAuth consent screen**
+3. Mục **Data Access** (giao diện mới) hoặc tab **Scopes** (giao diện cũ)
+4. **Add or Remove Scopes** → lọc `youtube.readonly` → tick dòng
+   `.../auth/youtube.readonly` (mô tả: *"View your YouTube account"*)
+5. **Update** → **Save**
+6. Về trang chủ đăng xuất rồi đăng nhập lại
+
+Ở bước 6 sẽ qua vài màn hình cảnh báo "ứng dụng chưa được xác minh" — bình
+thường, vì app đang ở chế độ thử nghiệm và chỉ mình dùng. Bấm qua là được.
+
+*Ghi chú thực tế (2026-08-14)*: giao diện Google hiện tại **không có ô tick
+riêng** cho quyền YouTube. Quyền được liệt kê sẵn trong màn hình cấp quyền, chỉ
+cần bấm "Tiếp tục" là coi như đồng ý. Tài liệu cũ của Google có nói tới checkbox
+cho từng quyền, nhưng bản đang chạy thì không.
+
+Code đã được sửa để bắt lỗi này ngay tại `layAccessToken()` và in ra đúng các
+bước trên, thay vì để Google trả về mã 403 khó hiểu.
+
+**Đã kiểm chứng sau khi sửa**: `scripts/kiem-ket-noi-youtube.ts` báo "Quyền
+YouTube: CÓ", gọi `subscriptions.list` đọc được danh sách kênh đã đăng ký thật.
+
+Kiểm tra bất cứ lúc nào:
+
+```bash
+npx tsx scripts/kiem-ket-noi-youtube.ts
+```
 
 ### 1b — Gọi YouTube API + đếm hạn mức
 
@@ -78,6 +118,34 @@ Script kiểm tra nhanh bất cứ lúc nào:
 ```bash
 npx tsx scripts/thu-youtube.ts
 ```
+
+### 1c — Nhập tín hiệu từ tài khoản
+
+File: `src/lib/youtube/nhapTinHieu.ts`, chạy bằng
+`npx tsx scripts/nhap-tin-hieu-youtube.ts`.
+
+**Đã nhập thật ngày 2026-08-14**, tổng **1.029 mục**, chỉ tốn **46 đơn vị** hạn
+mức (chưa tới 0,5% ngân sách ngày):
+
+| Loại | Số lượng | Độ mạnh của tín hiệu |
+|---|---|---|
+| Video đã thích | 282 | Mạnh nhất — hành động chủ động khen một nội dung cụ thể |
+| Video trong playlist tự lập | 523 (từ 27 playlist) | Đã chọn lọc có chủ đích |
+| Kênh đã đăng ký | 224 | Yếu nhất — nhiều người đăng ký rồi để đó |
+
+**Chạy lại an toàn**: lần chạy thứ hai thêm mới 0 mục, tổng vẫn 1.029 — dùng
+`skipDuplicates` nên nhặt thêm cái mới mà không nhân đôi cái cũ. Chạy lại sau
+vài tháng sẽ lấy được những gì đã thích thêm trong khoảng đó.
+
+Hai chi tiết đã xử lý:
+- **Video "Deleted video"/"Private video" bị loại**, không lưu — chúng vẫn nằm
+  trong playlist nhưng không còn tên thật, lưu vào chỉ làm nhiễu dữ liệu gu.
+- **Một playlist hỏng không làm chết cả lần nhập** — gom lỗi lại báo cuối cùng.
+
+*Nhận xét về dữ liệu thu được*: gu khá tạp, nhiều video giải trí ngắn xen lẫn
+mấy mảng rõ nét (AI, đạo & đời, chạy bộ đường dài). Nghĩa là tới Phase 9 khi
+dựng `UserTasteProfile` sẽ phải cân nhắc lọc bớt nhiễu, chứ lấy thẳng tần suất
+kênh làm trọng số thì mảng giải trí ngắn sẽ lấn át.
 
 ## Phase 15 — Cổng API trợ lý: XONG và ĐÃ XÁC NHẬN CHẠY THẬT (phần của `am`)
 
@@ -300,11 +368,14 @@ tiếp nối phiên trên web bị ngắt quãng)*
 - Kiểm tra bảng `AssistantApiLog` trên Neon: ghi đủ mọi lần gọi, nhãn token
   được che.
 
-**Phase 1 — bước 1a và 1b**
+**Phase 1 — bước 1a, 1b, 1c**
 - Dựng đăng nhập Google (`src/auth.ts`) với quyết định không dùng bộ bảng
   Auth.js, chỉ thêm một bảng `GoogleAccount` giữ đúng một dòng.
 - Dựng lớp gọi YouTube API kèm bộ đếm hạn mức (`src/lib/youtube/`), đã chạy thật
   và kiểm chứng cơ chế ngắt ở 80% — chi tiết ở mục "Phase 1" phía trên.
+- Vấp cạm bẫy thiếu quyền YouTube (đăng nhập được nhưng Google không cấp
+  `youtube.readonly`), đã sửa và ghi lại cách xử lý.
+- Nhập thật 1.029 tín hiệu từ tài khoản YouTube của chủ dự án.
 
 **Ghi chú kỹ thuật mới học được**
 - Auth.js v5 trả về `handlers` (một object), không trả `GET`/`POST` rời. Trong

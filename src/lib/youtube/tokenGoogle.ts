@@ -25,6 +25,28 @@ export class ChuaKetNoiYouTube extends Error {
   }
 }
 
+/** Quyền bắt buộc phải có thì mới đọc được dữ liệu YouTube của tài khoản. */
+export const QUYEN_YOUTUBE = "https://www.googleapis.com/auth/youtube.readonly";
+
+/**
+ * Lời nhắc khi đăng nhập được nhưng Google không cấp quyền YouTube.
+ *
+ * Đây là cái bẫy đã vấp một lần: Google chỉ cấp những quyền đã khai sẵn trong
+ * màn hình xin quyền của dự án trên Google Cloud. Code có xin thêm cũng bị bỏ
+ * qua trong im lặng — đăng nhập vẫn thành công, tới lúc gọi API mới báo lỗi 403
+ * khó hiểu.
+ */
+const HUONG_DAN_THIEU_QUYEN = [
+  "Đăng nhập thành công nhưng Google không cấp quyền đọc YouTube.",
+  "",
+  "Cách sửa, trong console.cloud.google.com:",
+  "  1. APIs & Services → OAuth consent screen",
+  "  2. Mục 'Data Access' (hoặc tab 'Scopes') → Add or Remove Scopes",
+  "  3. Lọc theo 'youtube.readonly', tick dòng .../auth/youtube.readonly",
+  "  4. Update → Save",
+  "  5. Về trang chủ đăng xuất rồi đăng nhập lại, NHỚ TICK ô quyền YouTube",
+].join("\n");
+
 interface PhanHoiLamMoi {
   access_token?: string;
   expires_in?: number;
@@ -48,6 +70,13 @@ export async function layAccessToken(): Promise<string> {
     throw new ChuaKetNoiYouTube(
       "Chưa kết nối tài khoản YouTube. Vào trang chủ bấm 'Đăng nhập bằng Google' một lần.",
     );
+  }
+
+  // Bắt lỗi thiếu quyền ngay tại đây, trước khi gọi API. Nếu để Google trả lời
+  // thì chỉ nhận được "insufficient authentication scopes" — đúng nhưng không
+  // giúp được gì cho người phải đi sửa.
+  if (taiKhoan.scope && !taiKhoan.scope.split(" ").includes(QUYEN_YOUTUBE)) {
+    throw new ChuaKetNoiYouTube(HUONG_DAN_THIEU_QUYEN);
   }
 
   const conHan =
