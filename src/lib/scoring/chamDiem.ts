@@ -180,6 +180,7 @@ export async function chamDiemHangLoat(
           },
         },
         externalDiscussions: { select: { score: true, commentCount: true } },
+        commentAnalysis: { select: { discussionQualityScore: true } },
       },
     });
 
@@ -198,18 +199,24 @@ export async function chamDiemHangLoat(
         (a) => a.author.approvedByUser,
       );
 
-      // Điểm thảo luận: với nội dung có bàn luận ở nơi khác (Hacker News,
-      // Reddit) thì dùng điểm đó — đây chính là thước đo thay thế cho blog,
-      // loại nội dung vốn không có chỉ số nào của riêng nó
+      // Điểm thảo luận, lấy theo thứ tự ưu tiên:
+      //
+      //   1. Claude đã đọc bình luận thật (vòng 2) — chính xác nhất, vì nó
+      //      phân biệt được thảo luận thực chất với bình luận phẫn nộ vài chữ
+      //   2. Điểm bàn luận trên Hacker News / Reddit — thước đo thay thế cho
+      //      blog, loại nội dung vốn không có chỉ số nào của riêng nó
+      //   3. Không có gì — trụ này bị loại khỏi công thức, trọng số chia lại
+      //      cho các trụ còn lại
       const diemThaoLuan =
-        muc.externalDiscussions.length > 0
+        muc.commentAnalysis?.discussionQualityScore ??
+        (muc.externalDiscussions.length > 0
           ? toPercentile(
               Math.max(
                 ...muc.externalDiscussions.map((tl) => tl.score ?? 0),
               ),
               tap.diemDienDan,
             )
-          : null;
+          : null);
 
       const boonPhoBien = popularityScore({
         viewCount: muc.viewOrPlayCount,

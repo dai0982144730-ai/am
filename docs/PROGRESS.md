@@ -10,7 +10,7 @@
 | **1** — Quét YouTube (6/6 bước) | ✅ xong, đã chạy thật |
 | **2** — Blog & diễn đàn AI | ✅ xong phần chữ; phần giọng đọc chờ khoá TTS |
 | **3** — Nhánh nhạc | ✅ xong, chạy hoàn toàn bằng luật |
-| **4** — Chấm chất lượng | ✅ xong phần lõi; còn vòng 2 đọc bình luận |
+| **4** — Chấm chất lượng | ✅ xong cả hai vòng, kể cả Claude đọc bình luận thật |
 | **15** — Cổng API trợ lý | ✅ xong, đã chạy thật |
 | Giao diện | Trang chủ thật đã chạy với dữ liệu thật |
 
@@ -35,9 +35,9 @@ Chia thành sáu bước để dễ kiểm chứng từng chặng:
 chuyển sang gọi Claude qua CLI dùng gói Claude Pro sẵn có — xem mục "Gọi Claude
 qua CLI" bên dưới.
 
-**Việc kế tiếp**: vòng 2 của Phase 4 (Claude đọc bình luận — phần quan trọng
-nhất còn thiếu, xem ghi chú ở mục Phase 4), hoặc Phase 4b (bộ lọc và tìm kiếm),
-hoặc lấy khoá TTS để khép nốt phần giọng đọc.
+**Việc kế tiếp**: Phase 4b (bộ lọc và tìm kiếm với ba kiểu sắp xếp), Phase 5
+(trình phát + theo dõi thói quen xem), hoặc lấy khoá TTS để khép nốt phần giọng
+đọc của Phase 2.
 
 **Về 760 nội dung chưa phân loại**: chủ dự án chốt không chạy hết — quá nhiều và
 không cần cho việc dựng giao diện. Đã phân loại có chọn lọc ~90 video *có triển
@@ -498,14 +498,61 @@ chưa làm được điều đó.
 và nhóm "Khác" không lên trang. Nhưng khi làm bản tin hằng sáng (Phase 10) thì
 phải xong vòng 2 trước, không thì trợ lý sẽ toàn gợi ý tin giật gân.
 
+## Phase 4 vòng 2 — Claude đọc bình luận: XONG
+
+File: `src/lib/youtube/layBinhLuan.ts` (lấy bình luận),
+`src/lib/llm/chamBinhLuan.ts` (Claude chấm),
+`src/lib/scoring/vongHaiBinhLuan.ts` (điều phối). Chạy bằng
+`npx tsx scripts/doc-binh-luan.ts`.
+
+Đây là mảnh ghép **phân biệt web này với việc chỉ sắp xếp theo lượt xem**, và nó
+đã chứng minh giá trị ngay lần chạy đầu.
+
+### Kết quả chạy thật — đúng như bản thiết kế dự đoán
+
+Tám video **đang đứng đầu bảng** (điểm 6,1–6,7) được đọc bình luận. Điểm thảo
+luận trung bình: **0,21 trên thang 1**. Nhận xét Claude đưa ra:
+
+> *"Phần bình luận toàn là lời cầu nguyện, niệm Phật, khen chung chung và emoji
+> — không ai bàn về nội dung"*
+>
+> *"Toàn bình luận khen chung chung, ủng hộ người làm nội dung mà không bàn chi
+> tiết gì về nội dung thực"*
+
+Cờ gắn được: **3 video bình luận toàn emoji**, **1 video bị người xem tố tiêu đề
+sai nội dung**.
+
+Sau khi tính lại, **cả tám video đó đều rơi khỏi tốp đầu**. Đúng nguyên văn điều
+`plan.md` đặt ra: *"video 2 triệu view nhưng bình luận toàn emoji phải xếp dưới
+video 50 nghìn view có thảo luận thực chất"*.
+
+### Một hệ quả cần biết: video chưa đọc bình luận tạm được lợi
+
+Khi trụ thảo luận không có dữ liệu, nó bị loại khỏi công thức và **trọng số 30%
+của nó chia lại cho ba trụ còn lại**. Nghĩa là video *chưa* đọc bình luận có
+điểm nhỉnh hơn video đã đọc mà thảo luận kém.
+
+Nghe như bất công, nhưng thực ra là **cơ chế tự điều chỉnh hợp lý**: video nào
+nổi lên tốp đầu thì vòng sau được đọc bình luận, thảo luận kém thì tụt xuống,
+nhường chỗ cho cái khác nổi lên. Chạy hằng ngày thì tốp đầu dần chỉ còn nội dung
+đã qua kiểm tra thật.
+
+Không nên "cho điểm trung tính 0,5" khi chưa đọc — làm vậy là bịa ra dữ liệu
+không có, và video kém sẽ được nâng lên oan.
+
+### Chi phí rất rẻ
+
+Một lần chạy 20 video: **20 đơn vị hạn mức YouTube** (0,2% ngân sách ngày) và 20
+lần gọi Haiku. `commentThreads.list` chỉ tốn 1 đơn vị cho tối đa 100 bình luận.
+
+Nhạc bị loại khỏi vòng 2: bình luận dưới video nhạc gần như luôn là "hay quá",
+và bản thiết kế cũng nói nhạc không dùng điểm chất lượng nội dung.
+
 ### Còn thiếu ở Phase 4
 
-- **Vòng 2 — Claude đọc bình luận** (`CommentAnalysis`): gọi `commentThreads.list`
-  cho ~20 ứng viên đứng đầu mỗi ngày, chấm chất lượng thảo luận, gắn cờ "bình
-  luận toàn emoji", "tố clickbait". Đây là phần quan trọng nhất còn thiếu.
-- **Màn hình chỉnh trọng số** trong Cài đặt. Bộ trọng số mặc định đã nằm trong
-  database (`SourceQualityProfile`, 5 loại nguồn) và code đọc ưu tiên bản người
-  dùng chỉnh — chỉ thiếu giao diện.
+**Màn hình chỉnh trọng số** trong Cài đặt. Bộ trọng số mặc định đã nằm trong
+database (`SourceQualityProfile`, 5 loại nguồn) và code đọc ưu tiên bản người
+dùng chỉnh — chỉ thiếu giao diện.
 
 ## Giao diện — đã có trang chủ thật
 
