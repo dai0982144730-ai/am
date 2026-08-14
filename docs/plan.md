@@ -464,8 +464,10 @@ mở cuối mục.)*
 3. `src/lib/nghiepVu/chuanHoaDeDoc.ts` — bỏ markdown, thay URL, đọc đúng viết
    tắt AI/LLM (danh sách viết tắt riêng cho `am` sẽ nhẹ hơn `phaply` nhiều vì
    không có số hiệu văn bản luật, chủ yếu là thuật ngữ AI).
-4. Bảng mới `GoiApiTroLyLog` (theo đúng mẫu `QuotaUsageLog`/`JobRun` đã có):
-   thời điểm, token, endpoint, thời gian phản hồi, số token AI tiêu thụ.
+4. Bảng mới `AssistantApiLog` (theo đúng mẫu `QuotaUsageLog`/`JobRun` đã có):
+   thời điểm, nhãn token, endpoint, thời gian phản hồi, số token AI tiêu thụ.
+   Tên bảng đặt tiếng Anh cho nhất quán với 36 bảng kia — đúng theo quyết định
+   "giữ nguyên schema tiếng Anh" ở trên.
 5. 5 route dùng chung + `GET /tom-tat-hom-nay` dưới
    `src/app/api/v1/tro-ly/`.
 6. `docs/API-TRO-LY.md` (riêng cho `am`) + `docs/vi-du-goi-api.http`.
@@ -477,24 +479,33 @@ với dữ liệu Phase 1–2 (không cần chờ Music/scoring engine xong — 
 1) mà không cần đợi personalization. `tom-tat-hom-nay` cần `AssistantBriefing`
 có dữ liệu thật, tức đợi Phase 10 (Digest) chạy được ít nhất một lần.
 
-### Câu hỏi mở — cần chủ dự án trả lời
+### Ba câu hỏi mở — đã được trả lời (2026-08-14)
 
-1. **`tiendo` và `phaply` đang ở đâu?** Phiên Claude Code này chỉ thấy repo
-   `dai0982144730-ai/am` trong tài khoản GitHub đang kết nối. Nếu hai repo
-   kia tồn tại (GitHub riêng, hay cùng tài khoản nhưng chưa cấp quyền), cho
-   biết địa chỉ để khảo sát thật — nếu chưa tồn tại/chưa bắt đầu code thì nói
-   rõ luôn, để không đợi vô ích.
-2. **Trang nào làm mẫu trước?** Yêu cầu gốc gợi ý làm trọn một trang rồi
-   nhân bản. `am` hiện có schema tốt nhất cho việc này (data model đã tổng
-   quát hoá sẵn) nhưng **chưa có dữ liệu thật** (Phase 1 ingestion chưa
-   chạy) — dựng API xong vẫn trả về rỗng, khó test bằng mắt. Nếu `phaply`
-   hoặc `tiendo` đã có dữ liệu thật đang chạy, làm mẫu ở đó có thể thấy kết
-   quả ngay và dễ chốt chuẩn hơn. Cần biết tình trạng thật của hai trang kia
-   trước khi chốt thứ tự.
-3. **Gói dùng chung (mục 6 yêu cầu gốc)**: chưa đề xuất cách tổ chức cụ thể
-   ở đây vì phụ thuộc hoàn toàn vào câu hỏi 1 — ba repo độc lập hoàn toàn hay
-   có thể gộp monorepo sẽ quyết định đây là npm package riêng hay một thư
-   mục copy tay giữa ba repo.
+1. **`tiendo` và `phaply` chưa có repo.** Chủ dự án sẽ gửi khi có.
+2. **Làm `am` trước** làm mẫu, chốt chuẩn rồi nhân bản sang hai trang kia.
+3. **Ba trang tách rời**, không gộp chung.
+
+### Gói dùng chung — cách chọn và lý do
+
+Câu trả lời số 3 quyết định luôn mục 6 của yêu cầu gốc. Ba cách đã cân nhắc:
+
+| Cách | Kết luận |
+|---|---|
+| Gộp ba trang vào một repo (monorepo) | ❌ Chủ dự án đã chốt tách rời. Gộp lại là đảo lộn ba dự án để lấy một lợi ích nhỏ |
+| Đóng gói thành npm package nội bộ | ❌ Phải dựng nơi chứa package, đánh phiên bản, mỗi lần sửa một dòng là phát hành lại rồi cập nhật ba nơi. Nặng hơn cả vấn đề nó giải quyết |
+| **Thư mục `src/lib/troLyChung/` chép tay giữa ba repo** | ✅ Không cần hạ tầng gì. Đổi lại phải nhớ chép — nhưng thư mục này rất ít thay đổi, vì nó là *hợp đồng giao tiếp*, mà hợp đồng thì cả điểm là phải ổn định |
+
+Chép sang trang khác chỉ phải đổi **hai chỗ**: `TEN_TRANG` trong `kieuDuLieu.ts`,
+và bảng viết tắt trong `vietTat.ts`. Bốn file còn lại chép nguyên xi. Nếu sau này
+ba trang gộp về một repo thì chuyển thành thư mục dùng chung thật mà không phải
+sửa một dòng code nào — chỉ đổi đường dẫn `import`.
+
+### Tình trạng — đã làm xong cho `am`
+
+Sáu endpoint đã viết xong, build sạch, đã chạy thử thật. Tài liệu đầy đủ ở
+**`docs/API-TRO-LY.md`**, tiến độ và kết quả kiểm chứng ở `docs/PROGRESS.md`.
+
+Còn lại: chép `src/lib/troLyChung/` sang `tiendo` và `phaply` khi hai repo đó có.
 
 ---
 

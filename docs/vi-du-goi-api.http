@@ -1,0 +1,146 @@
+###############################################################################
+# Cổng API trợ lý — trang `am`
+#
+# Cách dùng:
+#   - Trong VS Code: cài tiện ích "REST Client" rồi bấm "Send Request" trên
+#     từng khối bên dưới.
+#   - Không dùng VS Code: mỗi khối đều có bản curl tương đương ở comment.
+#
+# Đổi @token thành token thật trong file .env của bạn trước khi chạy.
+###############################################################################
+
+@host = http://localhost:3000
+@token = doi-thanh-token-that-trong-file-env
+
+
+###############################################################################
+# 1. Kiểm tra sức khoẻ
+#
+# curl -H "Authorization: Bearer $TOKEN" $HOST/api/v1/tro-ly/suc-khoe
+###############################################################################
+
+GET {{host}}/api/v1/tro-ly/suc-khoe
+Authorization: Bearer {{token}}
+
+
+###############################################################################
+# 2. Lấy danh sách công cụ (định dạng tools của Claude API)
+#
+# curl -H "Authorization: Bearer $TOKEN" $HOST/api/v1/tro-ly/cong-cu
+###############################################################################
+
+###
+GET {{host}}/api/v1/tro-ly/cong-cu
+Authorization: Bearer {{token}}
+
+
+###############################################################################
+# 3. Tìm kiếm
+#
+# curl -X POST -H "Authorization: Bearer $TOKEN" \
+#   -H "Content-Type: application/json" \
+#   -d '{"tuKhoa":"ý thức","soLuong":5}' \
+#   $HOST/api/v1/tro-ly/tim-kiem
+###############################################################################
+
+### Tìm đơn giản
+POST {{host}}/api/v1/tro-ly/tim-kiem
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tuKhoa": "ý thức",
+  "soLuong": 5
+}
+
+### Tìm trong một chuyên mục, lấy cả nội dung đầy đủ
+POST {{host}}/api/v1/tro-ly/tim-kiem
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tuKhoa": "Claude",
+  "chuyenMuc": "ai",
+  "tuNgay": "2026-08-01",
+  "soLuong": 3,
+  "kemNoiDung": true
+}
+
+### Thiếu từ khoá — phải trả 400 kèm mã tham_so_sai
+POST {{host}}/api/v1/tro-ly/tim-kiem
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "soLuong": 5
+}
+
+
+###############################################################################
+# 4. Lấy toàn văn một mục
+#
+# Thay <id> bằng một id thật lấy từ kết quả tìm kiếm ở trên.
+#
+# curl -H "Authorization: Bearer $TOKEN" $HOST/api/v1/tro-ly/noi-dung/<id>
+###############################################################################
+
+###
+GET {{host}}/api/v1/tro-ly/noi-dung/thay-bang-id-that
+Authorization: Bearer {{token}}
+
+### Id không tồn tại — phải trả 404 kèm mã khong_tim_thay
+GET {{host}}/api/v1/tro-ly/noi-dung/khong-co-that
+Authorization: Bearer {{token}}
+
+
+###############################################################################
+# 5. Hỏi trợ lý
+#
+# Cần ANTHROPIC_API_KEY trong .env. Chậm hơn các endpoint khác vì phải đọc nội
+# dung rồi mới trả lời.
+#
+# curl -X POST -H "Authorization: Bearer $TOKEN" \
+#   -H "Content-Type: application/json" \
+#   -d '{"cauHoi":"Tuần này có gì hay về AI?","cheDoGiongNoi":true}' \
+#   $HOST/api/v1/tro-ly/hoi
+###############################################################################
+
+###
+POST {{host}}/api/v1/tro-ly/hoi
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cauHoi": "Tuần này có video nào hay về ý thức không?",
+  "cheDoGiongNoi": true
+}
+
+
+###############################################################################
+# 6. Bản tin nội dung mới (endpoint riêng của am)
+#
+# curl -H "Authorization: Bearer $TOKEN" \
+#   "$HOST/api/v1/tro-ly/tom-tat-hom-nay?soNgay=3"
+###############################################################################
+
+### Hôm nay
+GET {{host}}/api/v1/tro-ly/tom-tat-hom-nay
+Authorization: Bearer {{token}}
+
+### Ba ngày gần đây
+GET {{host}}/api/v1/tro-ly/tom-tat-hom-nay?soNgay=3
+Authorization: Bearer {{token}}
+
+
+###############################################################################
+# 7. Kiểm tra bảo mật — gọi không token phải bị từ chối
+#
+# curl -i $HOST/api/v1/tro-ly/suc-khoe          → phải là 401
+###############################################################################
+
+### Không có header Authorization — phải trả 401 kèm mã thieu_token
+GET {{host}}/api/v1/tro-ly/suc-khoe
+
+### Token sai — phải trả 401 kèm mã token_sai
+GET {{host}}/api/v1/tro-ly/suc-khoe
+Authorization: Bearer token-bia-dat-khong-co-that

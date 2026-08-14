@@ -17,39 +17,63 @@ pgvector đã bật, logic chấm điểm chất lượng đã viết. `npm run 
 3. Client gọi YouTube Data API kèm đếm quota (`QuotaUsageLog`)
 4. Lấy lời thoại video + phân loại bằng Claude
 
-## Hạng mục mới — Cổng API trợ lý (Phase 15)
+## Phase 15 — Cổng API trợ lý: XONG (phần của `am`)
 
-Chủ dự án có kế hoạch xây app Android hỏi được cả 3 trang (`am`, `tiendo`,
-`phaply`) qua Claude API, sau khi `am` xong. **Chính phiên Claude Code này sẽ
-là người viết tiếp app Android đó** — ghi lại ở đây để phiên sau (kể cả phiên
-viết app Android) biết bối cảnh.
+Sáu endpoint dưới `/api/v1/tro-ly/` đã viết xong, build sạch, đã thử chạy thật.
+Tài liệu đầy đủ: **`docs/API-TRO-LY.md`** — kể cả mục "Ghi chú cho phiên làm app
+Android", là cầu nối sang giai đoạn 2.
 
-Yêu cầu gốc: `docs/yeu-cau-cong-api-tro-ly.md`. Rà soát + quyết định áp dụng
-cho `am`: `docs/plan.md` mục "Cổng API trợ lý — chuẩn bị cho app Android".
+Bối cảnh: sau khi `am` xong, một app Android sẽ hỏi được cả 3 trang (`am`,
+`tiendo`, `phaply`) qua Claude API. **Chính phiên Claude Code này viết tiếp app
+Android đó** — ghi lại để phiên sau biết.
 
-Tóm tắt đã chốt trong buổi rà soát 2026-08-14:
-- Data model hiện tại (`Source`/`ContentItem` tổng quát hoá từ Phase 0) khớp
-  tốt với khung `ketQua[]` yêu cầu — không cần sửa schema.
-- **Không** đổi tên 36 bảng Prisma sang tiếng Việt không dấu (rủi ro cao,
-  không lợi gì cho app Android). Quy ước tiếng Việt không dấu chỉ áp dụng ở
-  tầng mới: route `app/api/v1/tro-ly/`, hàm trong `lib/nghiepVu/`, tên
-  trường JSON trả ra — lớp này dịch từ tên tiếng Anh nội bộ sang JSON tiếng
-  Việt không dấu.
-- Chưa khảo sát được `tiendo`/`phaply` — repo chưa kết nối vào phiên này.
+### Ba câu hỏi mở đã được trả lời (2026-08-14)
 
-**3 câu hỏi mở, cần chủ dự án trả lời trước khi bắt đầu code Phase 15**
-(chi tiết trong `docs/plan.md`):
-1. Repo `tiendo`/`phaply` ở đâu — cho phép khảo sát thật hay chưa tồn tại?
-2. Trang nào làm mẫu trước — `am` có schema tốt nhất nhưng chưa có dữ liệu
-   thật (Phase 1 ingestion chưa chạy); nếu `phaply`/`tiendo` đã có dữ liệu
-   thì làm mẫu ở đó dễ kiểm chứng hơn.
-3. Ba repo có gộp monorepo được không, hay hoàn toàn độc lập — quyết định
-   cách tổ chức gói dùng chung (`lib/nghiepVu` types, `xacThucTokenTroLy`,
-   `chuanHoaDeDoc`).
+1. `tiendo` và `phaply` **chưa có repo**, chủ dự án sẽ gửi khi có.
+2. Làm **`am` trước** làm mẫu, chốt chuẩn rồi nhân bản.
+3. Ba trang **tách rời**, không gộp monorepo.
 
-Các endpoint đọc (`suc-khoe`, `cong-cu`, `tim-kiem`, `noi-dung/{id}`) của
-riêng `am` **không cần chờ trả lời 3 câu trên mới bắt đầu** — dựng được ngay
-với dữ liệu Phase 1 khi có, xem chi tiết phụ thuộc trong `docs/plan.md`.
+→ Kéo theo quyết định về gói dùng chung: `src/lib/troLyChung/` là **thư mục chép
+tay** giữa ba repo, không làm package npm (phải dựng hạ tầng phát hành cho một
+thứ rất ít thay đổi) và không gộp monorepo (chủ dự án đã chốt tách rời). Lý do
+đầy đủ trong `src/lib/troLyChung/README.md`.
+
+### Đã làm gì
+
+- `src/lib/troLyChung/` — bộ dùng chung, **chép nguyên sang 2 trang kia sau này**:
+  khung dữ liệu chuẩn, xác thực token, vỏ tuyến, chuẩn hoá giọng đọc, đọc số
+  tiếng Việt. Chép sang trang khác chỉ phải đổi 2 chỗ (`TEN_TRANG` và bảng viết
+  tắt), 4 file còn lại giữ nguyên.
+- `src/lib/nghiepVu/` — riêng của `am`: lớp dịch `ContentItem` → JSON tiếng Việt,
+  4 định nghĩa công cụ, gọi Claude sinh 2 bản trả lời, gom bản tin.
+- `src/app/api/v1/tro-ly/` — 6 tuyến, vỏ HTTP mỏng.
+- Bảng `AssistantApiLog` + migration **viết tay** (`20260814030000_them_nhat_ky_api_tro_ly`)
+  — chỉ thêm bảng mới, chạy `migrate deploy` an toàn, tránh hẳn cạm bẫy Prisma
+  xoá chỉ mục HNSW.
+- `TOKEN_TRO_LY` đã thêm vào `.env.example`.
+- `docs/API-TRO-LY.md` + `docs/vi-du-goi-api.http` (test nhanh mọi endpoint).
+
+### Đã kiểm chứng thật
+
+`npx tsc --noEmit` sạch · `npx eslint src` sạch · `next build` thành công, 6 tuyến
+đăng ký đúng. Chạy dev server và gọi thật:
+
+- Không token → 401 `thieu_token`; token bịa → 401 `token_sai` *(nghiệm thu #7)*
+- `/cong-cu` trả đúng định dạng `tools` của Claude API *(nghiệm thu #2)*
+- Giới hạn tần suất: đúng 60 lần lọt, lần thứ 61 bị chặn 429; token khác không
+  bị ảnh hưởng
+- Tham số sai → 400 kèm thông báo tiếng Việt chỉ rõ trường nào sai
+- Database tắt → `/suc-khoe` vẫn trả 200 kèm lý do dễ hiểu (không lộ đường dẫn
+  máy chủ hay mã nguồn)
+- Đọc số tiếng Việt: đúng cả 17 trường hợp bất quy tắc (mười lăm, hai mươi mốt,
+  hai mươi tư, một trăm lẻ năm, một nghìn không trăm lẻ năm…)
+- Chuẩn hoá giọng đọc: "AI" viết hoa → "ây ai", nhưng "ai" viết thường (từ tiếng
+  Việt) giữ nguyên — đúng như thiết kế
+
+**Chưa kiểm chứng được**: `/tim-kiem`, `/noi-dung/{id}`, `/hoi`,
+`/tom-tat-hom-nay` mới chỉ chạy qua build và typecheck, chưa gọi với dữ liệu
+thật vì Phase 1 (quét YouTube) chưa chạy nên kho còn rỗng. `/hoi` cũng cần
+`ANTHROPIC_API_KEY` mà hiện chưa có.
 
 ## Cần chủ dự án chuẩn bị
 
@@ -60,8 +84,9 @@ với dữ liệu Phase 1 khi có, xem chi tiết phụ thuộc trong `docs/plan
 | Khoá YouTube Data API v3 | ⬜ chưa | [console.cloud.google.com](https://console.cloud.google.com) → bật YouTube Data API v3 |
 | Google OAuth (đăng nhập) | ⬜ chưa | Cùng trang trên → Credentials → OAuth client ID. **Cần cho Phase 1** |
 | Whitelist tác giả/nguồn ban đầu | ⬜ chưa | Tác giả truyện, giảng sư, blog AI uy tín bạn đã biết |
-| Trả lời 3 câu hỏi mở về Cổng API trợ lý | ⬜ chưa | Xem mục "Hạng mục mới" ở trên |
-| Cấp quyền cho GitHub App xem repo `tiendo`/`phaply` (nếu đã tồn tại) | ⬜ chưa | Cần để khảo sát và đồng bộ chuẩn API |
+| Chạy `npx prisma migrate deploy` để tạo bảng `AssistantApiLog` | ⬜ chưa | **Đừng dùng `migrate dev`** — xem `docs/API-TRO-LY.md` |
+| Sinh `TOKEN_TRO_LY` điền vào `.env` | ⬜ chưa | Cần để gọi được Cổng API trợ lý |
+| Gửi repo `tiendo` / `phaply` khi có | ⬜ chưa | Để chép bộ `troLyChung` sang và đồng bộ chuẩn API |
 
 ## Chạy trên máy mới
 
@@ -153,3 +178,27 @@ xoá các dòng `DROP INDEX ..._vector_idx` → `migrate deploy`. Đã ghi rõ t
   `tiendo`/`phaply`.
 - Ghi nhận: sau khi `am` xong toàn bộ, chính phiên Claude Code này tiếp tục
   viết app Android — không phải giao việc khác.
+
+**Phase 15 — dựng xong Cổng API trợ lý cho `am`**
+- Chủ dự án trả lời 3 câu hỏi mở: `tiendo`/`phaply` chưa có repo, làm `am` trước,
+  ba trang tách rời không gộp.
+- Viết `src/lib/troLyChung/` (6 file dùng chung), `src/lib/nghiepVu/` (6 file
+  riêng của `am`), 6 tuyến dưới `src/app/api/v1/tro-ly/`.
+- Thêm bảng `AssistantApiLog` + migration viết tay, tránh cạm bẫy Prisma xoá
+  chỉ mục HNSW.
+- `docs/API-TRO-LY.md` + `docs/vi-du-goi-api.http`.
+- Đã chạy thật và kiểm chứng — chi tiết ở mục "Phase 15" phía trên.
+
+**Ghi chú kỹ thuật mới học được**
+- Prisma 7 sinh enum thành kiểu union chặt (`ContentGroup`), truyền chuỗi thường
+  vào là TypeScript báo lỗi. Cách sạch: viết hàm kiểm tra dạng "type guard" rồi
+  gán vào biến cục bộ, không ép kiểu bừa.
+- Kiểu của bản ghi lấy kèm quan hệ nên để `Prisma.ContentItemGetPayload<{ include:
+  typeof QUAN_HE_CAN_LAY }>` tự suy ra. Viết tay thì mỗi lần đổi `include` lại
+  phải nhớ sửa hai chỗ, quên một chỗ là TypeScript không báo gì.
+- Next.js 16: `params` trong route động là **Promise**, phải `await`. Trước đây
+  không phải vậy.
+- Bẫy tiếng Việt khi thay từ viết tắt: phải khớp **đúng chữ hoa**. Nếu thay
+  không phân biệt hoa thường thì câu "ai cũng biết" bị đọc thành "ây ai cũng
+  biết". Và `\b` của biểu thức chính quy không hiểu nguyên âm có dấu, nên phải
+  tự liệt kê bảng chữ cái tiếng Việt.

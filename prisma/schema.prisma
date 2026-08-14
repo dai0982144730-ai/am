@@ -901,6 +901,29 @@ model QuotaUsageLog {
   @@index([date])
 }
 
+/// Nhật ký mọi lượt gọi Cổng API trợ lý (/api/v1/tro-ly/*).
+///
+/// Để sau này biết chi phí Claude API đến từ thiết bị nào, endpoint nào, và
+/// endpoint nào chậm. Không lưu token thật — chỉ lưu vài ký tự đầu (`tokenLabel`)
+/// đủ để phân biệt thiết bị, không đủ để dùng lại.
+model AssistantApiLog {
+  id       String @id @default(cuid())
+  endpoint String
+  /// Vài ký tự đầu của token, dạng "abc123…"
+  tokenLabel     String
+  responseTimeMs Int
+  statusCode     Int
+
+  /// Chỉ có ở endpoint gọi Claude
+  aiInputTokens  Int?
+  aiOutputTokens Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([endpoint, createdAt])
+}
+
 /// Job nền chạy lại phải an toàn, không nhân đôi dữ liệu
 model JobRun {
   id             String    @id @default(cuid())
