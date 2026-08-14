@@ -679,22 +679,44 @@ Chia suất chạy đúng. Làm tròn xuống có chủ đích: 4 thẻ với t�
 chứ không phải 4, để chuyên mục nào cũng còn ít nhất một suất cho nguồn quen.
 Đặt đúng 100% mới lấy hết — lúc đó là chủ nhà cố ý.
 
-### Chỗ chưa chạy được và vì sao
+### Đã chạy thật đầu-cuối
 
-Kho hiện có **0 nội dung từ nguồn lạ đã chấm điểm**, nên thực tế chưa thẻ nào
-được trộn vào. Hai lý do:
+Sau khi cho 9 video nguồn lạ (tìm được từ từ khoá "AI agent") chạy qua dây
+chuyền, một bài được chấm **7,5 điểm**. Kết quả hàng AI ở trang chủ:
 
-1. Chín video từ nguồn lạ (do tìm từ khoá "AI agent") chưa qua phân loại và
-   chấm điểm.
-2. **Cả 13 nguồn blog/diễn đàn đều đang đánh dấu `subscribed`** — `quetBlog.ts`
-   gán cứng như vậy. Nghĩa là IEEE Spectrum, Nature, Ars Technica… đều bị coi
-   là "nguồn quen" dù chủ dự án chưa từng chọn chúng; chính máy thêm vào.
+| Tỉ lệ AI | Suất dành cho nguồn lạ | Thực dùng | Hàng thẻ |
+|---|---|---|---|
+| 0% | 0 | 0 | 4 thẻ đều nguồn quen |
+| 90% | 3 | **1** | 1 thẻ "nguồn mới" 7,5 điểm dẫn đầu + 3 thẻ nguồn quen |
 
-Điểm 2 là một quyết định cần chủ dự án chốt, chưa tự sửa. Coi chúng là "quen"
-thì hợp lý ở chỗ đây là danh sách khởi đầu đóng vai trò xương sống cho hai
-chuyên mục AI và Khoa học — nếu tính là "lạ" thì cả 13 phải tranh nhau cái suất
-nhỏ của phần nguồn mới, và hai chuyên mục đó gần như rỗng. Nhưng nếu chủ dự án
-muốn tự mình duyệt từng nguồn thì đổi được.
+Đây chính là **quy tắc "trần chứ không phải chỉ tiêu" chạy sống**: dành 3 suất
+nhưng chỉ 1 bài nguồn lạ vượt được cửa, nên **2 suất kia trả về cho nguồn quen**
+thay vì lấp bằng bài kém. Và bài lọt vào đứng đầu hàng vì nó thật sự điểm cao
+nhất, không phải vì nó là nguồn lạ.
+
+### Một lỗi lộ ra trong lúc kiểm: trang New rỗng dần
+
+Lúc mới quét về, nội dung tìm theo từ khoá được gán tạm `contentGroup =
+new_search`. Nhưng phân loại xong **Claude ghi đè bằng chuyên mục thật** ("ai",
+"khoa_hoc"…). Trang `/quan-tam` lại lọc theo `contentGroup`, nên nó **rỗng dần
+đúng theo tốc độ phân loại** — càng chạy càng mất bài. Đếm được ngay: 8 bài
+theo cách cũ, 9 bài theo cách đúng.
+
+Đã sửa: trang New và chip "New" bám vào **quan hệ tới `AdHocInterest`**, tức là
+"bài này có được nhờ chủ nhà gõ từ khoá kia" — thứ bền, không bị phân loại ghi
+đè. Một video AI tìm ra từ từ khoá "AI agent" giờ nằm cả ở hàng AI lẫn ở New,
+đúng cả hai.
+
+### Một điểm cần chủ dự án chốt
+
+**Cả 13 nguồn blog/diễn đàn đều đang đánh dấu `subscribed`** — `quetBlog.ts`
+gán cứng như vậy. Nghĩa là IEEE Spectrum, Nature, Ars Technica… đều được coi là
+"nguồn quen" dù chủ dự án chưa từng chọn chúng; chính máy thêm vào.
+
+Chưa tự sửa. Coi chúng là "quen" thì hợp lý ở chỗ đây là danh sách khởi đầu
+đóng vai xương sống cho hai chuyên mục AI và Khoa học — tính là "lạ" thì cả 13
+phải tranh nhau cái suất nhỏ của phần nguồn mới, và hai chuyên mục đó gần như
+rỗng. Nhưng nếu chủ dự án muốn tự duyệt từng nguồn thì đổi được.
 
 ## Chuyên mục thứ năm: Khoa học (2026-08-15)
 

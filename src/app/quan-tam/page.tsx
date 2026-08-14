@@ -25,7 +25,17 @@ export default async function TrangQuanTam() {
       },
     }),
     prisma.contentItem.findMany({
-      where: chuaLuotQua({ contentGroup: "new_search" }),
+      // Bám vào TỪ KHOÁ đã sinh ra nội dung này, không bám vào chuyên mục.
+      //
+      // Đã vấp thật: lúc mới quét về, nội dung được gán tạm `new_search`;
+      // nhưng phân loại xong Claude ghi đè bằng chuyên mục thật ("ai",
+      // "khoa_hoc"…). Lọc theo `contentGroup` thì trang này rỗng dần đúng
+      // theo tốc độ phân loại — càng chạy càng mất bài.
+      //
+      // Quan hệ tới `AdHocInterest` mới là thứ bền: nó ghi "bài này có được
+      // là nhờ chủ nhà gõ từ khoá kia". Một video AI tìm ra từ từ khoá
+      // "AI agent" thì vừa nằm ở hàng AI, vừa nằm ở đây — đúng cả hai.
+      where: chuaLuotQua({ adHocInterestId: { not: null } }),
       orderBy: [
         { score: { compositeScore: { sort: "desc", nulls: "last" } } },
         { publishedAt: "desc" },

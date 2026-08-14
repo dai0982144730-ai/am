@@ -97,7 +97,11 @@ function dungDieuKien(loc: BoLoc): Prisma.ContentItemWhereInput {
     status: "classified",
   };
 
-  if (loc.nhom) dieuKien.contentGroup = loc.nhom;
+  // Chip "New" nghĩa là "tìm được nhờ từ khoá tôi gõ", không phải một chuyên
+  // mục chủ đề — vì phân loại sẽ ghi đè `contentGroup` bằng chủ đề thật. Xem
+  // lời giải thích dài hơn ở `app/quan-tam/page.tsx`.
+  if (loc.nhom === "new_search") dieuKien.adHocInterestId = { not: null };
+  else if (loc.nhom) dieuKien.contentGroup = loc.nhom;
   if (loc.loai) dieuKien.type = loc.loai;
   if (loc.loaiGiong) dieuKien.narrationType = loc.loaiGiong;
   if (loc.daThuatLai) dieuKien.narrationAsset = { isNot: null };
