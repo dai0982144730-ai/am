@@ -17,6 +17,7 @@
 
 import type { ContentGroup, ContentItemType } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
+import { coTheLaNhac } from "@/lib/music/nhanDienNhac";
 
 import { goiHetTrang, goiYouTube } from "./goiApi";
 
@@ -44,6 +45,7 @@ interface ChiTietVideo {
     description?: string;
     publishedAt?: string;
     channelId?: string;
+    channelTitle?: string;
     defaultAudioLanguage?: string;
     defaultLanguage?: string;
     thumbnails?: Record<string, { url?: string }>;
@@ -360,6 +362,16 @@ async function layChiTietVaLuu(
           // Chưa biết video thuộc chuyên mục nào — để Claude xếp ở bước sau
           contentGroup: "other" as ContentGroup,
           ingestSource: "subscribed" as const,
+          // Video có dấu hiệu là nhạc thì đánh dấu luôn để bước sau bỏ qua việc
+          // lấy lời thoại. Nhạc không có lời thoại hữu ích, mà lấy thì vừa tốn
+          // lượt gọi vừa tăng rủi ro bị chặn — xem lib/music/nhanDienNhac.ts
+          status: coTheLaNhac(
+            video.snippet?.title ?? "",
+            video.snippet?.channelTitle,
+            docThoiLuong(video.contentDetails?.duration),
+          ).coTheLaNhac
+            ? ("pending_classification" as const)
+            : ("pending_transcript" as const),
         };
       })
       .filter((d) => d !== null);

@@ -7,6 +7,8 @@
  * nhịp. Đó là thứ giúp liếc qua là biết ngay, không phải đọc tiêu đề.
  */
 
+import Link from "next/link";
+
 import type { TheNoiDung } from "@/lib/nghiepVu/layNoiDungTrangChu";
 
 /** Đổi giây thành dạng "12:04" hoặc "1:02:40". */
@@ -130,12 +132,7 @@ export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
   const phu = thongTinPhu(muc);
 
   return (
-    <a
-      href={muc.url ?? "#"}
-      target="_blank"
-      rel="noreferrer"
-      className="group flex flex-col gap-2"
-    >
+    <Link href={`/xem/${muc.id}`} className="group flex flex-col gap-2">
       <div className="relative aspect-video overflow-hidden rounded-xl bg-neutral-200 dark:bg-neutral-800">
         {muc.thumbnailUrl ? (
           // Ảnh từ YouTube, dùng thẻ img thường cho khỏi phải khai miền ảnh
@@ -175,6 +172,6 @@ export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
             .join(" · ")}
         </p>
       </div>
-    </a>
+    </Link>
   );
 }
