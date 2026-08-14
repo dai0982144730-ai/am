@@ -20,7 +20,7 @@ Chia thành sáu bước để dễ kiểm chứng từng chặng:
 | 1b | Gọi YouTube API + đếm hạn mức + ngắt ở 80% | ✅ xong, đã chạy thật |
 | 1c | Nhập kênh đã đăng ký / video đã thích / playlist | ✅ xong, **đã nhập 1.029 mục thật** |
 | 1d | Quét video về thành `ContentItem` | ✅ xong, **kho có 820 video thật** |
-| 1e | Lấy lời thoại video | ✅ xong, tỷ lệ lấy được ~95% |
+| 1e | Lấy lời thoại video | ✅ xong, **779/820 video (95%)** |
 | 1f | Phân loại bằng Claude | ✅ code xong, **chờ `ANTHROPIC_API_KEY` để chạy** |
 
 **Việc kế tiếp — cần chủ dự án**: lấy khoá Anthropic API tại
@@ -205,8 +205,15 @@ YouTube đổi API ngầm". Cách phòng vẫn giữ nguyên — lấy được 
 gọi thưa (nghỉ 1,2 giây giữa mỗi video), video không có phụ đề thì đánh dấu để
 lần sau khỏi thử lại.
 
-**Đã chạy thật**: 20 video đầu lấy được 19 (~95%), trung bình 21.700 ký tự mỗi
-video. Video dài nhất trong kho cho ra 127.000 ký tự lời thoại.
+**Đã chạy xong toàn bộ kho** (2026-08-14):
+
+| Chỉ số | Con số |
+|---|---|
+| Video có lời thoại | **779 / 820 (95%)** |
+| Video không có phụ đề | 41 |
+| Tổng chữ thu được | khoảng 19 triệu ký tự |
+| Trung bình mỗi video | ~25.000 ký tự |
+| Video dài nhất | 160.377 ký tự |
 
 **Cạm bẫy đã vấp — Prisma bỏ cuộc sau 5 giây**: chạy tới video thứ 565 thì dừng
 với lỗi `Transaction API error: transaction timeout 5000 ms, however 8567 ms
@@ -216,7 +223,8 @@ không phải trên máy, nên bản ghi lớn chậm hơn nhiều so với lúc
 
 Đã nới hạn lên 60 giây (`prisma.$transaction([...], { timeout: 60_000 })`) ở cả
 ba chỗ ghi lớn. **Không mất dữ liệu nào** — kiểm tra lại thấy 0 video ở trạng
-thái dở dang, transaction đã tự huỷ sạch đúng như thiết kế.
+thái dở dang, transaction đã tự huỷ sạch đúng như thiết kế. Chạy lại 255 video
+còn dở sau khi sửa: trôi hết, không lỗi nào.
 
 ### 1f — Phân loại bằng Claude
 
