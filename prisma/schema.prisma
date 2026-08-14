@@ -740,6 +740,31 @@ model LibraryItem {
   @@index([folder])
 }
 
+/// Token Google của chủ dự án, để gọi YouTube API thay mặt người dùng.
+///
+/// App này chỉ có MỘT người dùng, nên bảng này cố ý chỉ giữ đúng một dòng —
+/// khoá `id` cố định bằng "chu_du_an". Không dựng bộ bảng User/Account/Session
+/// của Auth.js vì đó là thiết kế cho web nhiều người dùng.
+///
+/// `accessToken` sống khoảng một giờ rồi hết hạn; `refreshToken` là thứ đổi ra
+/// access token mới. Google CHỈ cấp refresh token ở lần cấp quyền đầu tiên, nên
+/// mất nó thì phải vào myaccount.google.com/permissions gỡ quyền rồi đăng nhập
+/// lại — vì vậy không bao giờ ghi đè bằng giá trị rỗng.
+model GoogleAccount {
+  id    String @id @default("chu_du_an")
+  email String
+
+  accessToken  String    @db.Text
+  refreshToken String?   @db.Text
+  /// Thời điểm accessToken hết hạn
+  expiresAt    DateTime?
+  /// Các quyền đã được cấp, phân tách bằng dấu cách
+  scope        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 /// Tín hiệu nhập từ chính tài khoản YouTube của người dùng — dùng để dựng gu
 /// ngay từ ngày đầu, khi app chưa có lịch sử xem của riêng nó.
 ///

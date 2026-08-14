@@ -4,18 +4,80 @@
 
 ## Đang ở đâu
 
-**Phase 0 — Nền tảng: XONG.**
+**Phase 0 — Nền tảng: XONG.** **Phase 15 — Cổng API trợ lý: XONG, đã chạy thật.**
+**Phase 1 — đang làm, xong 2/6 bước.**
 
-Khung Next.js 16 + Tailwind 4, Prisma 7, database Neon đã chạy thật với 36 bảng,
+Khung Next.js 16 + Tailwind 4, Prisma 7, database Neon đã chạy thật với 38 bảng,
 pgvector đã bật, logic chấm điểm chất lượng đã viết. `npm run dev` lên được trang.
 
-## Việc kế tiếp — Phase 1
+## Phase 1 — Quét YouTube: đang làm
 
-1. Đăng nhập Google + xin quyền YouTube
-2. Nhập **kênh đã đăng ký, video đã thích, playlist hiện có** → `YouTubeAccountSignal`
-   (đây là cách dựng gu ngay từ ngày đầu, vì lịch sử xem thì Google không cho lấy)
-3. Client gọi YouTube Data API kèm đếm quota (`QuotaUsageLog`)
-4. Lấy lời thoại video + phân loại bằng Claude
+Chia thành sáu bước để dễ kiểm chứng từng chặng:
+
+| Bước | Nội dung | Tình trạng |
+|---|---|---|
+| 1a | Đăng nhập Google, lưu token, chặn email lạ | ✅ xong, đã thử tới màn hình Google |
+| 1b | Gọi YouTube API + đếm hạn mức + ngắt ở 80% | ✅ xong, đã chạy thật |
+| 1c | Nhập kênh đã đăng ký / video đã thích / playlist | ⬜ **chờ chủ dự án đăng nhập một lần** |
+| 1d | Quét video về thành `ContentItem` | ⬜ chưa |
+| 1e | Lấy lời thoại video | ⬜ chưa, phải cài thư viện |
+| 1f | Phân loại bằng Claude | ⬜ chưa, **cần `ANTHROPIC_API_KEY` thật** |
+
+**Việc kế tiếp cần chủ dự án làm**: mở http://localhost:3000 bấm "Đăng nhập bằng
+Google" đúng một lần. Không có bước này thì 1c trở đi không chạy được, vì kênh
+đã đăng ký và video đã thích là dữ liệu riêng của tài khoản, khoá API không đọc
+được.
+
+### 1a — Đăng nhập Google
+
+**Quyết định thiết kế: không dùng bộ bảng `User`/`Account`/`Session` của Auth.js.**
+Đó là thiết kế cho web nhiều người dùng, trái với nguyên tắc "dùng riêng cho một
+người" trong `CLAUDE.md`. Thay bằng:
+
+- Phiên đăng nhập giữ trong cookie đã mã hoá (kiểu `jwt`), không cần bảng nào.
+- Đúng **một bảng mới** `GoogleAccount` giữ **đúng một dòng** (`id = "chu_du_an"`)
+  lưu token, để việc quét lúc 21:00 hằng đêm chạy được khi không ai mở trình duyệt.
+- Biến `EMAIL_CHU_DU_AN` trong `.env` — chỉ email này đăng nhập được, ai khác bị
+  từ chối. Bỏ trống thì chặn tất cả (thà không vào được còn hơn mở toang).
+
+Chỉ xin quyền **đọc** (`youtube.readonly`). Quyền ghi playlist thật để Phase 7
+xin riêng, người dùng thấy rõ mình đang cho phép cái gì.
+
+File: `src/auth.ts`, `src/app/api/auth/[...nextauth]/route.ts`,
+`src/app/dang-nhap/page.tsx`. Migration viết tay
+`20260814050000_them_tai_khoan_google`.
+
+**Đã kiểm chứng**: bấm nút đăng nhập → chuyển đúng sang `accounts.google.com`
+với `access_type=offline`, `prompt=consent` (hai thứ bắt buộc để Google chịu cấp
+refresh token), đúng scope `youtube.readonly`, đúng redirect URI, và có
+`code_challenge` (Auth.js tự bật PKCE).
+
+### 1b — Gọi YouTube API + đếm hạn mức
+
+Google cho 10.000 đơn vị/ngày. Giá lệnh chênh nhau rất xa: đọc danh sách 1 đơn
+vị, còn **tìm kiếm 100 đơn vị** — đắt gấp trăm lần. Nên với kênh đã biết thì
+luôn đọc thẳng danh sách video của kênh, không bao giờ dùng tìm kiếm.
+
+File: `src/lib/youtube/hanMuc.ts` (đếm + ngắt), `tokenGoogle.ts` (tự làm mới
+token), `goiApi.ts` (gọi API, dịch lỗi Google sang tiếng Việt).
+
+Hai chi tiết dễ sai đã xử lý:
+- **Ngày tính hạn mức theo múi giờ Thái Bình Dương**, không phải giờ Việt Nam —
+  vì đó mới là lúc Google reset. Tính nhầm là tưởng còn trong khi đã hết.
+- **Ghi hạn mức cả khi lệnh lỗi**, vì Google trừ theo lượt gọi chứ không theo
+  lượt thành công.
+
+**Đã kiểm chứng thật**: gọi `channels.list` lấy được kênh Anthropic (763.000
+người đăng ký, 172 video), bộ đếm trong database tăng đúng 1 đơn vị. Dựng tình
+huống đã dùng 8.501/10.000 → `search.list` bị chặn kèm lời giải thích, còn
+`playlistItems.list` và `videos.list` vẫn cho gọi — đúng nguyên tắc "ngắt tìm
+kiếm trước, giữ việc quét kênh quen". Bản ghi thử đã dọn sạch.
+
+Script kiểm tra nhanh bất cứ lúc nào:
+
+```bash
+npx tsx scripts/thu-youtube.ts
+```
 
 ## Phase 15 — Cổng API trợ lý: XONG và ĐÃ XÁC NHẬN CHẠY THẬT (phần của `am`)
 
@@ -107,9 +169,10 @@ biến mới có hiệu lực.
 | Việc | Trạng thái | Ghi chú |
 |---|---|---|
 | Database trên [Neon](https://neon.tech) | ✅ xong | Đã kết nối, đã tạo bảng |
-| Khoá Anthropic API | ⬜ chưa | [console.anthropic.com](https://console.anthropic.com) → API Keys |
-| Khoá YouTube Data API v3 | ⬜ chưa | [console.cloud.google.com](https://console.cloud.google.com) → bật YouTube Data API v3 |
-| Google OAuth (đăng nhập) | ⬜ chưa | Cùng trang trên → Credentials → OAuth client ID. **Cần cho Phase 1** |
+| Khoá Anthropic API | ⬜ chưa | [console.anthropic.com](https://console.anthropic.com) → API Keys. **Cần cho bước 1f** |
+| Khoá YouTube Data API v3 | ✅ xong | Đã điền, đã gọi thật thành công |
+| Google OAuth (đăng nhập) | ✅ xong | Đã điền `GOOGLE_CLIENT_ID`/`SECRET`, `AUTH_SECRET`, `EMAIL_CHU_DU_AN` |
+| **Đăng nhập Google một lần** | ⬜ **chưa** | Mở http://localhost:3000 bấm "Đăng nhập bằng Google". Không có bước này thì bước 1c trở đi không chạy được |
 | Whitelist tác giả/nguồn ban đầu | ⬜ chưa | Tác giả truyện, giảng sư, blog AI uy tín bạn đã biết |
 | Chạy `npx prisma migrate deploy` để tạo bảng `AssistantApiLog` | ✅ xong | Đã chạy trên máy văn phòng 2026-08-14 |
 | Sinh `TOKEN_TRO_LY` điền vào `.env` | ✅ xong | Đã có trên máy văn phòng. **Máy ở nhà phải tự sinh riêng** (`.env` không lên Git) |
@@ -237,7 +300,23 @@ tiếp nối phiên trên web bị ngắt quãng)*
 - Kiểm tra bảng `AssistantApiLog` trên Neon: ghi đủ mọi lần gọi, nhãn token
   được che.
 
+**Phase 1 — bước 1a và 1b**
+- Dựng đăng nhập Google (`src/auth.ts`) với quyết định không dùng bộ bảng
+  Auth.js, chỉ thêm một bảng `GoogleAccount` giữ đúng một dòng.
+- Dựng lớp gọi YouTube API kèm bộ đếm hạn mức (`src/lib/youtube/`), đã chạy thật
+  và kiểm chứng cơ chế ngắt ở 80% — chi tiết ở mục "Phase 1" phía trên.
+
 **Ghi chú kỹ thuật mới học được**
+- Auth.js v5 trả về `handlers` (một object), không trả `GET`/`POST` rời. Trong
+  route phải viết `const { GET, POST } = handlers`, không `export { GET, POST }
+  from "@/auth"` được.
+- Auth.js v5 đọc `AUTH_SECRET` (tên mới), nhưng vẫn chấp nhận `NEXTAUTH_SECRET`
+  cũ. Trên localhost không cần `trustHost` vì `NODE_ENV !== "production"` đã tự
+  bật.
+- Google **chỉ cấp refresh token ở lần cấp quyền đầu tiên**. Những lần đăng nhập
+  sau không gửi lại, nên khi lưu phải cẩn thận không ghi đè bằng rỗng — mất là
+  phải vào myaccount.google.com/permissions gỡ quyền rồi làm lại từ đầu. Đã đặt
+  `prompt=consent` để ép Google hỏi lại mỗi lần, giảm rủi ro này.
 - Prisma 7 sinh enum thành kiểu union chặt (`ContentGroup`), truyền chuỗi thường
   vào là TypeScript báo lỗi. Cách sạch: viết hàm kiểm tra dạng "type guard" rồi
   gán vào biến cục bộ, không ép kiểu bừa.
