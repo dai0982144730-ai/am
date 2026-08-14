@@ -17,6 +17,40 @@ pgvector đã bật, logic chấm điểm chất lượng đã viết. `npm run 
 3. Client gọi YouTube Data API kèm đếm quota (`QuotaUsageLog`)
 4. Lấy lời thoại video + phân loại bằng Claude
 
+## Hạng mục mới — Cổng API trợ lý (Phase 15)
+
+Chủ dự án có kế hoạch xây app Android hỏi được cả 3 trang (`am`, `tiendo`,
+`phaply`) qua Claude API, sau khi `am` xong. **Chính phiên Claude Code này sẽ
+là người viết tiếp app Android đó** — ghi lại ở đây để phiên sau (kể cả phiên
+viết app Android) biết bối cảnh.
+
+Yêu cầu gốc: `docs/yeu-cau-cong-api-tro-ly.md`. Rà soát + quyết định áp dụng
+cho `am`: `docs/plan.md` mục "Cổng API trợ lý — chuẩn bị cho app Android".
+
+Tóm tắt đã chốt trong buổi rà soát 2026-08-14:
+- Data model hiện tại (`Source`/`ContentItem` tổng quát hoá từ Phase 0) khớp
+  tốt với khung `ketQua[]` yêu cầu — không cần sửa schema.
+- **Không** đổi tên 36 bảng Prisma sang tiếng Việt không dấu (rủi ro cao,
+  không lợi gì cho app Android). Quy ước tiếng Việt không dấu chỉ áp dụng ở
+  tầng mới: route `app/api/v1/tro-ly/`, hàm trong `lib/nghiepVu/`, tên
+  trường JSON trả ra — lớp này dịch từ tên tiếng Anh nội bộ sang JSON tiếng
+  Việt không dấu.
+- Chưa khảo sát được `tiendo`/`phaply` — repo chưa kết nối vào phiên này.
+
+**3 câu hỏi mở, cần chủ dự án trả lời trước khi bắt đầu code Phase 15**
+(chi tiết trong `docs/plan.md`):
+1. Repo `tiendo`/`phaply` ở đâu — cho phép khảo sát thật hay chưa tồn tại?
+2. Trang nào làm mẫu trước — `am` có schema tốt nhất nhưng chưa có dữ liệu
+   thật (Phase 1 ingestion chưa chạy); nếu `phaply`/`tiendo` đã có dữ liệu
+   thì làm mẫu ở đó dễ kiểm chứng hơn.
+3. Ba repo có gộp monorepo được không, hay hoàn toàn độc lập — quyết định
+   cách tổ chức gói dùng chung (`lib/nghiepVu` types, `xacThucTokenTroLy`,
+   `chuanHoaDeDoc`).
+
+Các endpoint đọc (`suc-khoe`, `cong-cu`, `tim-kiem`, `noi-dung/{id}`) của
+riêng `am` **không cần chờ trả lời 3 câu trên mới bắt đầu** — dựng được ngay
+với dữ liệu Phase 1 khi có, xem chi tiết phụ thuộc trong `docs/plan.md`.
+
 ## Cần chủ dự án chuẩn bị
 
 | Việc | Trạng thái | Ghi chú |
@@ -26,6 +60,8 @@ pgvector đã bật, logic chấm điểm chất lượng đã viết. `npm run 
 | Khoá YouTube Data API v3 | ⬜ chưa | [console.cloud.google.com](https://console.cloud.google.com) → bật YouTube Data API v3 |
 | Google OAuth (đăng nhập) | ⬜ chưa | Cùng trang trên → Credentials → OAuth client ID. **Cần cho Phase 1** |
 | Whitelist tác giả/nguồn ban đầu | ⬜ chưa | Tác giả truyện, giảng sư, blog AI uy tín bạn đã biết |
+| Trả lời 3 câu hỏi mở về Cổng API trợ lý | ⬜ chưa | Xem mục "Hạng mục mới" ở trên |
+| Cấp quyền cho GitHub App xem repo `tiendo`/`phaply` (nếu đã tồn tại) | ⬜ chưa | Cần để khảo sát và đồng bộ chuẩn API |
 
 ## Chạy trên máy mới
 
@@ -93,3 +129,27 @@ Hai chỉ mục HNSW thì vẫn chưa có cách khai báo — mỗi lần `migra
 định xoá. Quy trình an toàn khi tạo migration mới: `--create-only` → mở file SQL
 xoá các dòng `DROP INDEX ..._vector_idx` → `migrate deploy`. Đã ghi rõ trong
 `CLAUDE.md`.
+
+### 2026-08-14 — Văn phòng
+
+**Chuẩn bị máy mới**
+- Clone + cài đặt xong trên PC văn phòng (nằm ở `C:\Users\Admin\am`, không
+  phải `D:\CLAUDE\CODE\am` như dự tính — `cd` sang ổ khác trên `cmd.exe` cần
+  `/d`, và `move` thư mục bị chặn bởi antivirus/quyền ổ D nên giữ nguyên chỗ
+  đã clone). `.env` đã điền `DATABASE_URL`/`DIRECT_URL` lấy lại từ Neon,
+  `npm run dev` chạy đúng, kết nối database thành công.
+
+**Rà soát yêu cầu "Cổng API trợ lý"**
+- Nhận tài liệu yêu cầu xây API cho app Android hỏi được cả 3 trang
+  (`am`/`tiendo`/`phaply`) sau này — lưu nguyên văn vào
+  `docs/yeu-cau-cong-api-tro-ly.md`.
+- Rà soát code Phase 0 hiện tại so với yêu cầu: data model phù hợp tốt,
+  chưa có gì ở tầng API/`lib/nghiepVu`/gọi Claude — xem chi tiết ở
+  `docs/plan.md` mục "Cổng API trợ lý" và mục "Hạng mục mới" phía trên.
+- Quyết định: giữ nguyên schema Prisma tiếng Anh, chỉ áp dụng quy ước tiếng
+  Việt không dấu cho tầng route/`lib/nghiepVu`/JSON mới viết.
+- Còn 3 câu hỏi mở cần chủ dự án trả lời trước khi bắt đầu code (xem mục
+  "Hạng mục mới — Cổng API trợ lý" phía trên), chủ yếu do chưa khảo sát được
+  `tiendo`/`phaply`.
+- Ghi nhận: sau khi `am` xong toàn bộ, chính phiên Claude Code này tiếp tục
+  viết app Android — không phải giao việc khác.

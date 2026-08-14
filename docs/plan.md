@@ -20,6 +20,22 @@ Vấn đề cốt lõi:
 
 Mục tiêu: web cá nhân (single-user, dùng cả điện thoại lẫn máy tính) có Claude đứng sau để tự quét → đọc hiểu → chấm điểm → lọc theo bộ trường chi tiết từng chủ đề → cá nhân hoá theo thói quen → trò chuyện/gợi ý → và ghi nhớ kiến thức đã tiếp nhận.
 
+### Giai đoạn 2 — sau khi `am` xong: app Android
+
+Am là một trong **ba trang** (cùng `tiendo.scigroup.vn` quản lý tiến độ dự án và
+`phaply.scigroup.vn` pháp lý công ty) sẽ được một **app Android** (Xiaomi 14
+Ultra, trợ lý mặc định giữ nút nguồn, giọng nói tiếng Việt, dùng Claude API)
+hỏi được cả ba. **Sau khi hoàn tất toàn bộ các phase của `am` liệt kê bên
+dưới, chính phiên Claude Code này tiếp tục sang việc viết app Android** —
+không phải một dự án tách biệt giao cho ai khác.
+
+Vì vậy `am` phải lộ ra một **"cổng API trợ lý"** (`/api/v1/tro-ly/*`) đúng
+chuẩn dùng chung cho cả ba trang ngay từ khi còn làm web, để app Android sau
+này ghép vào không phải sửa lại. Toàn bộ yêu cầu chi tiết nằm ở
+`docs/yeu-cau-cong-api-tro-ly.md` (tài liệu gốc do chủ dự án cung cấp); mục
+**"Cổng API trợ lý"** phía dưới là phần rà soát và quyết định áp dụng riêng
+cho `am`.
+
 ### Quyết định phạm vi đã chốt
 
 - Repo Next.js **hoàn toàn mới**, tách khỏi `qlda-web`, push GitHub riêng.
@@ -381,6 +397,104 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 | **12** | Audio-only & smart queue (kể cả hàng đợi theo BPM) |
 | **13** | Chat agent tool-use tích hợp toàn bộ API |
 | **14** | Vận hành: dashboard quota/chi phí, score versioning, export dữ liệu cá nhân |
+| **15** | **Cổng API trợ lý** (`/api/v1/tro-ly/*`) — chuẩn dùng chung với `tiendo`/`phaply`, chuẩn bị cho app Android. Chi tiết ở mục ngay dưới đây |
+
+> Phase 15 **không phải** làm sau cùng theo nghĩa chờ hết 0–14 mới bắt đầu —
+> các endpoint đọc dữ liệu (`suc-khoe`, `cong-cu`, `tim-kiem`, `noi-dung/{id}`)
+> có thể dựng song song ngay khi từng phần dữ liệu tương ứng đã có (vd:
+> `tim-kiem` cho nhóm AI dùng được ngay sau Phase 1–2, không cần chờ Phase 3
+> Music xong). Chỉ `hoi` và `tom-tat-hom-nay` cần đợi các phase liên quan
+> (personalization, digest) hoàn thiện thì trả lời mới có ý nghĩa.
+
+---
+
+## Cổng API trợ lý — chuẩn bị cho app Android (Phase 15)
+
+*(Rà soát và quyết định áp dụng riêng cho `am`, dựa trên yêu cầu gốc ở
+`docs/yeu-cau-cong-api-tro-ly.md`. Đã khảo sát trạng thái mã nguồn `am` tính
+đến 2026-08-14; **chưa khảo sát được `tiendo`/`phaply`** vì hai repo đó chưa
+kết nối vào tài khoản GitHub mà phiên Claude Code này đang thấy — xem câu hỏi
+mở cuối mục.)*
+
+### Trạng thái `am` so với yêu cầu
+
+- **Rất phù hợp về mặt data model**: nguyên tắc "mọi thứ xoay quanh
+  `Source`/`ContentItem`" (đã chốt từ Phase 0) khớp thẳng với khung
+  `ketQua[]` của `/tim-kiem` — `ContentItem.title → tieuDe`,
+  `description → tomTat`, `publishedAt → ngay`, `url → duongDan`,
+  `type → loai` (map `video/podcast_episode/audio_track → "video"`,
+  `blog_article/forum_post → "baiViet"`), phần còn lại
+  (`contentGroup`, `compositeScore`, `subtopic`, `durationSeconds`…) gói vào
+  `duLieuRieng`. `doLienQuan` tính từ `ContentScore.compositeScore` hoặc từ
+  khoảng cách semantic search (`ContentEmbedding`) tuỳ kiểu truy vấn.
+- `AssistantBriefing` (đã có trong schema, chưa có pipeline sinh ra) là dữ
+  liệu đúng ngay cho `GET /tom-tat-hom-nay` — không cần thêm bảng.
+- **Chưa có gì ở tầng API/logic**: `src/app/` mới có `page.tsx`/`layout.tsx`,
+  `src/lib/` mới có `db/prisma.ts` và `scoring/normalize.ts`. Chưa có
+  `lib/nghiepVu/`, chưa có route nào dưới `app/api/`, chưa gọi Claude API ở
+  đâu cả. **Đây là tin tốt cho việc dựng Phase 15**: không có logic cũ kẹt
+  trong component cần bóc tách như một codebase đã chạy lâu — viết thẳng
+  `lib/nghiepVu/` ngay từ đầu, code trong component gọi vào đó, không phải
+  refactor gì.
+- **Điểm lệch duy nhất, cần quyết định rõ**: mục 2.3 của yêu cầu gốc bắt
+  toàn bộ tên biến/hàm/route/trường JSON dùng **tiếng Việt không dấu**
+  (theo quy ước đang dùng ở `phaply`). Nhưng `prisma/schema.prisma` hiện tại
+  của `am` (36 bảng, đã chạy migration thật trên Neon) dùng **tiếng Anh**
+  hoàn toàn (`ContentItem`, `popularityScore`, `contentGroup`…).
+
+  **Quyết định** (đề xuất, xin xác nhận nếu chủ dự án muốn khác):
+  **không đổi tên schema Prisma hiện có.** Đổi tên 36 bảng trên database
+  thật đang chạy là việc rủi ro cao, tốn công, không mang lại lợi ích gì cho
+  app Android — app không bao giờ nhìn thấy tên cột trong Postgres, nó chỉ
+  thấy JSON trả về từ `/api/v1/tro-ly/*`. Quy ước tiếng Việt không dấu áp
+  dụng ở **tầng mới viết**: đường dẫn route, tên hàm trong `lib/nghiepVu/`,
+  và tên trường trong JSON trả ra. Các hàm trong `lib/nghiepVu/` đóng vai trò
+  lớp dịch: đọc `ContentItem` tiếng Anh từ Prisma → trả object tiếng Việt
+  không dấu đúng khung `ketQua`. Cách này giữ được toàn bộ 3 ngày công đã đổ
+  vào schema, và vẫn tuân thủ đúng tinh thần yêu cầu (app Android/3 trang chỉ
+  quan tâm hợp đồng API, không quan tâm tên cột nội bộ).
+
+### Việc cần làm cho `am` (Phase 15)
+
+1. `src/lib/nghiepVu/timKiemNoiDung.ts` — bọc quanh Prisma query hiện có,
+   trả đúng khung `ketQua[]`/`tongSo`.
+2. `src/lib/nghiepVu/xacThucTokenTroLy.ts` — middleware đọc
+   `Authorization: Bearer`, so với `TOKEN_TRO_LY` (nhiều token, phân tách
+   dấu phẩy), rate-limit theo token.
+3. `src/lib/nghiepVu/chuanHoaDeDoc.ts` — bỏ markdown, thay URL, đọc đúng viết
+   tắt AI/LLM (danh sách viết tắt riêng cho `am` sẽ nhẹ hơn `phaply` nhiều vì
+   không có số hiệu văn bản luật, chủ yếu là thuật ngữ AI).
+4. Bảng mới `GoiApiTroLyLog` (theo đúng mẫu `QuotaUsageLog`/`JobRun` đã có):
+   thời điểm, token, endpoint, thời gian phản hồi, số token AI tiêu thụ.
+5. 5 route dùng chung + `GET /tom-tat-hom-nay` dưới
+   `src/app/api/v1/tro-ly/`.
+6. `docs/API-TRO-LY.md` (riêng cho `am`) + `docs/vi-du-goi-api.http`.
+
+**Phụ thuộc**: `tim-kiem`/`noi-dung/{id}`/`suc-khoe`/`cong-cu` dựng được ngay
+với dữ liệu Phase 1–2 (không cần chờ Music/scoring engine xong — chỉ cần trả
+`doLienQuan` bằng ước lượng thô nếu `ContentScore` chưa có). `hoi` cần Claude
+đọc nội dung + `chuanHoaDeDoc`, làm được ngay sau khi có transcript (Phase
+1) mà không cần đợi personalization. `tom-tat-hom-nay` cần `AssistantBriefing`
+có dữ liệu thật, tức đợi Phase 10 (Digest) chạy được ít nhất một lần.
+
+### Câu hỏi mở — cần chủ dự án trả lời
+
+1. **`tiendo` và `phaply` đang ở đâu?** Phiên Claude Code này chỉ thấy repo
+   `dai0982144730-ai/am` trong tài khoản GitHub đang kết nối. Nếu hai repo
+   kia tồn tại (GitHub riêng, hay cùng tài khoản nhưng chưa cấp quyền), cho
+   biết địa chỉ để khảo sát thật — nếu chưa tồn tại/chưa bắt đầu code thì nói
+   rõ luôn, để không đợi vô ích.
+2. **Trang nào làm mẫu trước?** Yêu cầu gốc gợi ý làm trọn một trang rồi
+   nhân bản. `am` hiện có schema tốt nhất cho việc này (data model đã tổng
+   quát hoá sẵn) nhưng **chưa có dữ liệu thật** (Phase 1 ingestion chưa
+   chạy) — dựng API xong vẫn trả về rỗng, khó test bằng mắt. Nếu `phaply`
+   hoặc `tiendo` đã có dữ liệu thật đang chạy, làm mẫu ở đó có thể thấy kết
+   quả ngay và dễ chốt chuẩn hơn. Cần biết tình trạng thật của hai trang kia
+   trước khi chốt thứ tự.
+3. **Gói dùng chung (mục 6 yêu cầu gốc)**: chưa đề xuất cách tổ chức cụ thể
+   ở đây vì phụ thuộc hoàn toàn vào câu hỏi 1 — ba repo độc lập hoàn toàn hay
+   có thể gộp monorepo sẽ quyết định đây là npm package riêng hay một thư
+   mục copy tay giữa ba repo.
 
 ---
 
