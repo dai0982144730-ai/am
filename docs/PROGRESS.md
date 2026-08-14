@@ -20,12 +20,13 @@ Chia thành sáu bước để dễ kiểm chứng từng chặng:
 | 1b | Gọi YouTube API + đếm hạn mức + ngắt ở 80% | ✅ xong, đã chạy thật |
 | 1c | Nhập kênh đã đăng ký / video đã thích / playlist | ✅ xong, **đã nhập 1.029 mục thật** |
 | 1d | Quét video về thành `ContentItem` | ✅ xong, **kho có 820 video thật** |
-| 1e | Lấy lời thoại video | ⬜ chưa, phải cài thư viện |
-| 1f | Phân loại bằng Claude | ⬜ chưa, **cần `ANTHROPIC_API_KEY` thật** |
+| 1e | Lấy lời thoại video | ✅ xong, tỷ lệ lấy được ~95% |
+| 1f | Phân loại bằng Claude | ✅ code xong, **chờ `ANTHROPIC_API_KEY` để chạy** |
 
-**Việc kế tiếp**: bước 1e — lấy lời thoại video. Phải cài thư viện ngoài vì
-YouTube không có API chính thức đọc lời thoại video của người khác.
-`ANTHROPIC_API_KEY` cần cho bước 1f.
+**Việc kế tiếp — cần chủ dự án**: lấy khoá Anthropic API tại
+[console.anthropic.com](https://console.anthropic.com) → Settings → API Keys,
+điền vào dòng `ANTHROPIC_API_KEY` trong `.env`. Đó là thứ duy nhất còn thiếu để
+chạy bước 1f và khép lại Phase 1.
 
 ### 1a — Đăng nhập Google
 
@@ -186,6 +187,57 @@ Dương (khoảng 14h giờ Việt Nam). Nếu tính theo giờ Việt Nam thì 
 Một kênh hỏng không làm chết cả lần quét — với vài trăm kênh thì kênh bị khoá
 hoặc playlist riêng tư là chuyện thường. Lỗi được gom lại báo cuối cùng.
 
+### 1e — Lấy lời thoại video
+
+File: `src/lib/youtube/loiThoai.ts`, chạy bằng `npx tsx scripts/lay-loi-thoai.ts`
+(`--so N` để giới hạn).
+
+**Bản thiết kế phải sửa lại ở đây.** `docs/plan.md` định dùng `youtubei.js` làm
+chính, `youtube-transcript` làm dự phòng. Tới lúc làm thật (2026-08-14) thì
+**`youtubei.js` không lấy được lời thoại nữa** — YouTube đã chặn endpoint
+`get_transcript` với mọi loại client (thử cả WEB, ANDROID, IOS, TV,
+WEB_EMBEDDED; tải thẳng URL phụ đề trả về HTTP 200 nhưng rỗng).
+`youtube-transcript` thì vẫn chạy tốt, nên **đổi nó thành thư viện chính** và gỡ
+`youtubei.js` khỏi dự án.
+
+Đây đúng là rủi ro `docs/plan.md` đã lường trước: "thư viện transcript gãy khi
+YouTube đổi API ngầm". Cách phòng vẫn giữ nguyên — lấy được thì lưu vĩnh viễn,
+gọi thưa (nghỉ 1,2 giây giữa mỗi video), video không có phụ đề thì đánh dấu để
+lần sau khỏi thử lại.
+
+**Đã chạy thật**: 20 video đầu lấy được 19 (~95%), trung bình 21.700 ký tự mỗi
+video. Video dài nhất trong kho cho ra 127.000 ký tự lời thoại.
+
+### 1f — Phân loại bằng Claude
+
+File: `src/lib/llm/khungPhanLoai.ts` (khuôn dữ liệu), `phanLoai.ts` (gọi Claude),
+`luuPhanLoai.ts` (lớp dịch sang database). Chạy bằng
+`npx tsx scripts/phan-loai.ts --so N`.
+
+**Ba quyết định về chi phí** — đây là chỗ tốn tiền nhất hệ thống, mọi video quét
+về đều phải đi qua:
+
+1. **Dùng Haiku 4.5, không dùng Sonnet.** Việc ở bước này là xếp nhóm và điền vài
+   trường, không phải phân tích sâu. Haiku rẻ hơn ba lần. Sonnet để dành cho bước
+   chấm chất lượng ở Phase 4, khi chỉ còn vài chục ứng viên đứng đầu. Đổi được
+   qua biến `MODEL_PHAN_LOAI` trong `.env` nếu muốn thử.
+2. **Bản hướng dẫn được ghi nhớ tạm** (prompt caching). Phần hướng dẫn dài và
+   giống hệt nhau ở mọi lần gọi, nên đánh dấu để Claude nhớ lại — chỉ tốn khoảng
+   một phần mười so với đọc lại từ đầu.
+3. **Cắt lời thoại còn 4.000 ký tự.** Để biết video thuộc chuyên mục nào thì mấy
+   nghìn chữ đầu là đủ; gửi cả bản 127.000 chữ chỉ tốn tiền vô ích.
+
+**Câu trả lời đi theo khuôn định sẵn** (structured outputs + Zod): kiểu dữ liệu
+trong code và khuôn Claude phải tuân theo là *một*, không có chuyện sửa một chỗ
+quên chỗ kia. Không phải dò tìm trong văn bản tự do, không sợ trả về thứ không
+đọc được.
+
+Script luôn in chi phí ước tính ở cuối, kèm ước tính cho phần còn lại của kho —
+chạy `--so 5` xem kết quả trước rồi mới chạy cả kho.
+
+**Chưa kiểm chứng được**: `.env` chưa có `ANTHROPIC_API_KEY` thật. Code đã chạy
+đúng tới tận điểm gọi API và báo lỗi bằng tiếng Việt chỉ rõ phải lấy khoá ở đâu.
+
 ## Phase 15 — Cổng API trợ lý: XONG và ĐÃ XÁC NHẬN CHẠY THẬT (phần của `am`)
 
 Sáu endpoint dưới `/api/v1/tro-ly/` đã viết xong, build sạch, và **ngày
@@ -276,7 +328,7 @@ biến mới có hiệu lực.
 | Việc | Trạng thái | Ghi chú |
 |---|---|---|
 | Database trên [Neon](https://neon.tech) | ✅ xong | Đã kết nối, đã tạo bảng |
-| Khoá Anthropic API | ⬜ chưa | [console.anthropic.com](https://console.anthropic.com) → API Keys. **Cần cho bước 1f** |
+| Khoá Anthropic API | ⬜ **chưa — việc duy nhất còn chặn Phase 1** | [console.anthropic.com](https://console.anthropic.com) → Settings → API Keys |
 | Khoá YouTube Data API v3 | ✅ xong | Đã điền, đã gọi thật thành công |
 | Google OAuth (đăng nhập) | ✅ xong | Đã điền `GOOGLE_CLIENT_ID`/`SECRET`, `AUTH_SECRET`, `EMAIL_CHU_DU_AN` |
 | **Đăng nhập Google một lần** | ⬜ **chưa** | Mở http://localhost:3000 bấm "Đăng nhập bằng Google". Không có bước này thì bước 1c trở đi không chạy được |

@@ -233,7 +233,15 @@ Nhóm chủ đề · nguồn (YouTube/Blog/Diễn đàn/Podcast/SoundCloud, đã
 ## Chiến lược lấy dữ liệu
 
 - **YouTube Data API v3**: ưu tiên `playlistItems.list` (1 unit) cho kênh đã biết thay vì `search.list` (100 units — chỉ dùng discovery, giới hạn số lần/ngày); batch `videos.list` 50 id/lần; cache `channels.list` TTL vài ngày. `QuotaUsageLog` + circuit-breaker ở 80% ngân sách 10.000 units/ngày (tắt discovery trước, giữ crawl kênh whitelist).
-- **Transcript YouTube**: không có API chính thức cho video người khác → `youtubei.js` làm chính, fallback `youtube-transcript`. Cache vĩnh viễn (không bao giờ fetch lại cùng video), throttle, thất bại thì đánh dấu và fallback title+description thay vì crash pipeline.
+- **Transcript YouTube**: không có API chính thức cho video người khác → **`youtube-transcript` làm chính**. Cache vĩnh viễn (không bao giờ fetch lại cùng video), throttle, thất bại thì đánh dấu và fallback title+description thay vì crash pipeline.
+
+  > **Sửa so với bản thiết kế ban đầu (2026-08-14)**: mục này trước đây định dùng
+  > `youtubei.js` làm chính. Tới lúc làm thật thì thư viện đó **không lấy được
+  > transcript nữa** — YouTube đã chặn endpoint `get_transcript` với mọi loại
+  > client (đã thử WEB, ANDROID, IOS, TV, WEB_EMBEDDED). Đã gỡ `youtubei.js`
+  > khỏi dự án. Đây đúng là rủi ro "thư viện transcript gãy khi YouTube đổi API
+  > ngầm" ở bảng rủi ro bên dưới — cách phòng (adapter thay được) đã phát huy
+  > tác dụng: chỉ phải đổi một file.
 - **Blog/Diễn đàn AI**: fetch RSS/HTML từ 4 tier nguồn (hãng AI chính thức · blog chuyên gia cá nhân · diễn đàn cộng đồng như Hacker News/Reddit/LessWrong · trang tổng hợp). LLM đọc toàn văn → `NarrationAsset.scriptText` thuật lại đầy đủ bằng tiếng Việt → TTS.
 - **Music**: **bỏ qua hoàn toàn bước transcript**. Chỉ lấy metadata + tags + description, parse BPM/genre bằng rule + một lần gọi LLM rẻ (Haiku) để chuẩn hoá genre. Nhờ vậy nhánh Music gần như không tốn chi phí LLM dù số lượng track lớn.
 - **Podcast**: RSS công khai, show notes làm nguồn text. **SoundCloud**: API chính thức cho metadata.
