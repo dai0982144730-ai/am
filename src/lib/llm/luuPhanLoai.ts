@@ -122,6 +122,31 @@ function nghi(ms: number): Promise<void> {
 }
 
 /**
+ * Chạy một lượt ghi; hỏng vì đứt kết nối thì thử lại.
+ *
+ * Neon là database "tự ngủ khi rảnh", nên thỉnh thoảng cắt ngang kết nối đang
+ * nhàn rỗi — đã vấp thật: một mẻ 30 video chết ngay từ lệnh đếm đầu tiên với
+ * `Connection terminated unexpectedly`, chạy lại ngay sau đó thì trôi. Việc này
+ * chạy hàng giờ nên phải chịu được, không thể để cả mẻ hỏng vì mạng chớp một
+ * cái.
+ */
+async function ghiCoThuLai<T>(viec: () => Promise<T>): Promise<T> {
+  const LOI_DUT_KET_NOI =
+    /Connection terminated|ECONNRESET|socket hang up|terminated unexpectedly|Closed/i;
+
+  for (let lan = 0; ; lan += 1) {
+    try {
+      return await viec();
+    } catch (e) {
+      const thongDiep = e instanceof Error ? e.message : String(e);
+      if (lan >= 2 || !LOI_DUT_KET_NOI.test(thongDiep)) throw e;
+      // Chờ tăng dần rồi thử lại: 2 giây, rồi 5 giây
+      await nghi(lan === 0 ? 2_000 : 5_000);
+    }
+  }
+}
+
+/**
  * Từ khoá của những video *có triển vọng* thuộc bốn chuyên mục chính.
  *
  * Chỉ là bộ lọc thô ở bước chọn việc, không phải bộ phân loại — Claude vẫn là
@@ -206,7 +231,8 @@ export async function phanLoaiHangLoat(
       const goi = await phanLoaiMotNoiDung(noiDung);
       const kq = goi.ketQua;
 
-      await prisma.$transaction(
+      await ghiCoThuLai(() =>
+        prisma.$transaction(
         [
           prisma.contentClassification.create({
             data: {
@@ -225,6 +251,7 @@ export async function phanLoaiHangLoat(
           }),
         ],
         { timeout: HAN_GHI_MS, maxWait: HAN_CHO_MS },
+        ),
       );
 
       thanhCong += 1;

@@ -27,7 +27,12 @@ Chia thành sáu bước để dễ kiểm chứng từng chặng:
 chuyển sang gọi Claude qua CLI dùng gói Claude Pro sẵn có — xem mục "Gọi Claude
 qua CLI" bên dưới.
 
-**Việc kế tiếp**: chạy phân loại cho 812 nội dung còn lại, rồi sang Phase 2.
+**Việc kế tiếp**: Phase 2 (blog & diễn đàn AI) hoặc làm dày thêm giao diện.
+
+**Về 760 nội dung chưa phân loại**: chủ dự án chốt không chạy hết — quá nhiều và
+không cần cho việc dựng giao diện. Đã phân loại có chọn lọc ~90 video *có triển
+vọng* thuộc bốn chuyên mục chính (`--uu-tien`), đủ để mỗi mục có dữ liệu thật.
+Số còn lại phần lớn là tin thời sự và giải trí, đọc hết cũng chỉ ra "khác".
 
 ### 1a — Đăng nhập Google
 
@@ -317,7 +322,70 @@ tiến trình `claude.exe` mồ côi mỗi cái vài trăm MB, và từ đó **m
 đều treo**. Mất khá lâu mới nhận ra thủ phạm không phải câu lệnh sai mà là máy
 đã nghẽn. Nay dùng `taskkill /T /F` để giết cả cây tiến trình.
 
-**Đã chạy thật**: 8 video, 8/8 thành công, không lỗi.
+**Đã chạy thật**: khoảng 90 video. Phân bố 60 video đầu:
+
+| Chuyên mục | Số mục |
+|---|---|
+| Khác | 29 |
+| Triết học | 10 |
+| Truyện | 6 |
+| Nhạc | 5 |
+| AI | 2 |
+
+Đáng ghi nhận: ngay cả với video **đã lọc trước theo từ khoá** của bốn nhóm
+chính, Claude vẫn xếp gần một nửa vào "khác". Ví dụ *"Kỳ Án Ác Quỷ Ma Cà Rồng
+Sacramento"* nghe như truyện kinh dị nhưng là vụ án có thật → `other`, đúng lời
+dặn "chuyện có thật không tính là truyện". Nó lọc nghiêm chứ không nhét bừa cho
+đủ — đúng nguyên tắc "thà bỏ sót còn hơn lẫn tạp" trong bản thiết kế.
+
+### Cạm bẫy thứ ba của Prisma — hạn *chờ để bắt đầu*
+
+Sau khi đã nới hạn *chạy* lên 60 giây, vẫn gặp lỗi khác:
+`Unable to start a transaction in the given time`. Hoá ra Prisma có **hai** mốc
+thời gian riêng biệt, và mốc thứ hai mặc định chỉ **2 giây**:
+
+| Tham số | Nghĩa | Mặc định |
+|---|---|---|
+| `timeout` | Thời gian *chạy* transaction | 5 giây |
+| `maxWait` | Thời gian *chờ để bắt đầu* | **2 giây** |
+
+Khi database đang bận, xin mở transaction cũng phải xếp hàng. Nay đặt
+`maxWait: 30_000`.
+
+### Neon thỉnh thoảng cắt kết nối — đã cho tự thử lại
+
+Neon là database "tự ngủ khi rảnh", nên đôi khi cắt ngang kết nối đang nhàn rỗi.
+Đã vấp: một mẻ 30 video chết ngay từ lệnh đếm đầu tiên với `Connection
+terminated unexpectedly`; chạy lại ngay sau đó thì trôi bình thường. Với việc
+chạy hàng giờ thì không thể để cả mẻ hỏng vì mạng chớp một cái, nên mọi lượt ghi
+nay tự thử lại tối đa hai lần (chờ 2 rồi 5 giây) khi gặp lỗi *đứt kết nối* —
+những lỗi khác vẫn ném ra ngay, không giấu.
+
+## Giao diện — đã có trang chủ thật
+
+Trang chủ (`src/app/page.tsx`) chạy với dữ liệu thật trong kho, bám theo bản
+demo `docs/demo-ui.html`: thanh trên, cột điều hướng trái, thẻ ảnh 16:9 kèm
+thời lượng và lượt xem, mỗi chuyên mục một hàng.
+
+File: `src/components/KhungTrang.tsx` (khung chung), `src/components/TheNoiDung.tsx`
+(thẻ), `src/lib/nghiepVu/layNoiDungTrangChu.ts` (truy vấn).
+
+Vài điểm đáng ghi:
+
+- **Nhãn góc ảnh đổi theo chuyên mục** — truyện hiện thể loại, nhạc hiện số
+  nhịp, AI hiện chủ đề con. Liếc qua là biết, không phải đọc tiêu đề.
+- **Hai bộ lọc của bản thiết kế áp dụng ngay ở tầng truy vấn**: truyện nghi do
+  AI viết bị loại hẳn (bộ lọc cứng duy nhất trong hệ thống), nội dung có dấu
+  hiệu mê tín bị đẩy khỏi mục triết học.
+- **Mục chưa làm vẫn hiện nhưng làm mờ**, rê chuột thấy dự kiến làm ở phase nào
+  — để thấy web sẽ đi tới đâu thay vì bấm vào gặp trang trống.
+- Xếp tạm theo lượt xem. Khi có `ContentScore` (Phase 4) thì chỉ phải đổi mỗi
+  phần `orderBy`.
+
+**Đã kiểm chứng**: không lỗi console, ở 375px không tràn ngang và cột trái tự ẩn.
+
+Chưa làm: chip lọc theo chuyên mục, bản tin trợ lý (Phase 10), trình phát
+(Phase 5), và chín trang còn lại trong bản demo.
 
 ## Phase 15 — Cổng API trợ lý: XONG và ĐÃ XÁC NHẬN CHẠY THẬT (phần của `am`)
 
