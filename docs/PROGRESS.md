@@ -677,6 +677,34 @@ bài rồi tự xếp, vì một trang khoa học vẫn có bài không thuộc 
 Toàn bộ nguồn này tiếng Anh nên đi qua bước thuật lại sang tiếng Việt trước khi
 tới tai người nghe. Phần đọc thành tiếng vẫn chờ khoá TTS.
 
+### Đã chạy thật (2026-08-15)
+
+Quét 13 nguồn, xét 71 bài, **thêm 39 bài mới**, 35 lấy được toàn văn.
+
+Nature báo lỗi **406** trong lần quét đó nhưng chạy lại riêng thì được 75 bài —
+là bị chặn tạm vì gọi liên tiếp quá nhanh, không phải chặn hẳn. Cơ chế "một
+nguồn hỏng không làm chết cả lần quét" đã lo đúng việc của nó: 12 nguồn kia vẫn
+xong, và Nature sẽ được lấy ở lần quét sau.
+
+Bốn bài khoa học đầu tiên được phân loại đều vào đúng `khoa_hoc`, kèm nhận xét
+cho thấy Claude bám đúng tiêu chí "ứng dụng được":
+
+> *"Giải thích rõ nguyên lý máy nhiệt lượng tử siêu dẫn và chỉ ra ứng dụng cụ
+> thể: giảm số lượng cáp vi sóng đắt đỏ trong máy tính lượng tử lớn — **đúng
+> chuẩn khoa học ứng dụng chứ không chỉ là tin giật gân**."*
+
+> *"…nêu rõ ứng dụng thực tế: dùng detector antineutrino để giám sát lò phản
+> ứng hạt nhân ngay cả khi đã tắt máy, phục vụ an toàn và thanh sát hạt nhân."*
+
+Chuyên mục này cũng bắt được nội dung YouTube tiếng Việt, không chỉ báo nước
+ngoài — một video mổ tái tạo dây chằng của kênh Khớp Việt Official vào đúng
+nhóm, và nhận xét nói thẳng là *"lời bình rời rạc… chỉ phù hợp với người đã có
+nền tảng chuyên môn"*.
+
+**Chưa kiểm được**: ranh giới loại bỏ — tức là bài lý thuyết thuần tuý có bị đẩy
+sang nhóm "khác" đúng như thiết kế không. Mới phân loại 4/28 bài từ nguồn khoa
+học, chưa gặp ca nào để kiểm. Phải chạy hết mới nói được.
+
 ## Lịch sử xem — mở ra là rời luồng chính (2026-08-15)
 
 File: `src/lib/lichSu/actions.ts`, `loc.ts`,
