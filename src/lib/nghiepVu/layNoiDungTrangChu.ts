@@ -4,8 +4,9 @@
  * Trang chủ bám theo bản demo (`docs/demo-ui.html`): mỗi chuyên mục một hàng
  * thẻ, xếp cái đáng xem nhất lên trước.
  *
- * Tạm xếp theo lượt xem, vì engine chấm chất lượng là việc của Phase 4. Khi có
- * `ContentScore` rồi thì chỉ phải đổi mỗi phần `orderBy` ở đây.
+ * Xếp theo **điểm chất lượng** (Phase 4) — bốn trụ tín hiệu đã chuẩn hoá thứ
+ * hạng phần trăm trong cùng loại nguồn. Nội dung chưa được chấm thì rơi xuống
+ * cuối và xếp theo lượt xem, để kho mới quét về vẫn hiện ra chứ không biến mất.
  */
 
 import type { ContentGroup } from "@/generated/prisma/enums";
@@ -22,6 +23,7 @@ const TRUONG_CAN_LAY = {
   viewOrPlayCount: true,
   contentGroup: true,
   narrationType: true,
+  score: { select: { compositeScore: true } },
   source: { select: { title: true, reputationTier: true } },
   narrationAsset: { select: { id: true } },
   classification: {
@@ -98,7 +100,11 @@ async function layMotMuc(
     prisma.contentItem.findMany({
       where: dieuKien,
       select: TRUONG_CAN_LAY,
-      orderBy: [{ viewOrPlayCount: "desc" }, { publishedAt: "desc" }],
+      orderBy: [
+        // Nội dung chưa chấm điểm xuống cuối, chứ không lên đầu
+        { score: { compositeScore: { sort: "desc", nulls: "last" } } },
+        { viewOrPlayCount: "desc" },
+      ],
       take: soThe,
     }),
     prisma.contentItem.count({ where: dieuKien }),

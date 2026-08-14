@@ -156,6 +156,16 @@ export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
             {thoiLuong}
           </span>
         ) : null}
+
+        {/* Điểm chất lượng — bốn trụ tín hiệu đã chuẩn hoá trong cùng loại nguồn */}
+        {muc.score?.compositeScore != null ? (
+          <span
+            title="Điểm chất lượng trên thang 10, tính theo bốn trụ tín hiệu"
+            className="absolute bottom-2 left-2 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-neutral-900"
+          >
+            {muc.score.compositeScore.toFixed(1)}
+          </span>
+        ) : null}
       </div>
 
       <div>

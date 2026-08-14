@@ -9,6 +9,8 @@
 | **0** — Nền tảng | ✅ xong |
 | **1** — Quét YouTube (6/6 bước) | ✅ xong, đã chạy thật |
 | **2** — Blog & diễn đàn AI | ✅ xong phần chữ; phần giọng đọc chờ khoá TTS |
+| **3** — Nhánh nhạc | ✅ xong, chạy hoàn toàn bằng luật |
+| **4** — Chấm chất lượng | ✅ xong phần lõi; còn vòng 2 đọc bình luận |
 | **15** — Cổng API trợ lý | ✅ xong, đã chạy thật |
 | Giao diện | Trang chủ thật đã chạy với dữ liệu thật |
 
@@ -33,8 +35,9 @@ Chia thành sáu bước để dễ kiểm chứng từng chặng:
 chuyển sang gọi Claude qua CLI dùng gói Claude Pro sẵn có — xem mục "Gọi Claude
 qua CLI" bên dưới.
 
-**Việc kế tiếp**: Phase 3 (nhánh nhạc) hoặc Phase 4 (chấm chất lượng), hoặc lấy
-khoá TTS để khép nốt phần giọng đọc của Phase 2.
+**Việc kế tiếp**: vòng 2 của Phase 4 (Claude đọc bình luận — phần quan trọng
+nhất còn thiếu, xem ghi chú ở mục Phase 4), hoặc Phase 4b (bộ lọc và tìm kiếm),
+hoặc lấy khoá TTS để khép nốt phần giọng đọc.
 
 **Về 760 nội dung chưa phân loại**: chủ dự án chốt không chạy hết — quá nhiều và
 không cần cho việc dựng giao diện. Đã phân loại có chọn lọc ~90 video *có triển
@@ -437,6 +440,72 @@ Trên giao diện, bài đã thuật lại mang nhãn **ĐÃ THUẬT LẠI** ở
 **Giọng đọc (TTS)** — cần `TTS_PROVIDER` và `TTS_API_KEY` mà `.env` chưa có.
 Phần chữ đã xong nên khi có khoá chỉ việc đọc `NarrationAsset.scriptText` lên
 thành audio.
+
+## Phase 3 — Nhánh nhạc: XONG
+
+Nguyên tắc số hai của bản thiết kế: nhạc đi nhánh riêng, **không lấy lời thoại,
+không cho mô hình đọc sâu**. Lý do rất thực tế — đánh giá một bản nhạc bằng chữ
+là vô nghĩa.
+
+**Đã vấp thật, và đây là lỗi thứ tự đường ống**: 6/8 video nhạc trong kho **đã
+bị lấy lời thoại**, cho ra 30–66 ký tự vô nghĩa. Nguyên nhân: bước lấy lời thoại
+chạy *trước* bước phân loại, nên lúc đó chưa biết đâu là nhạc. Đã sửa bằng
+`src/lib/music/nhanDienNhac.ts` — đoán sớm bằng luật ngay lúc quét, video có dấu
+hiệu là nhạc thì bỏ qua luôn bước lấy lời thoại.
+
+Lưu ý: bộ nhận diện đó **không phải bộ phân loại**. Nó chỉ trả lời một câu hỏi
+hẹp — *"có đáng bỏ công lấy lời thoại không?"*. Claude vẫn quyết định chuyên mục.
+Đoán nhầm thì cùng lắm thiếu lời thoại của một video, lấy bù sau được.
+
+### Số nhịp: đọc, không đoán
+
+`src/lib/music/docBpm.ts` chỉ đọc con số mà chính người đăng đã ghi, và **bắt
+buộc phải có chữ "BPM" đứng cạnh** — "155 BPM Running Mix" thì lấy, "Top 155 bài
+hát hay" thì không. Không có thì để trống.
+
+Kết quả chạy thật trên 8 bản nhạc: **đọc được số nhịp 0/8** — vì không bản nào
+ghi số nhịp trong tiêu đề. Đúng như thiết kế muốn: thà trống còn hơn đoán sai
+làm hỏng buổi tập. **Đoán được thể loại 8/8** bằng luật từ khoá, không tốn một
+lần gọi mô hình nào.
+
+## Phase 4 — Chấm chất lượng: XONG phần lõi
+
+`src/lib/scoring/chamDiem.ts` (phần tính toán đã có sẵn ở `normalize.ts` từ
+Phase 0). Chạy bằng `npx tsx scripts/cham-diem.ts`.
+
+**Quy tắc không được phá**: mọi tín hiệu đều chuẩn hoá thành thứ hạng phần trăm
+**trong cùng một loại nguồn** trước khi vào công thức. 500.000 lượt xem YouTube
+và 300 điểm Hacker News không cùng thang đo.
+
+**Đã chạy thật**: 111 nội dung được chấm (101 video, 6 blog, 4 diễn đàn), điểm
+từ 0,3 tới 6,7 trên thang 10. Trang chủ giờ xếp theo điểm này thay vì lượt xem,
+và mỗi thẻ hiện điểm ở góc ảnh.
+
+### Một quan sát quan trọng về kết quả
+
+**Mười nội dung điểm cao nhất đều thuộc nhóm "Khác"** — tin thời sự giật gân về
+sư Minh Tuệ, điểm 6,1–6,7. Trong khi bốn chuyên mục chính chỉ đạt 4,9–5,7.
+
+Vì sao: engine hiện mới đo được tín hiệu **số học** (lượt xem, tỷ lệ bình luận).
+Tin giật gân vốn có tương tác rất cao. Thứ đáng lẽ phân biệt được — `discussionQualityScore`
+do Claude đọc bình luận thật — **chưa làm** (đó là vòng 2 của Phase 4).
+
+Đây đúng là tình huống `plan.md` đã lường trước: *"video 2 triệu view nhưng bình
+luận toàn emoji phải xếp dưới video 50 nghìn view có thảo luận thực chất"*. Hiện
+chưa làm được điều đó.
+
+**Không ảnh hưởng trải nghiệm ngay**, vì trang chủ chỉ hiện bốn chuyên mục chính
+và nhóm "Khác" không lên trang. Nhưng khi làm bản tin hằng sáng (Phase 10) thì
+phải xong vòng 2 trước, không thì trợ lý sẽ toàn gợi ý tin giật gân.
+
+### Còn thiếu ở Phase 4
+
+- **Vòng 2 — Claude đọc bình luận** (`CommentAnalysis`): gọi `commentThreads.list`
+  cho ~20 ứng viên đứng đầu mỗi ngày, chấm chất lượng thảo luận, gắn cờ "bình
+  luận toàn emoji", "tố clickbait". Đây là phần quan trọng nhất còn thiếu.
+- **Màn hình chỉnh trọng số** trong Cài đặt. Bộ trọng số mặc định đã nằm trong
+  database (`SourceQualityProfile`, 5 loại nguồn) và code đọc ưu tiên bản người
+  dùng chỉnh — chỉ thiếu giao diện.
 
 ## Giao diện — đã có trang chủ thật
 

@@ -74,6 +74,7 @@ export default async function TrangXem({
       viewOrPlayCount: true,
       contentGroup: true,
       narrationType: true,
+      score: { select: { compositeScore: true } },
       source: { select: { title: true, reputationTier: true } },
       narrationAsset: { select: { id: true } },
       classification: {
@@ -95,7 +96,10 @@ export default async function TrangXem({
         },
       },
     },
-    orderBy: { viewOrPlayCount: "desc" },
+    orderBy: [
+      { score: { compositeScore: { sort: "desc", nulls: "last" } } },
+      { viewOrPlayCount: "desc" },
+    ],
     take: 6,
   });
 
