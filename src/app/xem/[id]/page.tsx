@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { DanhGiaCamXuc } from "@/components/DanhGiaCamXuc";
 import { KhungTrang } from "@/components/KhungTrang";
+import { NutLuuThuVien } from "@/components/NutLuuThuVien";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
 import { TrinhPhatYouTube } from "@/components/TrinhPhatYouTube";
 import { prisma } from "@/lib/db/prisma";
@@ -52,6 +53,7 @@ export default async function TrangXem({
         narrationAsset: true,
         transcript: { select: { rawText: true, fetchStatus: true } },
         externalDiscussions: true,
+        libraryItem: { select: { id: true } },
       },
     }),
   ]);
@@ -170,6 +172,12 @@ export default async function TrangXem({
                 {TEN_NHOM[muc.contentGroup] ?? muc.contentGroup}
               </span>
             </div>
+
+            <NutLuuThuVien
+              idNoiDung={muc.id}
+              dangLuuBanDau={Boolean(muc.libraryItem)}
+              laChu={laChu}
+            />
 
             {/* Nhận xét của Claude — thứ phân biệt web này với YouTube */}
             {pl?.contentQualityNotes ? (

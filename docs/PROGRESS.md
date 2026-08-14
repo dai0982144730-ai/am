@@ -13,6 +13,7 @@
 | **4** — Chấm chất lượng | ✅ xong trọn: hai vòng chấm + màn hình chỉnh trọng số |
 | **4b** — Tìm kiếm & bộ lọc | ✅ xong, tìm được cả trong nhận xét của Claude |
 | **4c** — Chuyên mục New | ✅ xong, gõ từ khoá là đêm tự tìm |
+| **7a** — Thư viện cá nhân | ✅ xong, thư mục tự đặt tên + trạng thái đọc |
 | **5** — Trình phát & nhớ chỗ dở | ✅ xong, đồng bộ máy tính ↔ điện thoại |
 | **10** — Bản tin hằng sáng | ✅ xong, Claude viết bằng giọng trò chuyện |
 | **Tự chạy** | ✅ một lệnh làm đủ 8 bước, hẹn giờ 21:00 |
@@ -587,6 +588,40 @@ và bản thiết kế cũng nói nhạc không dùng điểm chất lượng n�
 
 Không còn thiếu gì — màn hình chỉnh trọng số đã làm xong, xem mục "Trang Cài
 đặt" bên dưới.
+
+## Phase 7a — Thư viện cá nhân: XONG
+
+File: `src/lib/thuVien/actions.ts`, `trangThai.ts`,
+`src/components/NutLuuThuVien.tsx`, `MucThuVien.tsx`,
+`src/app/thu-vien/page.tsx`. Xem tại `/thu-vien`.
+
+**Khác gì "đang xem dở"**: chỗ đang dở là máy tự ghi, phản ánh việc đã xảy ra.
+Thư viện là chủ nhà chủ động chọn, phản ánh ý định. Một video xem dở mười phút
+rồi bỏ hẳn vẫn nằm trong "đang xem dở"; chỉ thứ được cất vào thư viện mới là
+thứ thật sự muốn quay lại.
+
+**Thư mục là chữ tự do**, không có danh sách cố định. Ép vào một bộ thư mục có
+sẵn thì sẽ luôn có thứ không biết bỏ vào đâu. Ô nhập có gợi ý từ những thư mục
+đã dùng, nên vẫn gõ nhanh mà không bị gò.
+
+**Sửa tại chỗ, không mở trang riêng.** Sắp xếp thư viện là việc làm theo mạch —
+đổi thư mục ba bốn mục liền, đánh dấu xong vài cái. Bắt bấm vào từng mục rồi
+quay ra thì làm hai lần là bỏ cuộc.
+
+Khách không mở được trang này (đã thử — hiện lời mời đăng nhập). Khác với các
+trang khác nơi khách vẫn xem được nội dung: thư viện không phải nội dung chung,
+nó là đồ riêng của chủ nhà.
+
+### Một cái bẫy của Next đã dính
+
+File mang chỉ thị `"use server"` **chỉ được xuất ra hàm async**. Để một object
+hằng số (`TRANG_THAI_DOC`) trong đó làm cả trang chết với lỗi 500:
+*"A use server file can only export async functions, found object"*. Phải tách
+ra file thường — nay nằm ở `trangThai.ts`.
+
+Đây là cái bẫy chung, không riêng gì thư viện: đã gặp đúng kiểu này ở
+`quanTam/giaTuKhoa.ts` (tách hằng số cho trình duyệt đọc được mà không kéo theo
+prisma). Thêm hằng số vào file `"use server"` là hỏng ngay.
 
 ## Phase 4c — Chuyên mục "New": XONG
 

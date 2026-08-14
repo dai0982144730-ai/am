@@ -397,7 +397,7 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 | **4c** | Chuyên mục **New**: `AdHocInterest` (ô nhập từ khoá, bật/tắt tự quét), tích hợp vào cron 21:00 + hiển thị chi phí quota — **xong 2026-08-15** |
 | **5** | Player + theo dõi hành vi + `ResumePoint` đồng bộ đa thiết bị + rating cảm xúc — **xong 2026-08-15** |
 | **6** | Xác thực tác giả nâng cao: LLM auto-discovery + `pendingReview` + tủ sách tác giả + full-text search |
-| **7** | Thư viện cá nhân + quản lý playlist YouTube: thêm/tạo tự động, di chuyển/gỡ chờ duyệt, không bao giờ xoá playlist |
+| **7** | Thư viện cá nhân (**xong 2026-08-15**) + quản lý playlist YouTube: thêm/tạo tự động, di chuyển/gỡ chờ duyệt, không bao giờ xoá playlist (**chưa làm**) |
 | **8** | Trợ lý ghi chú: `Note` (text/voice), auto-tag, `KnowledgeCollection` + wiki, `ActionItem` |
 | **9** | Personalization engine: taste profile, embeddings, mood-theo-giờ, cold-start onboarding |
 | **10** | Trợ lý chủ động: `DigestRun`, `AssistantBriefing` + audio briefing, dedup, checklist AI — **xong phần chữ 2026-08-15**, audio chờ khoá TTS |

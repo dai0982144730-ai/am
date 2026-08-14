@@ -26,7 +26,7 @@ const NHOM_CHINH: MucDieuHuong[] = [
 ];
 
 const NHOM_CUA_BAN: MucDieuHuong[] = [
-  { ten: "Thư viện", bieuTuong: "☰", seLamO: "Phase 7" },
+  { ten: "Thư viện", bieuTuong: "☰", duongDan: "/thu-vien" },
   { ten: "Playlist", bieuTuong: "≡", seLamO: "Phase 7" },
   { ten: "Ghi chú", bieuTuong: "✎", seLamO: "Phase 8" },
   { ten: "Tủ sách", bieuTuong: "◫", seLamO: "Phase 6" },
