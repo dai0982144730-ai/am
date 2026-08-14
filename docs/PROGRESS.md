@@ -208,6 +208,16 @@ lần sau khỏi thử lại.
 **Đã chạy thật**: 20 video đầu lấy được 19 (~95%), trung bình 21.700 ký tự mỗi
 video. Video dài nhất trong kho cho ra 127.000 ký tự lời thoại.
 
+**Cạm bẫy đã vấp — Prisma bỏ cuộc sau 5 giây**: chạy tới video thứ 565 thì dừng
+với lỗi `Transaction API error: transaction timeout 5000 ms, however 8567 ms
+passed`. Nguyên nhân: ghi một bản lời thoại 74.000 ký tự lên Neon mất hơn 8
+giây, mà Prisma mặc định chỉ chờ 5 giây rồi huỷ. Database nằm trên mạng chứ
+không phải trên máy, nên bản ghi lớn chậm hơn nhiều so với lúc thử nghiệm.
+
+Đã nới hạn lên 60 giây (`prisma.$transaction([...], { timeout: 60_000 })`) ở cả
+ba chỗ ghi lớn. **Không mất dữ liệu nào** — kiểm tra lại thấy 0 video ở trạng
+thái dở dang, transaction đã tự huỷ sạch đúng như thiết kế.
+
 ### 1f — Phân loại bằng Claude
 
 File: `src/lib/llm/khungPhanLoai.ts` (khuôn dữ liệu), `phanLoai.ts` (gọi Claude),
@@ -500,3 +510,7 @@ tiếp nối phiên trên web bị ngắt quãng)*
   với code trong Next.js được framework nạp `.env` sẵn. Và `tsx` ở dự án này
   biên dịch ra CommonJS nên **không dùng được `await` ở cấp cao nhất** — phải
   bọc trong `async function main()`.
+- **Prisma mặc định chỉ cho một transaction chạy 5 giây.** Với database đặt trên
+  mạng (Neon) và bản ghi lớn (lời thoại vài chục nghìn ký tự), ngần đó là không
+  đủ. Truyền `{ timeout: 60_000 }` làm tham số thứ hai của `$transaction`. Điều
+  an tâm: khi hết giờ, Prisma huỷ sạch chứ không để lại dữ liệu dở dang.

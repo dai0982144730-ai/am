@@ -32,6 +32,12 @@ import {
 const NGHI_GIUA_HAI_LAN_MS = 300;
 
 /**
+ * Thời gian tối đa cho một lượt ghi vào database. Mặc định 5 giây của Prisma
+ * là quá ngắn khi database nằm trên mạng — đã vấp ở bước lấy lời thoại.
+ */
+const HAN_GHI_MS = 60_000;
+
+/**
  * Xếp số nhịp vào dải 5 nhịp, chỉ trong khoảng 140–180 mà người dùng quan tâm.
  *
  * Ngoài khoảng đó trả `null`: một bản nhạc 90 nhịp không dùng để chạy bộ được,
@@ -153,23 +159,26 @@ export async function phanLoaiHangLoat(
       const goi = await phanLoaiMotNoiDung(noiDung);
       const kq = goi.ketQua;
 
-      await prisma.$transaction([
-        prisma.contentClassification.create({
-          data: {
-            contentItemId: muc.id,
-            modelUsed: goi.modelDaDung,
-            ...dichSangDatabase(kq, muc.durationSeconds),
-          },
-        }),
-        prisma.contentItem.update({
-          where: { id: muc.id },
-          data: {
-            contentGroup: kq.nhom as ContentGroup,
-            narrationType: kq.loaiGiongDoc as NarrationType,
-            status: "classified",
-          },
-        }),
-      ]);
+      await prisma.$transaction(
+        [
+          prisma.contentClassification.create({
+            data: {
+              contentItemId: muc.id,
+              modelUsed: goi.modelDaDung,
+              ...dichSangDatabase(kq, muc.durationSeconds),
+            },
+          }),
+          prisma.contentItem.update({
+            where: { id: muc.id },
+            data: {
+              contentGroup: kq.nhom as ContentGroup,
+              narrationType: kq.loaiGiongDoc as NarrationType,
+              status: "classified",
+            },
+          }),
+        ],
+        { timeout: HAN_GHI_MS },
+      );
 
       thanhCong += 1;
       theoNhom[kq.nhom] = (theoNhom[kq.nhom] ?? 0) + 1;

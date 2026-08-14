@@ -29,6 +29,15 @@ import { prisma } from "@/lib/db/prisma";
 const NGHI_GIUA_HAI_LAN_MS = 1_200;
 
 /**
+ * Thời gian tối đa cho một lượt ghi vào database.
+ *
+ * Mặc định của Prisma là 5 giây, và đã vấp thật: ghi một bản lời thoại 74.000
+ * ký tự lên Neon (database đặt trên mạng, không phải máy này) mất hơn 8 giây.
+ * Nới rộng hẳn ra, vì đây là lượt ghi hiếm chứ không phải việc chạy liên tục.
+ */
+const HAN_GHI_MS = 60_000;
+
+/**
  * Video dài quá thì lời thoại rất lớn (một video 2,5 tiếng cho ra ~127.000 ký
  * tự). Vẫn lưu đủ, nhưng cắt ở mức này để một video hỏng định dạng không làm
  * phình database vô hạn.
@@ -156,22 +165,25 @@ export async function layLoiThoaiHangLoat(
     const ketQua = await layLoiThoai(video.externalId, video.originalLanguage);
 
     if (ketQua) {
-      await prisma.$transaction([
-        prisma.transcript.create({
-          data: {
-            contentItemId: video.id,
-            source: "unofficial_scrape",
-            language: ketQua.language,
-            rawText: ketQua.rawText,
-            segments: ketQua.segments,
-            fetchStatus: "success",
-          },
-        }),
-        prisma.contentItem.update({
-          where: { id: video.id },
-          data: { status: "pending_classification" },
-        }),
-      ]);
+      await prisma.$transaction(
+        [
+          prisma.transcript.create({
+            data: {
+              contentItemId: video.id,
+              source: "unofficial_scrape",
+              language: ketQua.language,
+              rawText: ketQua.rawText,
+              segments: ketQua.segments,
+              fetchStatus: "success",
+            },
+          }),
+          prisma.contentItem.update({
+            where: { id: video.id },
+            data: { status: "pending_classification" },
+          }),
+        ],
+        { timeout: HAN_GHI_MS },
+      );
 
       layDuoc += 1;
       tongKyTu += ketQua.rawText.length;
@@ -180,20 +192,23 @@ export async function layLoiThoaiHangLoat(
       );
     } else {
       // Ghi lại cả lần thất bại, để lần chạy sau không thử lại video này nữa
-      await prisma.$transaction([
-        prisma.transcript.create({
-          data: {
-            contentItemId: video.id,
-            source: "unofficial_scrape",
-            rawText: "",
-            fetchStatus: "failed",
-          },
-        }),
-        prisma.contentItem.update({
-          where: { id: video.id },
-          data: { status: "transcript_unavailable" },
-        }),
-      ]);
+      await prisma.$transaction(
+        [
+          prisma.transcript.create({
+            data: {
+              contentItemId: video.id,
+              source: "unofficial_scrape",
+              rawText: "",
+              fetchStatus: "failed",
+            },
+          }),
+          prisma.contentItem.update({
+            where: { id: video.id },
+            data: { status: "transcript_unavailable" },
+          }),
+        ],
+        { timeout: HAN_GHI_MS },
+      );
 
       khongCoPhuDe += 1;
       bao?.(`  – ${video.title.slice(0, 45)} — không có phụ đề`);
