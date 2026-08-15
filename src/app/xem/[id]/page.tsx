@@ -9,6 +9,7 @@ import { KhungTrang } from "@/components/KhungTrang";
 import { NutLuuThuVien } from "@/components/NutLuuThuVien";
 import { ONhapGhiChu } from "@/components/ONhapGhiChu";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
+import { TrinhPhatAmThanh } from "@/components/TrinhPhatAmThanh";
 import { TrinhPhatYouTube } from "@/components/TrinhPhatYouTube";
 import { prisma } from "@/lib/db/prisma";
 import { docTinhTrangXem } from "@/lib/tieuThu/docTienDo";
@@ -282,15 +283,31 @@ export default async function TrangXem({
                 <h2 className="mb-3 text-base font-semibold">
                   Bản thuật lại tiếng Việt
                 </h2>
-                <div className="rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-800 dark:text-neutral-200">
+                {/* Giọng đọc lên TRƯỚC phần chữ, có chủ đích: chủ dự án nói
+                    rõ nhu cầu là nghe và nhìn, không phải đọc. Chữ để đó cho
+                    ai muốn liếc lại, nhưng thứ chính là nút phát. */}
+                {muc.narrationAsset.ttsAudioUrl ? (
+                  <TrinhPhatAmThanh
+                    duongDan={muc.narrationAsset.ttsAudioUrl}
+                    giong={muc.narrationAsset.ttsVoice}
+                    ghiChu="Claude đọc nội dung gốc rồi kể lại bằng lời văn riêng, không dịch nguyên văn."
+                  />
+                ) : (
+                  <p className="rounded-xl border border-dashed border-neutral-300 p-3 text-xs text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+                    Chưa có giọng đọc. Chạy{" "}
+                    <code>npx tsx scripts/tao-am-thanh.ts</code> hoặc đợi lượt
+                    quét đêm.
+                  </p>
+                )}
+
+                <details className="mt-3 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
+                  <summary className="cursor-pointer text-sm font-medium">
+                    Đọc bằng chữ
+                  </summary>
+                  <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-neutral-800 dark:text-neutral-200">
                     {muc.narrationAsset.scriptText}
                   </div>
-                </div>
-                <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">
-                  Claude đọc bài gốc rồi kể lại bằng lời văn riêng, không dịch
-                  nguyên văn. Phần giọng đọc sẽ có khi cấu hình xong TTS.
-                </p>
+                </details>
               </section>
             ) : null}
 

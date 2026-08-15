@@ -34,6 +34,11 @@ import { quetTuKhoaQuanTam } from "@/lib/quanTam/quetTuKhoa";
 import { chamDiemHangLoat } from "@/lib/scoring/chamDiem";
 import { chayVongHai } from "@/lib/scoring/vongHaiBinhLuan";
 import { taoBanTin } from "@/lib/troLy/taoBanTin";
+import { daCauHinh } from "@/lib/tts/doc";
+import {
+  taoAmThanhChoBanTin,
+  taoAmThanhChoThuatLai,
+} from "@/lib/tts/taoAmThanh";
 import { layLoiThoaiHangLoat } from "@/lib/youtube/loiThoai";
 import { dongBoNguonTuKenhDaDangKy, quetVideoMoi } from "@/lib/youtube/quetKenh";
 
@@ -63,6 +68,14 @@ export const GIOI_HAN_MOI_DEM = {
   soGanNhan: 30,
   /** Số chủ đề đem đi tìm ngoài vùng đã theo dõi. Mỗi chủ đề tốn 101 đơn vị. */
   soChuDeTuTim: 6,
+  /**
+   * Số bản thuật lại được đọc thành tiếng mỗi đêm.
+   *
+   * Đặt thấp có chủ đích: mỗi bản khoảng 9.000 ký tự, năm bản là 45.000 — một
+   * tháng chạy đều là 1,35 triệu, vẫn dưới trần 4 triệu của giọng Standard
+   * nhưng đã vượt trần 1 triệu của giọng Wavenet.
+   */
+  soDocThanhTieng: 5,
 } as const;
 
 export interface KetQuaMotBuoc {
@@ -309,6 +322,33 @@ export async function quetDem(
       async () => {
         const kq = await taoBanTin(true);
         return `chắt ${kq.soNoiBat} mục nổi bật + ${kq.soXemThem} mục xem thêm từ ${kq.tongMoi} nội dung`;
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước cuối: đọc thành tiếng -----
+  //
+  // Đặt SAU CÙNG, sau cả bản tin, vì nó cần bản tin đã viết xong mới có gì để
+  // đọc. Và vì đây là bước duy nhất tiêu tiền thật — hỏng thì phần còn lại của
+  // đêm vẫn nguyên vẹn.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Đọc bản tin và bản thuật lại thành tiếng",
+      async () => {
+        if (!daCauHinh()) return "chưa cấu hình TTS_API_KEY, bỏ qua";
+
+        const bt = await taoAmThanhChoBanTin();
+        const tl = await taoAmThanhChoThuatLai(GIOI_HAN_MOI_DEM.soDocThanhTieng);
+
+        const phan = [
+          bt.daTao ? "bản tin xong" : `bản tin: ${bt.lyDo}`,
+          tl.daXet === 0
+            ? "không có bản thuật lại nào chờ"
+            : `${tl.thanhCong}/${tl.daXet} bản thuật lại, ${tl.soKyTu.toLocaleString("vi-VN")} ký tự`,
+        ];
+        if (tl.hetHanMuc) phan.push("DỪNG vì chạm ngưỡng khoá hạn mức");
+        return phan.join(" · ");
       },
       bao,
     ),

@@ -53,6 +53,7 @@ coverage/
 /public/generated/
 /storage/
 
-# File âm thanh sinh ra để nghe thử — không thuộc mã nguồn
+# File âm thanh sinh ra — không thuộc mã nguồn, và nặng vài MB mỗi file
 /mau-giong/
+/public/am-thanh/
 *.mp3

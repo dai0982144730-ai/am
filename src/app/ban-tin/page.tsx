@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { KhungTrang } from "@/components/KhungTrang";
+import { TrinhPhatAmThanh } from "@/components/TrinhPhatAmThanh";
 import { prisma } from "@/lib/db/prisma";
 import { emailChuDuAn } from "@/lib/quyen";
 
@@ -146,9 +147,20 @@ export default async function TrangBanTin() {
               <div className="max-w-3xl whitespace-pre-wrap text-[15px] leading-relaxed text-neutral-800 dark:text-neutral-200">
                 {banTin.conversationalScript}
               </div>
-              <p className="mt-4 border-t border-neutral-200 pt-3 text-xs text-neutral-400 dark:border-neutral-800 dark:text-neutral-500">
-                Phần đọc thành tiếng sẽ có khi cấu hình xong giọng đọc.
-              </p>
+              <div className="mt-4 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+                {banTin.audioBriefingUrl ? (
+                  <TrinhPhatAmThanh
+                    duongDan={banTin.audioBriefingUrl}
+                    nhan="Nghe bản tin"
+                    ghiChu="Nghe trong lúc pha cà phê — không cần nhìn màn hình."
+                  />
+                ) : (
+                  <p className="text-xs text-neutral-400 dark:text-neutral-500">
+                    Chưa có giọng đọc cho bản tin này. Chạy{" "}
+                    <code>npx tsx scripts/tao-am-thanh.ts</code>.
+                  </p>
+                )}
+              </div>
             </div>
 
             {noiDung.topPicks?.map((muc) => (
