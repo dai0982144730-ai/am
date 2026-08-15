@@ -103,9 +103,21 @@ export default async function TrangGhiChu() {
           </div>
         ) : null}
 
+        {/* BA CỘT KIỂU CỘT BÁO — chủ dự án chốt 2026-08-15.
+
+            Mỗi ngăn ghi chú chỉ cao chừng vài trăm pixel mà chiếm hết bề ngang,
+            nên xếp dọc thì trang dài lê thê còn hai phần ba màn hình bỏ trống.
+
+            Dùng cột báo chứ không dùng lưới, cùng lý do như trang Cài đặt: các
+            ngăn cao thấp rất khác nhau, lưới sẽ bắt chúng thẳng hàng và hở ra
+            mảng trống to. Cột báo thì ngăn sau lấp lên ngay.
+
+            `break-inside-avoid` để không ngăn nào bị cắt đôi giữa hai cột. */}
+        <div className="mt-8 md:columns-2 md:[column-gap:2rem] xl:columns-3">
+
         {/* Việc cần làm — để trên cùng vì đây là thứ cần hành động */}
         {cacViec.length > 0 ? (
-          <section className="mt-8">
+          <section className="mb-8 break-inside-avoid">
             <h2 className="mb-3 text-base font-semibold">
               Việc cần làm ({cacViec.filter((v) => v.status === "todo").length}{" "}
               chưa xong)
@@ -128,7 +140,7 @@ export default async function TrangGhiChu() {
         {/* Các ngăn chủ đề */}
         {cacBoSuuTap.map((bo) =>
           bo.notes.length === 0 ? null : (
-            <section key={bo.id} className="mt-8">
+            <section key={bo.id} className="mb-8 break-inside-avoid">
               <h2 className="text-base font-semibold">{bo.title}</h2>
               <p className="mt-0.5 text-xs text-neutral-400 dark:text-neutral-500">
                 {bo.notes.length} ghi chú
@@ -189,7 +201,7 @@ export default async function TrangGhiChu() {
 
         {/* Chưa gắn nhãn */}
         {chuaGanNhan.length > 0 ? (
-          <section className="mt-8">
+          <section className="mb-8 break-inside-avoid">
             <h2 className="text-base font-semibold">Chưa xếp ngăn</h2>
             <p className="mt-0.5 text-xs text-neutral-400 dark:text-neutral-500">
               Chạy <code>npx tsx scripts/gan-nhan-ghi-chu.ts</code> để Claude đọc
@@ -217,6 +229,7 @@ export default async function TrangGhiChu() {
             </ul>
           </section>
         ) : null}
+        </div>
       </div>
     </KhungTrang>
   );

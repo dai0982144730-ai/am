@@ -52,11 +52,19 @@ export default async function TrangChu() {
             ) : null}
             .
           </p>
-          <p className="mt-3 text-sm">
-            <Link href="/ban-tin" className="font-medium underline">
-              Đọc bản tin sáng nay →
-            </Link>
-          </p>
+          {/* Nút thật, không phải chữ gạch chân.
+
+              Đây là lối vào thứ chủ dự án mở mỗi sáng — thao tác thường xuyên
+              nhất của cả app. Một dòng chữ gạch chân nhạt màu thì lẫn vào đoạn
+              văn phía trên, phải nhìn kỹ mới thấy. Chủ dự án yêu cầu làm đậm
+              và nổi lên như các nút chuyên mục. */}
+          <Link
+            href="/ban-tin"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cam-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cam-600/40 transition-all duration-200 hover:-translate-y-0.5 hover:bg-cam-500 active:translate-y-0 dark:bg-cam-500 dark:shadow-cam-500/30"
+          >
+            Đọc bản tin sáng nay
+            <span aria-hidden>→</span>
+          </Link>
         </div>
 
         <DangXemDo cacMuc={dangXemDo} />

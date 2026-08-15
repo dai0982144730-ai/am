@@ -144,11 +144,15 @@ export default async function TrangBanTin() {
             </p>
 
             {/* Bản tin trò chuyện — thứ chính của trang này.
-                Riêng phần văn xuôi này giữ hẹp có chủ đích: dòng chữ dài quá
-                khoảng 90 ký tự thì mắt lạc dòng khi xuống hàng. Các thẻ bên
-                dưới thì tràn hết bề ngang. */}
+
+                CHIA CỘT BÁO, không bó hẹp một cột. Bản trước dùng `max-w-3xl`
+                cho dòng chữ khỏi dài quá — đúng về mặt đọc, nhưng để lại một
+                mảng trống rất to bên phải, và chủ dự án chỉ ra đúng chỗ đó.
+
+                Chia cột giải được cả hai: dòng vẫn ngắn vừa tầm mắt, mà bề
+                ngang thì dùng hết. Màn hẹp vẫn một cột như cũ. */}
             <div className="mt-5 rounded-2xl border border-neutral-200 bg-neutral-50 p-6 dark:border-neutral-800 dark:bg-neutral-900">
-              <div className="max-w-3xl whitespace-pre-wrap text-[15px] leading-relaxed text-neutral-800 dark:text-neutral-200">
+              <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-neutral-800 lg:columns-2 lg:[column-gap:3rem] 2xl:columns-3 dark:text-neutral-200">
                 {banTin.conversationalScript}
               </div>
               <div className="mt-4 border-t border-neutral-200 pt-4 dark:border-neutral-800">

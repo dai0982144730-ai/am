@@ -15,6 +15,7 @@
  */
 
 import type { Prisma } from "@/generated/prisma/client";
+import { prisma } from "@/lib/db/prisma";
 
 /**
  * Bọc một điều kiện sẵn có thêm điều kiện "chưa lướt qua".
@@ -32,5 +33,56 @@ export function chuaLuotQua(
       dieuKien,
       { OR: [{ watchHistory: { is: null } }, { libraryItem: { isNot: null } }] },
     ],
+  };
+}
+
+/** Lịch sử chỉ giữ ngần này ngày — chủ dự án chốt 2026-08-15. */
+export const SO_NGAY_GIU_LICH_SU = 7;
+
+/**
+ * Đọc lịch sử xem trong một tuần, tách sẵn thành "hôm nay" và "trước đó".
+ *
+ * ĐẶT Ở ĐÂY CHỨ KHÔNG ĐẶT TRONG TRANG, có lý do thật chứ không phải cho gọn:
+ * gọi `Date.now()` ngay lúc vẽ trang là tác dụng phụ đặt sai chỗ, và ESLint
+ * chặn thẳng — Next có thể vẽ lại một trang bất cứ lúc nào, kể cả lúc chỉ tải
+ * trước, nên thứ phụ thuộc vào "bây giờ là mấy giờ" phải nằm ngoài phần vẽ.
+ *
+ * Ở đây chỉ LỌC ĐỂ HIỆN. Việc xoá thật nằm trong lượt quét đêm.
+ */
+export async function docLichSuMotTuan() {
+  const moc = new Date(Date.now() - SO_NGAY_GIU_LICH_SU * 86_400_000);
+
+  // Mốc "hôm nay" là 0 giờ sáng nay theo giờ máy, không phải "24 tiếng vừa
+  // qua". Xem lúc 23h tối qua thì sáng nay phải nằm ở cột "trước đó" — đó mới
+  // là cách người ta nghĩ về ngày.
+  const dauHomNay = new Date();
+  dauHomNay.setHours(0, 0, 0, 0);
+
+  const cacMuc = await prisma.watchHistory.findMany({
+    where: { lastOpenedAt: { gte: moc } },
+    orderBy: { lastOpenedAt: "desc" },
+    take: 200,
+    select: {
+      lastOpenedAt: true,
+      openCount: true,
+      contentItem: {
+        select: {
+          id: true,
+          title: true,
+          thumbnailUrl: true,
+          durationSeconds: true,
+          contentGroup: true,
+          source: { select: { title: true } },
+          score: { select: { compositeScore: true } },
+          libraryItem: { select: { id: true } },
+        },
+      },
+    },
+  });
+
+  return {
+    tatCa: cacMuc,
+    homNay: cacMuc.filter((m) => m.lastOpenedAt >= dauHomNay),
+    truocDo: cacMuc.filter((m) => m.lastOpenedAt < dauHomNay),
   };
 }

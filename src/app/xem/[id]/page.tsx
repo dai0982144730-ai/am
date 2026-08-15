@@ -343,6 +343,24 @@ export default async function TrangXem({
               </section>
             ) : null}
 
+            {/* ĐÁNH GIÁ LÊN TRƯỚC, GHI CHÚ XUỐNG SAU — chủ dự án chốt
+                2026-08-15.
+
+                Hợp với thứ tự việc thật: xem xong thì phản ứng đầu tiên là
+                "hay hay dở", chỉ mất một cú bấm sao. Ghi chú là việc dài hơi
+                hơn, và không phải lần nào cũng ghi. Để ô ghi chú lên trước
+                thành ra chắn mất thao tác mà lần nào cũng làm.
+
+                Đánh giá cũng là thứ dạy máy hiểu gu chủ nhà, nên càng dễ bấm
+                thì máy càng học được nhiều. */}
+            <DanhGiaCamXuc
+              idNoiDung={muc.id}
+              chuyenMuc={muc.contentGroup}
+              laChu={laChu}
+              saoBanDau={tinhTrang.saoDaCham}
+              tagBanDau={tinhTrang.tagCamXuc}
+            />
+
             {laChu ? (
               <>
                 <ONhapGhiChu idNoiDung={muc.id} laChu={laChu} />
@@ -362,14 +380,6 @@ export default async function TrangXem({
                 />
               </>
             ) : null}
-
-            <DanhGiaCamXuc
-              idNoiDung={muc.id}
-              chuyenMuc={muc.contentGroup}
-              laChu={laChu}
-              saoBanDau={tinhTrang.saoDaCham}
-              tagBanDau={tinhTrang.tagCamXuc}
-            />
 
             {muc.description ? (
               <details className="mt-6 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">

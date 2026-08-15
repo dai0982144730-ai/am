@@ -176,11 +176,20 @@ export function BangTuKhoa({
           Chưa có từ khoá nào. Gõ thứ bạn đang tò mò vào ô trên.
         </p>
       ) : (
-        <ul className="mt-6 divide-y divide-neutral-200 dark:divide-neutral-800">
+        // HAI CỘT trên màn rộng — chủ dự án chốt 2026-08-15.
+        //
+        // Mỗi dòng từ khoá chỉ cao chừng 60px mà kéo hết bề ngang màn hình,
+        // nên danh sách một cột vừa dài lê thê vừa để trống hai phần ba bên
+        // phải. Hai cột thì liếc một cái là thấy hết.
+        //
+        // Dùng lưới chứ không dùng cột báo ở đây: các dòng cao bằng nhau nên
+        // không sinh ra khoảng hở như bên trang Cài đặt, mà lưới thì giữ đúng
+        // thứ tự trái-phải, dễ dò hơn.
+        <ul className="mt-6 grid gap-x-8 lg:grid-cols-2">
           {cacTuKhoa.map((tu) => (
             <li
               key={tu.id}
-              className="flex flex-wrap items-center gap-3 py-3"
+              className="flex flex-wrap items-center gap-3 border-b border-neutral-200 py-3 dark:border-neutral-800"
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{tu.keyword}</p>

@@ -193,6 +193,29 @@ export async function quetDem(
     ),
   );
 
+  // ----- Dọn lịch sử xem quá một tuần -----
+  //
+  // Chủ dự án chốt chỉ giữ bảy ngày. Trang Lịch sử chỉ LỌC để hiện; việc xoá
+  // thật nằm ở đây, vì vẽ một trang mà lại xoá dữ liệu là tác dụng phụ đặt sai
+  // chỗ — Next có thể vẽ lại trang bất cứ lúc nào, kể cả khi chỉ tải trước.
+  //
+  // Xoá khỏi lịch sử còn có tác dụng thứ hai: nội dung ấy quay lại luồng chính
+  // thay vì bị chặn vĩnh viễn chỉ vì lỡ mở một lần cách đây hàng tháng.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Dọn lịch sử xem quá một tuần",
+      async () => {
+        const kq = await prisma.watchHistory.deleteMany({
+          where: {
+            lastOpenedAt: { lt: new Date(Date.now() - 7 * 86_400_000) },
+          },
+        });
+        return kq.count === 0 ? "không có mục nào quá hạn" : `xoá ${kq.count} mục`;
+      },
+      bao,
+    ),
+  );
+
   // ----- Bước 2a: tập mới từ podcast -----
   //
   // Đặt cạnh việc quét blog vì cùng tính chất: đọc feed RSS, không tốn hạn mức

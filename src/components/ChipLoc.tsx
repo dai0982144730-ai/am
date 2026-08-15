@@ -55,27 +55,50 @@ export function ChipLoc({
     batDauChuyen(() => dieuHuong.push(`${duongDan}?${moi.toString()}`));
   }
 
+  /**
+   * Nút chuyên mục: TO BẰNG NHAU, chữ đậm, nổi lên khi rê chuột.
+   *
+   * Chủ dự án yêu cầu (2026-08-15) và có lý về mặt nhìn: bản trước mỗi nút một
+   * bề ngang theo độ dài chữ, nên hàng nút trông so le, mắt phải đọc từng cái
+   * mới biết có gì. Bằng nhau thì liếc một cái là nắm được cả hàng.
+   *
+   * `flex-1 basis-0` là chỗ làm nên chuyện: mọi nút chia đều bề ngang còn lại
+   * bất kể chữ dài ngắn. `min-w-0` để chữ dài không phá vỡ phần chia đều.
+   */
   const kieuChip =
-    "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors";
-  const kieuChon = "bg-cam-600 text-white dark:bg-cam-500 dark:text-white";
+    "min-w-0 flex-1 basis-0 rounded-xl px-3 py-2.5 text-sm font-semibold " +
+    "transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0";
+
+  // Nút đang chọn: nổi hẳn lên bằng bóng đổ màu cam. Dùng bóng chứ không dùng
+  // viền — viền làm nút xê dịch 1px khi đổi trạng thái, nhìn giật.
+  const kieuChon =
+    "bg-cam-600 text-white shadow-lg shadow-cam-600/40 dark:bg-cam-500 dark:shadow-cam-500/30";
   const kieuThuong =
-    "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700";
+    "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:shadow-md " +
+    "dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700";
 
   return (
     <div className={dangChuyen ? "opacity-60 transition-opacity" : undefined}>
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2">
         {CAC_NHOM.map((nhom) => {
           const so = nhom.ma ? demTheoNhom[nhom.ma] : undefined;
+          const dangO = nhomHienTai === nhom.ma;
           return (
             <button
               key={nhom.ma || "tat-ca"}
               type="button"
               onClick={() => doiThamSo("nhom", nhom.ma)}
-              className={`${kieuChip} ${nhomHienTai === nhom.ma ? kieuChon : kieuThuong}`}
+              className={`${kieuChip} ${dangO ? kieuChon : kieuThuong}`}
             >
-              {nhom.ten}
+              <span className="truncate">{nhom.ten}</span>
               {so !== undefined ? (
-                <span className="ml-1.5 opacity-60">{so}</span>
+                <span
+                  className={`ml-1.5 tabular-nums ${
+                    dangO ? "opacity-80" : "opacity-55"
+                  }`}
+                >
+                  {so}
+                </span>
               ) : null}
             </button>
           );
