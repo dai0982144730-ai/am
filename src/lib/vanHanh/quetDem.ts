@@ -28,6 +28,7 @@ import { prisma } from "@/lib/db/prisma";
 import { phanLoaiHangLoat } from "@/lib/llm/luuPhanLoai";
 import { thuatLaiHangLoat } from "@/lib/llm/luuThuatLai";
 import { quetBlog } from "@/lib/nguon/quetBlog";
+import { quetPodcast } from "@/lib/nguon/quetPodcast";
 import { ganNhanHangLoat } from "@/lib/ghiChu/ganNhan";
 import { timNguonMoi } from "@/lib/khamPha/timNguonMoi";
 import { quetTuKhoaQuanTam } from "@/lib/quanTam/quetTuKhoa";
@@ -56,6 +57,17 @@ export const GIOI_HAN_MOI_DEM = {
   soNgayGanDay: 3,
   /** Số bài xét mỗi nguồn blog */
   baiMoiNguonBlog: 8,
+  /** Số tập xét mỗi kênh podcast */
+  tapMoiKenhPodcast: 5,
+  /**
+   * Podcast nhìn ngược lại xa hơn hẳn các nguồn khác.
+   *
+   * Video và blog ra hàng ngày nên nhìn lại 3 ngày là đủ. Podcast thì mỗi tuần
+   * hoặc mỗi hai tuần mới có một tập — lấy mốc 3 ngày thì hầu hết các đêm chẳng
+   * thấy gì, mà tập mới ra đúng hôm quét trục trặc là mất luôn. Lấy về trùng
+   * không tốn gì: tập đã có trong kho thì bỏ qua ngay.
+   */
+  soNgayGanDayPodcast: 21,
   /** Số video lấy lời thoại */
   soLoiThoai: 120,
   /** Số nội dung nhờ Claude phân loại */
@@ -176,6 +188,25 @@ export async function quetDem(
           GIOI_HAN_MOI_DEM.soNgayGanDay,
         );
         return `${kq.soNguonQuet} nguồn, thêm ${kq.soBaiThemMoi} bài (${kq.soLayDuocToanVan} lấy được chữ)`;
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước 2a: tập mới từ podcast -----
+  //
+  // Đặt cạnh việc quét blog vì cùng tính chất: đọc feed RSS, không tốn hạn mức
+  // YouTube, không gọi Claude. Rẻ nhất trong cả lượt chạy đêm.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Quét tập mới từ podcast",
+      async () => {
+        const kq = await quetPodcast(
+          GIOI_HAN_MOI_DEM.tapMoiKenhPodcast,
+          GIOI_HAN_MOI_DEM.soNgayGanDayPodcast,
+        );
+        if (kq.soKenhQuet === 0) return "chưa thêm kênh podcast nào";
+        return `${kq.soKenhQuet} kênh, thêm ${kq.soTapThemMoi} tập (${kq.soCoMoTa} tập có mô tả riêng)`;
       },
       bao,
     ),

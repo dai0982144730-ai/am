@@ -24,7 +24,8 @@
 | **Điểm chất lượng** | ✅ Claude chấm số, trụ tín hiệu duy nhất dùng được cho blog |
 | **5** — Trình phát & nhớ chỗ dở | ✅ xong, đồng bộ máy tính ↔ điện thoại |
 | **10** — Bản tin hằng sáng | ✅ xong, Claude viết bằng giọng trò chuyện |
-| **Tự chạy** | ✅ một lệnh làm đủ 8 bước, hẹn giờ 21:00 |
+| **11** — Podcast | ✅ xong: gõ tên là tìm ra kênh, nghe thẳng trong app |
+| **Tự chạy** | ✅ một lệnh làm đủ 9 bước, hẹn giờ 21:00 |
 | **15** — Cổng API trợ lý | ✅ xong, đã chạy thật |
 | Giao diện | Trang chủ, trang xem video, trang cài đặt — chạy với dữ liệu thật |
 | Phân quyền | Khách xem được; cấu hình và việc gọi Claude cần đăng nhập |
@@ -1751,3 +1752,101 @@ tiếp nối phiên trên web bị ngắt quãng)*
   mạng (Neon) và bản ghi lớn (lời thoại vài chục nghìn ký tự), ngần đó là không
   đủ. Truyền `{ timeout: 60_000 }` làm tham số thứ hai của `$transaction`. Điều
   an tâm: khi hết giờ, Prisma huỷ sạch chứ không để lại dữ liệu dở dang.
+
+## Phase 11 — Podcast: XONG (2026-08-15)
+
+Podcast là loại nội dung **hợp với am nhất trong tất cả các nguồn**. Mọi nguồn
+khác đều phải đi vòng mới tới được thứ chủ dự án cần là nghe tiếng Việt:
+
+| Nguồn | Đường đi tới tai chủ nhà |
+|---|---|
+| Blog tiếng Anh | Claude dịch → giọng máy đọc lại → tốn hạn mức TTS |
+| Video tiếng Anh | lấy lời thoại → dịch → giọng máy → tốn hạn mức |
+| **Podcast tiếng Việt** | **phát thẳng** |
+
+Một tập podcast tiếng Việt đã sẵn là giọng người thật. Không dịch, không đọc
+lại, không tốn một ký tự nào trong hạn mức 4 triệu — mà chất lượng giọng còn hơn
+hẳn giọng máy.
+
+### Tìm kênh bằng cách gõ TÊN, không bắt dán đường dẫn
+
+Bản đầu tôi định làm ô "dán đường dẫn RSS vào đây" và đó là một yêu cầu vô lý:
+đường dẫn RSS gần như không hiện ra chỗ nào cho người dùng thường nhìn thấy.
+
+Apple có API tra cứu podcast **miễn phí, không cần khoá**, trả thẳng ra đường
+dẫn feed. Đã thử thật: gõ "Sunhuyn" ra đúng kênh 105 tập, gõ "Vietcetera" ra bốn
+kênh của họ. Ô dán đường dẫn vẫn giữ, nằm dưới phần tìm, cho kênh không có trên
+Apple.
+
+### Ba thứ phải sửa mới cho podcast nổi lên được
+
+Cả ba đều lộ ra khi chạy thật, không phải nghĩ ra từ đầu.
+
+**1. Mô tả tập phần lớn là lời rao lặp ở mọi tập.** Kênh đầu tiên thêm vào có
+mô tả của cả 105 tập giống nhau gần như từng chữ: lời chào, link bán sổ tay,
+link kênh YouTube, hashtag. Đưa nguyên thứ đó cho Claude thì Claude chấm chất
+lượng **0,2/1** — chấm đúng, vì đó đúng là quảng cáo, nhưng nó nói về lời rao
+chứ không nói gì về tập podcast. Mà điểm đó chiếm một nửa điểm tổng của podcast.
+
+Cách sửa: lọc lời rao trước khi chấm. Hai luật, đo trên 450 tập của bốn kênh:
+bỏ dòng chứa link hoặc chỉ có hashtag, và bỏ dòng lặp ở từ 40% số tập trở lên.
+Lọc xong mà còn dưới 400 ký tự thì coi như **không có gì để đọc** — bỏ hẳn trụ
+chất lượng thay vì chấm điểm thấp cho một mẩu quảng cáo.
+
+Kết quả đo: kênh toàn quảng cáo từ 80/105 tập được nhận xuống còn 9 — và 9 tập
+đó kiểm lại đúng là có mô tả thật. Kênh có nội dung thật giữ gần nguyên: The
+Money Date 30/36, Have A Sip 212/255.
+
+Đã thử một luật thứ ba — đo tỷ lệ từ dùng chung cả kênh — và **bỏ**, vì đo trên
+bốn kênh thật thì nó không đổi được một kết quả nào: từ nối tiếng Việt lấn át
+nên kênh toàn quảng cáo ra 62% còn kênh có nội dung thật ra 67%.
+
+**2. Tuổi nguồn tính sai, ảnh hưởng cả 13 blog.** `Source.createdAt` là lúc am
+**biết tới** nguồn chứ không phải lúc nguồn ra đời, nên mọi nguồn vừa thêm đều
+0 ngày tuổi và bị trừ điểm uy tín vì "chưa đủ thời gian chứng minh". Một kênh
+podcast chạy nhiều năm với 105 tập vừa thêm vào là bị coi như mới mở hôm qua.
+Đổi sang lấy ngày đăng bài cũ nhất của nguồn — bằng chứng thật, có sẵn, miễn phí.
+
+**3. Trụ chất lượng chỉ được tính chứ chưa bao giờ được lưu** vào `ContentScore`,
+khác với bốn trụ kia. Điểm tổng vẫn đúng, nhưng nhìn vào bảng điểm không hiểu vì
+sao ra con số đó.
+
+Sau ba sửa này, sáu tập đầu tiên vào kho được chấm 4,1–6,1 và tập cao nhất đứng
+trên 284/297 nội dung trong kho.
+
+### Dải nhắc khởi động lại — sửa chỗ đặt
+
+Dải nhắc "máy chủ đang giữ bản Prisma cũ" trước đây nằm trong `KhungTrang`, tức
+là bên trong từng trang. Đặt vậy thì nó **vô dụng đúng lúc cần nhất**: khi máy
+chủ giữ bản cũ, trang chết ngay ở bước lấy dữ liệu, chưa kịp vẽ ra khung nào cả,
+người dùng chỉ thấy "A server error occurred". Đã tận mắt thấy nó hỏng đúng vậy
+khi mở `/cai-dat`.
+
+Chuyển lên `app/layout.tsx` — bố cục gốc vẫn dựng dù trang bên trong chết. Thêm
+`app/error.tsx` nói rõ phải làm gì thay cho màn báo lỗi trống rỗng của Next.
+
+### Đã kiểm thật
+
+- Trang Cài đặt và trang nghe: HTTP 200, đủ phần podcast
+- Thẻ `<audio>` nạp được file gốc của Have A Sip: `readyState` 4, đúng 4.805
+  giây như feed khai
+- Dải nhắc thử cả hai chiều: hiện khi bản Prisma mới hơn tiến trình, tắt khi không
+- Dán nhầm feed blog vào ô podcast: bị chặn kèm lời giải thích, không tạo nguồn rác
+
+**Cạm bẫy ghi lại**: `anchor.fm` trả **403 cho mọi client không phải trình
+duyệt** — thử bằng PowerShell hay `curl` đều hỏng, kể cả có `Range` và
+`User-Agent` giả. Trình duyệt thì phát bình thường. Đừng kết luận file hỏng chỉ
+vì gọi thử từ dòng lệnh không được.
+
+### Lệnh dùng tay
+
+```bash
+npx tsx scripts/podcast.ts tim "Have A Sip"
+npx tsx scripts/podcast.ts danhsach
+npx tsx scripts/podcast.ts quet --tap 10 --ngay 30
+npx tsx scripts/phan-loai.ts --podcast
+```
+
+Cờ `--podcast` là cần thiết chứ không phải tiện tay: hàng chờ phân loại xếp theo
+ngày đăng, mà tin thời sự YouTube ra hàng ngày còn podcast vài tuần một tập. Đo
+thật lúc thêm kênh đầu tiên: **765 mục đứng trước 5 tập podcast vừa lấy về**.
