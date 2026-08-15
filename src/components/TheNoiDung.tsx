@@ -72,6 +72,25 @@ const TEN_CHU_DE_AI: Record<string, string> = {
   claude_usage_guide: "hướng dẫn dùng Claude",
 };
 
+/**
+ * Nhãn LOẠI NGUỒN ở góc phải ảnh — mỗi loại một màu riêng.
+ *
+ * Chủ dự án yêu cầu 2026-08-15. Liếc một cái là biết thứ này đến từ đâu mà
+ * không phải đọc tên kênh: video YouTube, bài blog, bài diễn đàn, tập podcast
+ * hay bản nhạc SoundCloud — mỗi loại xử sự một kiểu khi bấm vào, nên biết
+ * trước thì đỡ bị hụt.
+ *
+ * Năm màu chọn cách xa nhau trên vòng màu để phân biệt được cả khi nhìn lướt,
+ * và đều là màu đậm chữ trắng để nổi trên ảnh nền bất kể ảnh sáng hay tối.
+ */
+const NHAN_NGUON: Record<string, { ten: string; mau: string }> = {
+  youtube_channel: { ten: "YOUTUBE", mau: "bg-red-600/90" },
+  blog_feed: { ten: "BLOG", mau: "bg-sky-600/90" },
+  forum_community: { ten: "DIỄN ĐÀN", mau: "bg-violet-600/90" },
+  podcast_rss: { ten: "PODCAST", mau: "bg-emerald-600/90" },
+  soundcloud_channel: { ten: "SOUNDCLOUD", mau: "bg-amber-600/90" },
+};
+
 /** Nhãn nổi ở góc trái ảnh — mỗi chuyên mục một kiểu thông tin. */
 function nhanGoc(muc: NonNullable<TheNoiDung>): string | null {
   // NGHE ĐƯỢC hay CHƯA là thông tin quan trọng nhất với chủ nhà, nên nó đứng
@@ -141,6 +160,7 @@ export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
   const luotXem = docLuotXem(muc.viewOrPlayCount);
   const khiNao = docThoiGian(muc.publishedAt);
   const nhan = nhanGoc(muc);
+  const nhanNguon = NHAN_NGUON[muc.source.type];
   const phu = thongTinPhu(muc);
 
   return (
@@ -160,6 +180,16 @@ export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
         {nhan ? (
           <span className="absolute left-2 top-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white">
             {nhan}
+          </span>
+        ) : null}
+
+        {/* Loại nguồn — góc phải TRÊN, để không đụng nhãn chuyên mục bên trái
+            và không đụng thời lượng ở góc phải dưới */}
+        {nhanNguon ? (
+          <span
+            className={`absolute right-2 top-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white ${nhanNguon.mau}`}
+          >
+            {nhanNguon.ten}
           </span>
         ) : null}
 

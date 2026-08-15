@@ -106,7 +106,7 @@ export default async function TrangQuanTam() {
         {ketQuaMoi.length > 0 ? (
           <section className="mt-10">
             <h2 className="mb-3 text-base font-semibold">Tìm được gần đây</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {ketQuaMoi.map((muc) => (
                 <TheNoiDungCard key={muc.id} muc={muc} />
               ))}

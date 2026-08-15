@@ -38,12 +38,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 
+import { datKhung, docKhung } from "@/lib/giaoDien/khungChat";
+
 interface MucDieuHuong {
   ten: string;
   /** Tên ngắn dùng khi menu co lại — chữ chỉ còn một dòng bé xíu */
   tenNgan?: string;
   bieuTuong: LucideIcon;
   duongDan?: string;
+  /** Bấm vào thì mở khung trò chuyện thay vì chuyển trang */
+  moTroLy?: boolean;
   /** Phase nào sẽ làm mục này — hiện ra khi rê chuột */
   seLamO?: string;
 }
@@ -75,10 +79,12 @@ const NHOM_CUA_BAN: MucDieuHuong[] = [
 
 const NHOM_TRO_LY: MucDieuHuong[] = [
   {
+    // Bấm vào đây mở đúng khung trò chuyện mà nút tròn góc phải dưới mở —
+    // chủ dự án chốt 2026-08-15. Hai lối vào, một cái đích.
     ten: "Trò chuyện",
     tenNgan: "Chat",
     bieuTuong: MessageCircle,
-    seLamO: "Phase 13",
+    moTroLy: true,
   },
   { ten: "Cài đặt", bieuTuong: Settings, duongDan: "/cai-dat" },
 ];
@@ -119,6 +125,18 @@ function datCoLai(moi: boolean): void {
   for (const goiLai of NGUOI_NGHE) goiLai();
 }
 
+/**
+ * Mở khung trò chuyện — dùng chung cho mục "Trò chuyện" trong menu.
+ *
+ * Gọi thẳng vào kho trạng thái của khung chứ không truyền hàm xuống qua nhiều
+ * tầng: khung nằm ở bố cục gốc còn menu nằm sâu trong cây, nối bằng props thì
+ * phải xâu qua bốn năm chỗ chẳng liên quan.
+ */
+function moKhungTroChuyen(): void {
+  const nay = docKhung();
+  datKhung({ ...nay, moRa: true, thuGon: false });
+}
+
 function dangOMuc(duongDan: string | undefined, hienTai: string): boolean {
   if (!duongDan) return false;
   if (duongDan === "/") return hienTai === "/";
@@ -130,6 +148,19 @@ function MucBung({ muc, dangO }: { muc: MucDieuHuong; dangO: boolean }) {
   const Icon = muc.bieuTuong;
   const kieu =
     "flex items-center gap-4 rounded-lg px-3 py-2 text-sm transition-colors";
+
+  if (muc.moTroLy) {
+    return (
+      <button
+        type="button"
+        onClick={moKhungTroChuyen}
+        className={`${kieu} w-full text-neutral-700 hover:bg-cam-50 dark:text-neutral-200 dark:hover:bg-cam-50`}
+      >
+        <Icon size={20} strokeWidth={1.75} className="shrink-0" />
+        {muc.ten}
+      </button>
+    );
+  }
 
   if (!muc.duongDan) {
     return (
@@ -167,6 +198,20 @@ function MucCo({ muc, dangO }: { muc: MucDieuHuong; dangO: boolean }) {
   const ten = muc.tenNgan ?? muc.ten;
   const kieu =
     "flex w-full flex-col items-center gap-1 rounded-lg px-1 py-3.5 text-[10px] leading-tight transition-colors";
+
+  if (muc.moTroLy) {
+    return (
+      <button
+        type="button"
+        onClick={moKhungTroChuyen}
+        title={muc.ten}
+        className={`${kieu} text-neutral-700 hover:bg-cam-50 dark:text-neutral-200 dark:hover:bg-cam-50`}
+      >
+        <Icon size={24} strokeWidth={1.9} />
+        <span className="line-clamp-1">{ten}</span>
+      </button>
+    );
+  }
 
   if (!muc.duongDan) {
     return (
