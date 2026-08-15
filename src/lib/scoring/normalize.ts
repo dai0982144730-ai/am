@@ -149,11 +149,25 @@ export interface SourceWeights {
  */
 export const DEFAULT_WEIGHTS: Record<string, SourceWeights> = {
   youtube_channel: {
-    popularity: 0.2,
-    engagementDepth: 0.3,
-    discussion: 0.3,
-    authority: 0.2,
-    contentQuality: 0,
+    // TRỤ CHẤT LƯỢNG LÀ TRỤ NẶNG NHẤT, và đây chính là chỗ phân biệt am với
+    // trang chủ YouTube.
+    //
+    // Bản đầu để trụ này bằng 0 cho YouTube — nghĩa là Claude đọc nội dung,
+    // chấm điểm, rồi điểm ấy bị vứt đi, với 255/297 nội dung trong kho. Còn
+    // lại toàn lượt xem và tỷ lệ tương tác: đúng những thứ chính YouTube đã
+    // tối ưu, và đúng những thứ đẩy tin giật gân lên đầu.
+    //
+    // ĐO THẬT TRƯỚC KHI SỬA (2026-08-15): trong 15 nội dung điểm cao nhất có
+    // 5 bài Claude chấm chất lượng 0,10–0,20 — tiêu đề kiểu "N.óng! Minh Không
+    // có bi..iế.n" chèn dấu chấm giữa chữ để né kiểm duyệt — mà vẫn xếp TRÊN
+    // một tập podcast phỏng vấn được chấm 0,75.
+    //
+    // Nếu am xếp hạng chủ yếu theo lượt xem thì nó chẳng hơn gì YouTube.
+    popularity: 0.15,
+    engagementDepth: 0.2,
+    discussion: 0.2,
+    authority: 0.1,
+    contentQuality: 0.35,
   },
   soundcloud_channel: {
     popularity: 0.3,
@@ -163,11 +177,13 @@ export const DEFAULT_WEIGHTS: Record<string, SourceWeights> = {
     contentQuality: 0,
   },
   forum_community: {
-    popularity: 0.25,
-    engagementDepth: 0.15,
-    discussion: 0.45,
-    authority: 0.15,
-    contentQuality: 0,
+    // Diễn đàn vẫn nghiêng về chất lượng thảo luận — đó là bản chất của nó —
+    // nhưng cũng phải nghe Claude đọc bài, cùng lý do như YouTube.
+    popularity: 0.2,
+    engagementDepth: 0.1,
+    discussion: 0.35,
+    authority: 0.1,
+    contentQuality: 0.25,
   },
   blog_feed: {
     popularity: 0.25,
