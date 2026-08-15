@@ -10,8 +10,9 @@
  * lựa chọn" — đó là chiếm mất chỗ của thứ dùng được.
  *
  * ĐƯỜNG SỐNG DUY NHẤT cho nội dung nước ngoài: Am đọc, dịch, kể lại bằng tiếng
- * Việt (`NarrationAsset`). Có bản thuật lại rồi thì hiện bình thường — chủ dự
- * án nói rõ khi đó chữ dài cũng được, vì sẽ có bản âm thanh tiếng Việt đi kèm.
+ * Việt **và đọc thành tiếng**. Điều kiện là bản ÂM THANH, không phải bản chữ —
+ * chủ dự án nói nguyên văn: *"có bản âm thanh tiếng việt đi kèm"* thì chữ dài
+ * cũng được. Bản chữ không kèm tiếng thì vẫn là bắt đọc, mà đây là app nghe.
  */
 
 import type { Prisma } from "@/generated/prisma/client";
@@ -36,8 +37,12 @@ export const KHAC_TIENG_VIET = "khac";
  * tắc ở đây là **thà lọt còn hơn giấu nhầm**: chỉ chặn khi Claude đã thật sự
  * đọc và kết luận, còn lại để hiện.
  *
- * Nội dung nước ngoài có bản thuật lại tiếng Việt thì vẫn hiện — chủ dự án nói
- * rõ khi đó chữ dài cũng được, vì sẽ có bản âm thanh tiếng Việt đi kèm.
+ * Nội dung nước ngoài chỉ được hiện khi bản thuật lại **đã đọc thành tiếng**.
+ *
+ * ĐÃ ĐO VÀ SỬA (2026-08-15): bản đầu chỉ hỏi "có bản thuật lại không", nên 7 bài
+ * blog tiếng Anh mới dịch xong phần chữ mà chưa kịp đọc thành tiếng vẫn nằm
+ * trên trang chính. Đó là bắt chủ nhà đọc một bức tường chữ — đúng thứ app này
+ * sinh ra để tránh. Điều kiện thật là **có tiếng**, không phải có chữ.
  *
  * Dùng `AND` chứ không trải thẳng, vì bên trong có `OR` và nơi gọi cũng thường
  * đã có `OR` riêng — trải thẳng thì cái sau đè mất cái trước, lỗi không báo gì
@@ -57,18 +62,25 @@ export function ngheDuocTiengViet(
           // oan dù chưa lượt phân loại nào ghi giá trị "khac" cả.
           { originalLanguage: null },
           { NOT: { originalLanguage: KHAC_TIENG_VIET } },
-          { narrationAsset: { isNot: null } },
+          // Có bản ĐỌC THÀNH TIẾNG, không phải chỉ có bản chữ
+          { narrationAsset: { ttsAudioUrl: { not: null } } },
         ],
       },
     ],
   };
 }
 
-/** Nội dung này chủ nhà nghe/đọc được không. */
+/**
+ * Nội dung này chủ nhà nghe được không.
+ *
+ * Phải khớp từng chữ với `ngheDuocTiengViet` ở trên — hai hàm lệch nhau thì
+ * trang danh sách và trang chi tiết bất đồng, kiểu "bấm vào thẻ thì báo không
+ * xem được".
+ */
 export function tiengVietDungDuoc(muc: {
   originalLanguage: string | null;
-  narrationAsset?: { id: string } | null;
+  narrationAsset?: { ttsAudioUrl: string | null } | null;
 }): boolean {
-  if (muc.narrationAsset) return true;
+  if (muc.narrationAsset?.ttsAudioUrl) return true;
   return muc.originalLanguage !== KHAC_TIENG_VIET;
 }
