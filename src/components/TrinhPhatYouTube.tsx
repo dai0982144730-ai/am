@@ -183,11 +183,28 @@ export function TrinhPhatYouTube({
 
       trinhPhat.current = new yt.Player(oChua.current, {
         videoId: maVideo,
-        host: "https://www.youtube-nocookie.com",
+        // DÙNG youtube.com CHỨ KHÔNG PHẢI youtube-nocookie.com, có lý do.
+        //
+        // Bản đầu dùng `youtube-nocookie.com` để đỡ bị theo dõi. Nhưng với
+        // trình duyệt đó là **một trang khác hẳn**, và tiện ích lồng tiếng
+        // tiếng Việt của chủ dự án chỉ khai báo chạy trên `youtube.com` — nên
+        // nó không chui được vào khung của Am. Chủ dự án gặp đúng vậy: cùng
+        // video, mở thẳng trên YouTube thì lồng tiếng chạy, mở trong Am thì
+        // không, dù menu chuột phải vẫn hiện mục của tiện ích.
+        //
+        // Đổi lấy: YouTube đặt cookie theo dõi như bình thường. Chấp nhận,
+        // vì nghe được bằng tiếng Việt là điều kiện sống còn của app này còn
+        // vài cookie thì không.
+        host: "https://www.youtube.com",
         playerVars: {
           start: Math.floor(viTriDangDo),
           rel: 0,
           modestbranding: 1,
+          // Cho khung nói chuyện được với trang cha — vừa cần cho phần ghi
+          // tiến độ, vừa giúp tiện ích ngoài nhận ra đây là trình phát thật
+          enablejsapi: 1,
+          origin:
+            typeof window !== "undefined" ? window.location.origin : "",
         },
         events: {
           onStateChange: (e) => {
