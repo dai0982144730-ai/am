@@ -12,6 +12,7 @@
 
 import { signOut } from "@/auth";
 import { KhungDieuHuong } from "@/components/KhungDieuHuong";
+import { NhacKhoiDongLai } from "@/components/NhacKhoiDongLai";
 
 export function KhungTrang({
   children,
@@ -37,7 +38,11 @@ export function KhungTrang({
   );
 
   return (
-    <KhungDieuHuong emailNguoiDung={emailNguoiDung} dangXuat={nutDangXuat}>
+    <KhungDieuHuong
+      emailNguoiDung={emailNguoiDung}
+      dangXuat={nutDangXuat}
+      nhacKhoiDongLai={<NhacKhoiDongLai />}
+    >
       {children}
     </KhungDieuHuong>
   );
