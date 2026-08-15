@@ -310,6 +310,14 @@ model ContentItem {
   thumbnailUrl String?
   publishedAt DateTime?
 
+  /// File âm thanh gốc của tập podcast (thẻ <enclosure> trong feed).
+  ///
+  /// KHÁC HẲN `NarrationAsset.ttsAudioUrl`: đây là **giọng người thật do chính
+  /// nhà làm podcast thu**, phát thẳng từ máy chủ của họ, không tốn một ký tự
+  /// TTS nào. Podcast tiếng Việt vốn đã là âm thanh tiếng Việt — đúng thứ chủ
+  /// dự án cần, không phải dịch, không phải đọc lại.
+  audioUrl String?
+
   durationSeconds Int?
   viewOrPlayCount Int?
   likeCount       Int?

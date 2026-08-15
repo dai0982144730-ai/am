@@ -40,6 +40,25 @@ async function main() {
     }`,
   );
 
+  // Hai chỉ mục HNSW cho tìm kiếm ngữ nghĩa. Đây là thứ DỄ MẤT NHẤT trong cả
+  // database: Prisma không biết chúng tồn tại nên lần nào tạo migration cũng
+  // chèn sẵn lệnh `DROP INDEX`. Quên xoá hai dòng đó một lần là mất, mà mất thì
+  // không có gì báo — tìm kiếm vẫn chạy, chỉ chậm dần đi. Nên phải kiểm ở đây.
+  const idx = await client.query<{ indexname: string }>(
+    `SELECT indexname FROM pg_indexes
+     WHERE schemaname = 'public' AND indexname LIKE '%_vector_idx'`,
+  );
+  const CAN_CO = ["ContentEmbedding_vector_idx", "NoteEmbedding_vector_idx"];
+  const dangCo = idx.rows.map((r) => r.indexname);
+  const thieu = CAN_CO.filter((t) => !dangCo.includes(t));
+  console.log(
+    `Chỉ mục tìm kiếm ngữ nghĩa: ${
+      thieu.length === 0
+        ? `đủ cả ${CAN_CO.length}`
+        : `THIẾU ${thieu.join(", ")} — xem mục "Cạm bẫy" trong CLAUDE.md`
+    }`,
+  );
+
   const migrations = await client.query<{ migration_name: string; finished_at: Date | null }>(
     `SELECT migration_name, finished_at FROM "_prisma_migrations" ORDER BY started_at`,
   );

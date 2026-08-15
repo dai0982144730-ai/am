@@ -161,12 +161,14 @@ export async function chamDiemHangLoat(
       where: { source: { type: loaiNguon }, status: "classified" },
       select: {
         id: true,
+        type: true,
         viewOrPlayCount: true,
         likeCount: true,
         commentCount: true,
         contentGroup: true,
         source: {
           select: {
+            id: true,
             followerCount: true,
             isVerified: true,
             createdAt: true,
@@ -182,18 +184,44 @@ export async function chamDiemHangLoat(
         },
         externalDiscussions: { select: { score: true, commentCount: true } },
         commentAnalysis: { select: { discussionQualityScore: true } },
+        // Chỉ cần biết CÓ chữ để đọc hay không, không cần chính nội dung
+        transcript: { select: { fetchStatus: true } },
       },
     });
 
     if (cacMuc.length === 0) continue;
+
+    // Bài cũ nhất của mỗi nguồn — dùng để biết nguồn đã hoạt động bao lâu.
+    //
+    // VÌ SAO KHÔNG DÙNG `Source.createdAt`: cột đó là lúc **Am biết tới** nguồn,
+    // không phải lúc nguồn ra đời. Mọi nguồn vừa thêm đều bằng 0 ngày tuổi, mà
+    // dưới 180 ngày thì `sourceAuthorityScore` trừ điểm vì "chưa đủ thời gian
+    // chứng minh". Hậu quả: một kênh podcast chạy sáu năm với 105 tập, hay một
+    // blog khoa học lâu đời, vừa thêm vào là bị coi như mới mở hôm qua.
+    //
+    // Ngày đăng của bài cũ nhất là bằng chứng thật và có sẵn, không tốn gì.
+    const baiCuNhat = await prisma.contentItem.groupBy({
+      by: ["sourceId"],
+      where: { source: { type: loaiNguon }, publishedAt: { not: null } },
+      _min: { publishedAt: true },
+    });
+    const mocDauTien = new Map(
+      baiCuNhat.map((n) => [n.sourceId, n._min.publishedAt]),
+    );
 
     bao?.(`\n${loaiNguon}: ${cacMuc.length} nội dung`);
 
     for (const muc of cacMuc) {
       const nguon = muc.source;
 
-      const tuoiNguonNgay = nguon.createdAt
-        ? Math.floor((Date.now() - nguon.createdAt.getTime()) / 86_400_000)
+      // Lấy mốc SỚM hơn trong hai mốc: lúc Am biết tới nguồn, và ngày đăng bài
+      // cũ nhất của nguồn đó
+      const mocBatDau = [nguon.createdAt, mocDauTien.get(nguon.id)]
+        .filter((d): d is Date => d instanceof Date)
+        .sort((a, b) => a.getTime() - b.getTime())[0];
+
+      const tuoiNguonNgay = mocBatDau
+        ? Math.floor((Date.now() - mocBatDau.getTime()) / 86_400_000)
         : null;
 
       const trongWhitelist = nguon.authors.some(
@@ -249,6 +277,16 @@ export async function chamDiemHangLoat(
       // trọng số sang trụ "phổ biến" khiến nhạc thiên về lượt xem và leo từ
       // hạng 2 lên hạng 1. Để  tự chia lại theo đúng tỷ lệ gốc
       // giữa các trụ còn lại là cách công bằng hơn.
+      // Tách ra biến riêng để vừa đem đi tính vừa LƯU LẠI được. Bốn trụ kia
+      // đều được ghi vào `ContentScore`, riêng trụ này trước đây chỉ tính rồi
+      // vứt — nhìn vào bảng điểm không hiểu vì sao ra con số đó.
+      const boonChatLuong =
+        muc.contentGroup === "music" ||
+        (muc.type === "podcast_episode" &&
+          muc.transcript?.fetchStatus !== "success")
+          ? null
+          : (muc.classification?.contentQualityScore ?? null);
+
       let diem = compositeScore(
         {
           popularity: boonPhoBien,
@@ -263,10 +301,17 @@ export async function chamDiemHangLoat(
           //
           // Nhạc thì bỏ, cùng lý do như trụ thảo luận: đánh giá nhạc bằng chữ
           // là vô nghĩa.
-          contentQuality:
-            muc.contentGroup === "music"
-              ? null
-              : (muc.classification?.contentQualityScore ?? null),
+          //
+          // Podcast không có chữ riêng của tập thì cũng bỏ, cùng một lẽ. Mô tả
+          // podcast phần lớn là lời rao lặp ở mọi tập — chào hỏi, link bán
+          // hàng, hashtag. Đã lọc phần lặp đó trước khi lưu (`bocPhanRieng`);
+          // lọc xong mà chẳng còn gì thì nghĩa là **không có gì để đọc**, chứ
+          // không phải "đọc rồi thấy dở". Để Claude chấm một mẩu quảng cáo rồi
+          // lấy điểm đó làm một nửa điểm podcast là chấm nhầm đối tượng.
+          //
+          // Bỏ trụ này đi thì `compositeScore` tự chia lại trọng số cho các trụ
+          // còn lại — đúng cơ chế đã có sẵn cho blog không có lượt xem.
+          contentQuality: boonChatLuong,
         },
         trongSo,
       );
@@ -289,6 +334,7 @@ export async function chamDiemHangLoat(
           engagementDepthScore: boonTuongTac,
           discussionQualityScore: diemThaoLuan,
           sourceAuthorityScore: boonUyTin,
+          contentQualityScore: boonChatLuong,
           compositeScore: diem,
           scoreVersion: PHIEN_BAN_CHAM_DIEM,
         },
@@ -297,6 +343,7 @@ export async function chamDiemHangLoat(
           engagementDepthScore: boonTuongTac,
           discussionQualityScore: diemThaoLuan,
           sourceAuthorityScore: boonUyTin,
+          contentQualityScore: boonChatLuong,
           compositeScore: diem,
           scoreVersion: PHIEN_BAN_CHAM_DIEM,
           computedAt: new Date(),

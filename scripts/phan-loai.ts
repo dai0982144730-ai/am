@@ -3,6 +3,7 @@
  *
  *   npx tsx scripts/phan-loai.ts --so 5     # chạy thử 5 video trước
  *   npx tsx scripts/phan-loai.ts --so 200   # rồi chạy nhiều
+ *   npx tsx scripts/phan-loai.ts --podcast  # chỉ xếp các tập podcast
  *
  * Chạy lại an toàn: nội dung đã phân loại rồi thì bỏ qua.
  *
@@ -38,11 +39,15 @@ async function main() {
   const gioiHan = thamSo("so") ?? 20;
   const uuTien = process.argv.includes("--uu-tien");
   const chiBaiViet = process.argv.includes("--bai-viet");
+  // Podcast ra vài tuần một tập, còn tin thời sự ra hàng ngày. Hàng chờ xếp
+  // theo ngày đăng nên không có cờ này thì podcast không bao giờ tới lượt.
+  const chiPodcast = process.argv.includes("--podcast");
 
   const conCho = await prisma.contentItem.count({
     where: {
       status: { in: ["pending_classification", "transcript_unavailable"] },
       classification: null,
+      ...(chiPodcast ? { type: "podcast_episode" as const } : {}),
     },
   });
   console.log(`Đường gọi: ${chonCachGoi() === "cli" ? "Claude CLI trên máy (gói Pro)" : "khoá API"}`);
@@ -54,7 +59,13 @@ async function main() {
     return;
   }
 
-  const kq = await phanLoaiHangLoat(gioiHan, (dong) => console.log(dong), uuTien, chiBaiViet);
+  const kq = await phanLoaiHangLoat(
+    gioiHan,
+    (dong) => console.log(dong),
+    uuTien,
+    chiBaiViet,
+    chiPodcast ? ["podcast_episode"] : undefined,
+  );
 
   console.log(`\nĐã xét ${kq.daXet} — thành công ${kq.thanhCong}, lỗi ${kq.loi}`);
 

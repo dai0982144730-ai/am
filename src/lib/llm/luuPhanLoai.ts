@@ -10,6 +10,7 @@ import type {
   AiSubtopic,
   BpmConfidence,
   ContentGroup,
+  ContentItemType,
   ListenerLevel,
   MusicGenre,
   NarrationType,
@@ -181,17 +182,25 @@ const TU_KHOA_TRIEN_VONG = [
  * @param chiLayCoTrienVong Chỉ xét video có từ khoá gợi ý thuộc bốn chuyên mục
  *   chính. Dùng khi muốn nhanh chóng có đủ dữ liệu mỗi nhóm để dựng giao diện,
  *   thay vì đọc tuần tự cả kho mà phần lớn là tin thời sự.
+ * @param chiLayLoai Chỉ xét vài loại nội dung.
+ *
+ *   VÌ SAO CẦN: hàng chờ xếp theo ngày đăng, mà tin thời sự YouTube ra hàng
+ *   ngày còn podcast thì vài tuần một tập. Không có bộ lọc này thì podcast vĩnh
+ *   viễn nằm cuối hàng — đã đo thật lúc thêm kênh podcast đầu tiên: 765 mục
+ *   đứng trước 5 tập vừa lấy về.
  */
 export async function phanLoaiHangLoat(
   gioiHan = 50,
   bao?: (dong: string) => void,
   chiLayCoTrienVong = false,
   chiLayBaiViet = false,
+  chiLayLoai?: ContentItemType[],
 ): Promise<KetQuaPhanLoaiHangLoat> {
   const cacMuc = await prisma.contentItem.findMany({
     where: {
       status: { in: ["pending_classification", "transcript_unavailable"] },
       classification: null,
+      ...(chiLayLoai?.length ? { type: { in: chiLayLoai } } : {}),
       ...(chiLayBaiViet
         ? { type: { in: ["blog_article" as const, "forum_post" as const] } }
         : {}),

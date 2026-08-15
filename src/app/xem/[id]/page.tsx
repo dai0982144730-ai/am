@@ -10,6 +10,7 @@ import { NutLuuThuVien } from "@/components/NutLuuThuVien";
 import { ONhapGhiChu } from "@/components/ONhapGhiChu";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
 import { TrinhPhatAmThanh } from "@/components/TrinhPhatAmThanh";
+import { TrinhPhatPodcast } from "@/components/TrinhPhatPodcast";
 import { TrinhPhatYouTube } from "@/components/TrinhPhatYouTube";
 import { prisma } from "@/lib/db/prisma";
 import { docTinhTrangXem } from "@/lib/tieuThu/docTienDo";
@@ -179,6 +180,22 @@ export default async function TrangXem({
                 laChu={laChu}
                 viTriDangDo={tinhTrang.viTriDangDo}
                 soLanDaXem={tinhTrang.soLanDaXem}
+              />
+            ) : muc.audioUrl ? (
+              // Tập podcast: phát thẳng file tiếng của tác giả. Đây là loại nội
+              // dung rẻ nhất và hợp nhất với cách dùng của chủ nhà — đã sẵn là
+              // giọng người thật nói tiếng Việt, không phải dịch, không phải
+              // đọc lại, không tốn ký tự TTS nào.
+              <TrinhPhatPodcast
+                duongDanAmThanh={muc.audioUrl}
+                idNoiDung={muc.id}
+                tieuDe={muc.title}
+                anhBia={muc.thumbnailUrl}
+                tenKenh={muc.source.title}
+                laChu={laChu}
+                viTriDangDo={tinhTrang.viTriDangDo}
+                soLanDaXem={tinhTrang.soLanDaXem}
+                tocDoMacDinh={caiDatTts?.ttsSpeed ?? 1}
               />
             ) : (
               // KHÔNG có nút "mở bài gốc" ở đây, và đừng thêm lại.
