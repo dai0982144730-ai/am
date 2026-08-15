@@ -244,6 +244,10 @@ async function timMotChuDe(
       luotXem: docSo(video.statistics?.viewCount),
       luotThich: docSo(video.statistics?.likeCount),
       kieuPhat: video.snippet?.liveBroadcastContent,
+      ngonNguAmThanh:
+        video.snippet?.defaultAudioLanguage ??
+        video.snippet?.defaultLanguage ??
+        null,
     });
     if (!loc.qua) {
       kq.soBiLoc += 1;

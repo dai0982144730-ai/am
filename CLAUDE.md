@@ -47,6 +47,27 @@ Ba điều này xuyên suốt thiết kế, đừng phá vỡ khi thêm tính n�
 Thêm một điều về chấm điểm: **chuẩn hoá percentile trong cùng loại nguồn**, không
 bao giờ so trực tiếp lượt xem YouTube với điểm Hacker News.
 
+## Nguyên tắc quan trọng nhất: NGHE và NHÌN, bằng TIẾNG VIỆT, TRONG app
+
+Chủ dự án chốt ngày 2026-08-15, và đây là thứ phủ lên mọi quyết định khác:
+
+1. **Am là app nghe và nhìn, không phải app đọc.**
+2. **Chỉ tiếng Việt.** Chủ dự án không biết tiếng Anh. Nội dung tiếng Anh nguyên
+   bản là *"vô tri, không có ý nghĩa gì hết"* — kể cả khi điểm chất lượng cao.
+3. **Không bao giờ phải rời app.** Không đặt liên kết "mở bài gốc" ra ngoài làm
+   cách xem chính. *"Nhu cầu kiểu đó tôi dùng Google."*
+
+**Ngoại lệ duy nhất**: bài tiếng Anh mà Am đã đọc, dịch, kể lại bằng tiếng Việt
+**kèm bản âm thanh tiếng Việt**. Khi đó nội dung chữ dài cũng được, vì có audio.
+
+Hệ quả bắt buộc khi viết code:
+
+- Video YouTube từ nguồn mới: **kiểm có tiếng Việt trước khi đưa vào kho**.
+  Không có tiếng Việt và cũng không dựng được bản thuật lại thì đừng lấy.
+- Nội dung tiếng nước ngoài **chỉ được hiện khi đã có bản thuật lại tiếng Việt**.
+- Tiêu đề tiếng Anh phải dịch trước khi hiện lên thẻ (`ContentClassification.titleVi`).
+- Đừng thêm nút nào dẫn người dùng ra khỏi app để tiêu thụ nội dung.
+
 ## Cạm bẫy đã gặp — đọc trước khi chạy migration
 
 **Prisma sẽ tự ý xoá thứ nó không hiểu.** Hai chỉ mục HNSW cho tìm kiếm ngữ nghĩa

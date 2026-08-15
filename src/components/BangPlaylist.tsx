@@ -40,6 +40,69 @@ export interface DeXuatGon {
   trangThai: string;
 }
 
+/**
+ * Một dòng playlist, có công tắc cho/không cho trợ lý sắp xếp.
+ *
+ * VÌ SAO PHẢI GIỮ TRẠNG THÁI RIÊNG Ở ĐÂY: bản đầu đọc thẳng `muc.choSapXep`
+ * từ props rồi bấm là gửi `!muc.choSapXep`. Nhưng props chỉ đổi sau khi máy
+ * chủ dựng lại cả trang — bấm lần hai trước lúc đó thì vẫn tính ra giá trị cũ,
+ * nên **tắt rồi thì không bật lại được**, bấm mãi vẫn ra tắt. Chủ dự án gặp
+ * đúng lỗi này.
+ *
+ * Giữ trạng thái ngay tại chỗ thì nút phản ứng tức thì và lần bấm sau luôn
+ * tính từ giá trị đúng.
+ */
+function MotPlaylist({
+  muc,
+  laChu,
+}: {
+  muc: PlaylistGon;
+  laChu: boolean;
+}) {
+  const [choSapXep, setChoSapXep] = useState(muc.choSapXep);
+  const [thongDiep, setThongDiep] = useState<string | null>(null);
+  const [dangChay, batDau] = useTransition();
+
+  return (
+    <li className="flex items-center gap-3 rounded-xl border border-neutral-200 px-3 py-2.5 dark:border-neutral-800">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{muc.ten}</p>
+        <p className="text-xs text-neutral-400">
+          {muc.soMuc} video
+          {thongDiep ? ` · ${thongDiep}` : ""}
+        </p>
+      </div>
+      {laChu ? (
+        <button
+          type="button"
+          disabled={dangChay}
+          title={
+            choSapXep
+              ? "Trợ lý được phép đề xuất thêm video vào playlist này. Bấm để tắt."
+              : "Trợ lý bỏ qua playlist này. Bấm để cho phép đề xuất."
+          }
+          onClick={() => {
+            const moi = !choSapXep;
+            setChoSapXep(moi);
+            batDau(async () => {
+              const kq = await batTatChoSapXep(muc.id, moi);
+              if (!kq.ok) setChoSapXep(!moi);
+              setThongDiep(kq.thongDiep);
+            });
+          }}
+          className={`shrink-0 rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40 ${
+            choSapXep
+              ? "border-cam-600 bg-cam-600 text-white dark:border-cam-500 dark:bg-cam-500"
+              : "border-neutral-300 text-neutral-500 dark:border-neutral-700"
+          }`}
+        >
+          {choSapXep ? "Cho sắp xếp" : "Không đụng tới"}
+        </button>
+      ) : null}
+    </li>
+  );
+}
+
 export function BangPlaylist({
   cacPlaylist,
   cacDeXuat,
@@ -100,6 +163,39 @@ export function BangPlaylist({
           {thongDiep}
         </p>
       ) : null}
+
+      {/* Trang này làm gì — chủ dự án hỏi thẳng, nên trả lời ngay tại chỗ */}
+      <div className="mt-5 grid gap-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-xs leading-relaxed sm:grid-cols-3 dark:border-neutral-800 dark:bg-neutral-900">
+        <div>
+          <p className="font-semibold text-neutral-700 dark:text-neutral-200">
+            1 · Trợ lý xem qua kho
+          </p>
+          <p className="mt-1 text-neutral-600 dark:text-neutral-300">
+            Với những video điểm cao hoặc bạn đã cất thư viện, Claude đối chiếu
+            với danh sách playlist thật của bạn rồi nói nên bỏ vào playlist nào,
+            kèm lý do. Nó <strong>chỉ đề xuất</strong>.
+          </p>
+        </div>
+        <div>
+          <p className="font-semibold text-neutral-700 dark:text-neutral-200">
+            2 · Bạn duyệt
+          </p>
+          <p className="mt-1 text-neutral-600 dark:text-neutral-300">
+            Bấm <strong>Duyệt</strong> nghĩa là &ldquo;tôi đồng ý&rdquo; —
+            nhưng YouTube vẫn chưa đổi gì cả. Bấm <strong>Bỏ</strong> thì đề
+            xuất biến mất và video đó không bị hỏi lại.
+          </p>
+        </div>
+        <div>
+          <p className="font-semibold text-neutral-700 dark:text-neutral-200">
+            3 · Ghi lên YouTube
+          </p>
+          <p className="mt-1 text-neutral-600 dark:text-neutral-300">
+            Đây mới là lúc video thật sự vào playlist trên tài khoản của bạn.
+            Hai bước tách rời để một cú bấm nhầm không đổi được gì ngoài đời.
+          </p>
+        </div>
+      </div>
 
       {/* Đề xuất đang chờ */}
       <section className="mt-6">
@@ -236,9 +332,11 @@ export function BangPlaylist({
             </button>
           ) : null}
         </div>
-        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          Trợ lý chỉ đề xuất cho những playlist bạn bật. Playlist tắt thì nó
-          không đụng tới.
+        <p className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+          <strong className="text-cam-700 dark:text-cam-300">Cho sắp xếp</strong>{" "}
+          = trợ lý được phép đề xuất thêm video vào playlist này ·{" "}
+          <strong>Không đụng tới</strong> = nó bỏ qua hẳn. Bấm vào nút để đổi
+          qua lại. Dù bật, nó cũng chỉ đề xuất chứ không tự thêm.
         </p>
 
         {cacPlaylist.length === 0 ? (
@@ -246,28 +344,11 @@ export function BangPlaylist({
             Chưa đọc playlist nào về. Bấm &ldquo;Đọc lại từ YouTube&rdquo;.
           </p>
         ) : (
-          <ul className="mt-3 divide-y divide-neutral-200 dark:divide-neutral-800">
+          // Lưới như trang Danh sách phát của YouTube — 27 playlist xếp dọc
+          // một cột thì phải cuộn mãi, mà mỗi dòng chỉ có tên và số video
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {cacPlaylist.map((p) => (
-              <li key={p.id} className="flex items-center gap-3 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm">{p.ten}</p>
-                  <p className="text-xs text-neutral-400">{p.soMuc} video</p>
-                </div>
-                {laChu ? (
-                  <button
-                    type="button"
-                    disabled={dangChay}
-                    onClick={() => chay(() => batTatChoSapXep(p.id, !p.choSapXep))}
-                    className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40 ${
-                      p.choSapXep
-                        ? "border-cam-600 bg-cam-600 text-white dark:border-cam-500 dark:bg-cam-500 dark:text-white"
-                        : "border-neutral-300 text-neutral-500 dark:border-neutral-700"
-                    }`}
-                  >
-                    {p.choSapXep ? "Cho sắp xếp" : "Không đụng tới"}
-                  </button>
-                ) : null}
-              </li>
+              <MotPlaylist key={p.id} muc={p} laChu={laChu} />
             ))}
           </ul>
         )}

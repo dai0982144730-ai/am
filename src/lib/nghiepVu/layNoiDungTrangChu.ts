@@ -12,6 +12,7 @@
 import type { ContentGroup } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { chuaLuotQua } from "@/lib/lichSu/loc";
+import { ngheDuocTiengViet } from "@/lib/tiengViet/loc";
 import { layTronTheoTyLe } from "@/lib/nguonMoi/tron";
 
 /** Các trường cần cho một thẻ nội dung trên trang chủ. */
@@ -38,6 +39,7 @@ const TRUONG_CAN_LAY = {
   narrationAsset: { select: { id: true } },
   classification: {
     select: {
+      titleVi: true,
       contentQualityNotes: true,
       extractedTopics: true,
       extractedAuthorNameRaw: true,
@@ -57,7 +59,9 @@ const TRUONG_CAN_LAY = {
 } as const;
 
 export type TheNoiDung = Awaited<
-  ReturnType<typeof prisma.contentItem.findFirst<{ select: typeof TRUONG_CAN_LAY }>>
+  ReturnType<
+    typeof prisma.contentItem.findFirst<{ select: typeof TRUONG_CAN_LAY }>
+  >
 >;
 
 /** Bốn chuyên mục hiện lên trang chủ, theo đúng thứ tự trong bản demo. */
@@ -112,7 +116,9 @@ async function layMotMuc(
   };
 
   // Thứ đã lướt qua rồi thì không bày lại — trừ khi đã cất vào thư viện
-  const loc = chuaLuotQua(dieuKien);
+  // Hai lớp lọc, cả hai đều bắt buộc: đã lướt qua thì đừng bày lại, và không
+  // nghe được bằng tiếng Việt thì đừng bày ra ngay từ đầu
+  const loc = ngheDuocTiengViet(chuaLuotQua(dieuKien));
 
   // Trộn nguồn quen với nguồn lạ theo tỉ lệ chủ nhà đặt cho chuyên mục này
   const [tron, tongSo] = await Promise.all([

@@ -53,6 +53,25 @@ export interface UngVienThoLoc {
   kieuPhat?: string;
   /** Số người theo dõi kênh, nếu biết */
   nguoiTheoDoiKenh?: number | null;
+  /** Ngôn ngữ âm thanh YouTube khai báo, thường để trống */
+  ngonNguAmThanh?: string | null;
+}
+
+/**
+ * Nội dung không phải tiếng Việt thì chủ nhà nghe không hiểu.
+ *
+ * Chủ dự án nói thẳng: nguồn của họ đều là tiếng Việt vì họ không biết tiếng
+ * Anh, và nội dung tiếng Anh là *"vô tri, không có ý nghĩa gì hết"*.
+ *
+ * CHỈ LOẠI KHI BIẾT CHẮC. YouTube để trống trường ngôn ngữ ở phần lớn video —
+ * loại luôn khi không biết thì gạt oan gần hết, kể cả video Việt. Trường hợp
+ * không rõ để Claude quyết lúc phân loại (nó đọc được nội dung thật), rồi bộ
+ * lọc hiển thị trong `tiengViet/loc.ts` giấu đi nếu quả thật là tiếng nước
+ * ngoài mà chưa có bản thuật lại.
+ */
+function laTiengVietHoacChuaRo(ma: string | null | undefined): boolean {
+  if (!ma) return true;
+  return ma.toLowerCase().startsWith("vi");
 }
 
 export interface KetQuaLoc {
@@ -71,6 +90,14 @@ export function locSoBo(uv: UngVienThoLoc): KetQuaLoc {
   // Phát trực tiếp chưa xong thì chưa có gì để đọc, để chấm
   if (uv.kieuPhat === "live" || uv.kieuPhat === "upcoming") {
     return { qua: false, lyDo: "buổi phát trực tiếp chưa xong" };
+  }
+
+  // Chặn sớm nhất có thể: nghe không hiểu thì hay tới mấy cũng vô dụng
+  if (!laTiengVietHoacChuaRo(uv.ngonNguAmThanh)) {
+    return {
+      qua: false,
+      lyDo: `âm thanh tiếng "${uv.ngonNguAmThanh}", không phải tiếng Việt`,
+    };
   }
 
   if (uv.thoiLuongGiay !== null) {

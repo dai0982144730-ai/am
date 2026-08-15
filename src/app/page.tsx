@@ -32,7 +32,7 @@ export default async function TrangChu() {
 
   return (
     <KhungTrang emailNguoiDung={phien?.user?.email}>
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         {/* Dải thông tin về lần quét gần nhất. Bản tin trò chuyện nằm ở trang
             riêng — ở đây chỉ dẫn sang. */}
         <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">

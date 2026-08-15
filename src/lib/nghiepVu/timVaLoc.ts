@@ -25,6 +25,7 @@ import type {
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { chuaLuotQua } from "@/lib/lichSu/loc";
+import { ngheDuocTiengViet } from "@/lib/tiengViet/loc";
 
 export type KieuSapXep = "phu_hop_nhat" | "chat_luong_cao_nhat" | "moi_nhat";
 
@@ -74,6 +75,7 @@ const TRUONG_THE = {
   narrationAsset: { select: { id: true } },
   classification: {
     select: {
+      titleVi: true,
       contentQualityNotes: true,
       extractedTopics: true,
       extractedAuthorNameRaw: true,
@@ -195,9 +197,9 @@ export async function timNoiDung(loc: BoLoc): Promise<KetQuaTim> {
   // ô tìm kiếm thường là để lần lại đúng cái vừa xem hôm qua. Chỉ lúc lướt
   // không mục đích mới cần giấu.
   const dangTimCuThe = Boolean(loc.tuKhoa?.trim());
-  const dieuKien = dangTimCuThe
-    ? dungDieuKien(loc)
-    : chuaLuotQua(dungDieuKien(loc));
+  const dieuKien = ngheDuocTiengViet(
+    dangTimCuThe ? dungDieuKien(loc) : chuaLuotQua(dungDieuKien(loc)),
+  );
 
   const [cacThe, tongSo] = await Promise.all([
     prisma.contentItem.findMany({

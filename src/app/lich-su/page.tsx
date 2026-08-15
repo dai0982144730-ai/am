@@ -62,7 +62,7 @@ export default async function TrangLichSu() {
 
   return (
     <KhungTrang emailNguoiDung={phien.user.email}>
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+      <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h1 className="text-xl font-semibold tracking-tight">Lịch sử xem</h1>
           {cacMuc.length > 0 ? <NutXoaSachLichSu /> : null}

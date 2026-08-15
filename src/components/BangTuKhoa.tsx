@@ -136,6 +136,40 @@ export function BangTuKhoa({
         </p>
       ) : null}
 
+      {/* Ba nhãn dưới đây tự chúng không nói được gì — chủ dự án hỏi thẳng
+          "đã tắt, gỡ nghĩa là gì". Giải thích ngay tại chỗ, đừng bắt đi tìm */}
+      {cacTuKhoa.length > 0 ? (
+        <dl className="mt-5 grid gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-xs leading-relaxed sm:grid-cols-3 dark:border-neutral-800 dark:bg-neutral-900">
+          <div>
+            <dt className="font-semibold text-cam-700 dark:text-cam-300">
+              Đang tự quét
+            </dt>
+            <dd className="mt-0.5 text-neutral-600 dark:text-neutral-300">
+              Mỗi tối máy tự đi tìm thêm nội dung mới cho từ khoá này. Tốn 100
+              đơn vị hạn mức YouTube mỗi đêm.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-neutral-700 dark:text-neutral-200">
+              Đã tắt
+            </dt>
+            <dd className="mt-0.5 text-neutral-600 dark:text-neutral-300">
+              Tạm dừng: không tìm thêm, không tốn hạn mức. Những gì đã tìm được
+              vẫn nằm nguyên ở đây. Bấm lần nữa là bật lại.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-neutral-700 dark:text-neutral-200">
+              Gỡ
+            </dt>
+            <dd className="mt-0.5 text-neutral-600 dark:text-neutral-300">
+              Xoá hẳn từ khoá khỏi danh sách. <strong>Nội dung đã tìm được
+              không mất</strong> — nó vẫn ở trong kho và ở Khám phá.
+            </dd>
+          </div>
+        </dl>
+      ) : null}
+
       {/* Danh sách */}
       {cacTuKhoa.length === 0 ? (
         <p className="mt-8 text-center text-sm text-neutral-400">
@@ -162,6 +196,11 @@ export function BangTuKhoa({
                     type="button"
                     onClick={() => chay(() => batTatTuQuet(tu.id, !tu.autoScan))}
                     disabled={dangChay}
+                    title={
+                      tu.autoScan
+                        ? "Mỗi tối máy tự tìm thêm nội dung mới cho từ khoá này, tốn 100 đơn vị hạn mức. Bấm để tạm dừng."
+                        : "Đang tạm dừng — không tìm thêm, không tốn hạn mức. Nội dung đã tìm được vẫn còn. Bấm để bật lại."
+                    }
                     className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40 ${
                       tu.autoScan
                         ? "border-cam-600 bg-cam-600 text-white dark:border-cam-500 dark:bg-cam-500 dark:text-white"
@@ -174,6 +213,7 @@ export function BangTuKhoa({
                     type="button"
                     onClick={() => chay(() => goTuKhoa(tu.id))}
                     disabled={dangChay}
+                    title="Xoá hẳn từ khoá khỏi danh sách. Nội dung đã tìm được vẫn giữ nguyên trong kho, không mất."
                     className="text-xs text-neutral-400 underline hover:text-neutral-700 disabled:opacity-40 dark:hover:text-neutral-200"
                   >
                     Gỡ

@@ -170,7 +170,10 @@ export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
 
       <div>
         <h3 className="line-clamp-2 text-sm font-medium leading-snug text-neutral-900 group-hover:text-neutral-600 dark:text-neutral-100 dark:group-hover:text-neutral-300">
-          {muc.title}
+          {/* Tiêu đề tiếng Việt nếu Claude đã dịch, không thì dùng gốc.
+              Phần lớn nguồn khoa học và AI hay là báo tiếng Anh — lướt trang
+              chủ mà gặp cả hàng tiêu đề tiếng Anh thì khó quyết mở cái nào. */}
+          {muc.classification?.titleVi || muc.title}
         </h3>
         <p className="mt-1 line-clamp-1 text-xs text-neutral-500 dark:text-neutral-400">
           {/* Nói rõ đây là nguồn chưa theo dõi, để liếc một cái là biết nên

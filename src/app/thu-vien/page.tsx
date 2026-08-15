@@ -92,7 +92,7 @@ export default async function TrangThuVien({
 
   return (
     <KhungTrang emailNguoiDung={phien?.user?.email}>
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+      <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="text-xl font-semibold tracking-tight">Thư viện</h1>
         <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
           {tong} nội dung bạn tự tay cất lại. Khác với &ldquo;đang xem
@@ -155,7 +155,9 @@ export default async function TrangThuVien({
             ) : null}
           </div>
         ) : (
-          <ul className="mt-6 divide-y divide-neutral-200 dark:divide-neutral-800">
+          // Lưới thẻ như trang Danh sách phát của YouTube, thay cho danh sách
+          // dọc — màn rộng mà xếp một cột thì hai bên trống hoác
+          <ul className="mt-6 grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {cacMuc.map((m) => (
               <MucThuVien
                 key={m.contentItem.id}

@@ -6,6 +6,7 @@ import { KhungTrang } from "@/components/KhungTrang";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
 import { prisma } from "@/lib/db/prisma";
 import { chuaLuotQua } from "@/lib/lichSu/loc";
+import { ngheDuocTiengViet } from "@/lib/tiengViet/loc";
 import { nganSachMoiNgay } from "@/lib/youtube/hanMuc";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export default async function TrangQuanTam() {
       // Quan hệ tới `AdHocInterest` mới là thứ bền: nó ghi "bài này có được
       // là nhờ chủ nhà gõ từ khoá kia". Một video AI tìm ra từ từ khoá
       // "AI agent" thì vừa nằm ở hàng AI, vừa nằm ở đây — đúng cả hai.
-      where: chuaLuotQua({ adHocInterestId: { not: null } }),
+      where: ngheDuocTiengViet(chuaLuotQua({ adHocInterestId: { not: null } })),
       orderBy: [
         { score: { compositeScore: { sort: "desc", nulls: "last" } } },
         { publishedAt: "desc" },
@@ -64,6 +65,7 @@ export default async function TrangQuanTam() {
         narrationAsset: { select: { id: true } },
         classification: {
           select: {
+            titleVi: true,
             contentQualityNotes: true,
             extractedTopics: true,
             extractedAuthorNameRaw: true,
@@ -86,7 +88,7 @@ export default async function TrangQuanTam() {
 
   return (
     <KhungTrang emailNguoiDung={phien?.user?.email}>
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+      <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="text-xl font-semibold tracking-tight">New</h1>
         <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
           Bốn chuyên mục kia chỉ thấy được nội dung từ các kênh bạn đã theo dõi.

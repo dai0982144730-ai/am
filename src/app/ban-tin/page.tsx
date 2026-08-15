@@ -34,6 +34,60 @@ function docThoiLuong(giay: number | null | undefined): string | null {
     : `${phut} phút`;
 }
 
+/**
+ * Một mục trong bản tin: ảnh bên trái, chữ bên phải.
+ *
+ * MỌI THẺ CÙNG CHIỀU CAO, đúng yêu cầu của chủ dự án. Làm bằng `h-full` trên
+ * thẻ cộng `items-stretch` ở lưới, rồi đẩy dòng chân xuống đáy bằng `mt-auto`.
+ * Nhận xét bị cắt còn ba dòng — một thẻ có nhận xét dài hơn hẳn là thứ khiến
+ * cả hàng trông so le lộn xộn.
+ */
+function TheBanTin({ muc, anh }: { muc: MucGon; anh: string | null }) {
+  const phu = [muc.nguon, docThoiLuong(muc.thoiLuongGiay)]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <Link
+      href={`/xem/${muc.id}`}
+      className="flex h-full gap-4 rounded-xl border border-neutral-200 p-3 transition-colors hover:border-cam-300 hover:bg-cam-50/40 dark:border-neutral-800 dark:hover:bg-neutral-900"
+    >
+      <div className="w-40 shrink-0 overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800">
+        {anh ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={anh} alt="" className="aspect-video w-full object-cover" />
+        ) : (
+          <div className="aspect-video" />
+        )}
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="line-clamp-2 text-sm font-medium leading-snug">
+            {muc.tieuDe}
+          </h3>
+          {muc.diem != null ? (
+            <span className="shrink-0 rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-semibold tabular-nums dark:bg-neutral-800">
+              {muc.diem.toFixed(1)}
+            </span>
+          ) : null}
+        </div>
+
+        {muc.nhanXet ? (
+          <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
+            {muc.nhanXet}
+          </p>
+        ) : null}
+
+        <p className="mt-auto pt-2 text-xs text-neutral-500 dark:text-neutral-400">
+          {phu}
+          {muc.daThuatLai ? " · đã thuật lại tiếng Việt" : ""}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
 export default async function TrangBanTin() {
   const [email, banTin] = await Promise.all([
     emailChuDuAn(),
@@ -45,12 +99,24 @@ export default async function TrangBanTin() {
 
   const noiDung = (banTin?.pickedItemsTiered ?? {}) as NoiDungGon;
 
+  // Ảnh không nằm trong bản tin đã lưu — tra từ kho theo mã nội dung. Cách này
+  // chạy được với cả bản tin cũ, khỏi phải tạo lại, và ảnh luôn là bản mới nhất.
+  const moiId = [
+    ...(noiDung.topPicks ?? []).flatMap((m) => m.cacMuc.map((x) => x.id)),
+    ...(noiDung.moreIfInterested ?? []).map((x) => x.id),
+  ];
+  const cacAnh = moiId.length
+    ? await prisma.contentItem.findMany({
+        where: { id: { in: moiId } },
+        select: { id: true, thumbnailUrl: true },
+      })
+    : [];
+  const anhTheoId = new Map(cacAnh.map((a) => [a.id, a.thumbnailUrl]));
+
   return (
     <KhungTrang emailNguoiDung={email}>
-      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-        <h1 className="text-xl font-semibold tracking-tight">
-          Am nói với bạn
-        </h1>
+      <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
+        <h1 className="text-xl font-semibold tracking-tight">Am nói với bạn</h1>
 
         {!banTin ? (
           <div className="mt-6 rounded-xl border border-dashed border-neutral-300 p-10 text-center dark:border-neutral-700">
@@ -72,9 +138,12 @@ export default async function TrangBanTin() {
               })}
             </p>
 
-            {/* Bản tin trò chuyện — thứ chính của trang này */}
+            {/* Bản tin trò chuyện — thứ chính của trang này.
+                Riêng phần văn xuôi này giữ hẹp có chủ đích: dòng chữ dài quá
+                khoảng 90 ký tự thì mắt lạc dòng khi xuống hàng. Các thẻ bên
+                dưới thì tràn hết bề ngang. */}
             <div className="mt-5 rounded-2xl border border-neutral-200 bg-neutral-50 p-6 dark:border-neutral-800 dark:bg-neutral-900">
-              <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-neutral-800 dark:text-neutral-200">
+              <div className="max-w-3xl whitespace-pre-wrap text-[15px] leading-relaxed text-neutral-800 dark:text-neutral-200">
                 {banTin.conversationalScript}
               </div>
               <p className="mt-4 border-t border-neutral-200 pt-3 text-xs text-neutral-400 dark:border-neutral-800 dark:text-neutral-500">
@@ -82,67 +151,35 @@ export default async function TrangBanTin() {
               </p>
             </div>
 
-            {/* Các mục được nhắc tới, để bấm vào xem ngay */}
             {noiDung.topPicks?.map((muc) => (
               <section key={muc.chuyenMuc} className="mt-8">
                 <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                   {muc.tenChuyenMuc}
                 </h2>
-                <div className="space-y-3">
+                <div className="grid items-stretch gap-3 lg:grid-cols-2 2xl:grid-cols-3">
                   {muc.cacMuc.map((m) => (
-                    <Link
+                    <TheBanTin
                       key={m.id}
-                      href={`/xem/${m.id}`}
-                      className="block rounded-xl border border-neutral-200 p-4 transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-sm font-medium leading-snug">
-                          {m.tieuDe}
-                        </h3>
-                        {m.diem != null ? (
-                          <span className="shrink-0 rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-semibold tabular-nums dark:bg-neutral-800">
-                            {m.diem.toFixed(1)}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                        {[
-                          m.nguon,
-                          docThoiLuong(m.thoiLuongGiay),
-                          m.daThuatLai ? "đã thuật lại tiếng Việt" : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                      {m.nhanXet ? (
-                        <p className="mt-2 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
-                          {m.nhanXet}
-                        </p>
-                      ) : null}
-                    </Link>
+                      muc={m}
+                      anh={anhTheoId.get(m.id) ?? null}
+                    />
                   ))}
                 </div>
               </section>
             ))}
 
-            {noiDung.moreIfInterested &&
-            noiDung.moreIfInterested.length > 0 ? (
+            {noiDung.moreIfInterested && noiDung.moreIfInterested.length > 0 ? (
               <section className="mt-8">
                 <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                   Xem thêm nếu rảnh
                 </h2>
-                <div className="space-y-2">
+                <div className="grid items-stretch gap-3 lg:grid-cols-2 2xl:grid-cols-3">
                   {noiDung.moreIfInterested.map((m) => (
-                    <Link
+                    <TheBanTin
                       key={m.id}
-                      href={`/xem/${m.id}`}
-                      className="flex items-baseline justify-between gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    >
-                      <span className="line-clamp-1">{m.tieuDe}</span>
-                      <span className="shrink-0 text-xs text-neutral-400">
-                        {m.nguon}
-                      </span>
-                    </Link>
+                      muc={m}
+                      anh={anhTheoId.get(m.id) ?? null}
+                    />
                   ))}
                 </div>
               </section>

@@ -33,7 +33,7 @@ export default async function TrangCaiDat() {
 
   return (
     <KhungTrang emailNguoiDung={email}>
-      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="text-xl font-semibold tracking-tight">Cài đặt</h1>
 
         {!laChu ? (
@@ -82,7 +82,9 @@ export default async function TrangCaiDat() {
               </p>
             </div>
           ) : (
-            <div className="mt-6 space-y-5">
+            // Hai cột trên màn rộng: sáu loại nguồn xếp dọc một cột thì
+            // phải cuộn mãi mới hết, mà mỗi khối lại ngắn.
+            <div className="mt-6 grid gap-4 xl:grid-cols-2">
               {cacBoTrongSo.map((bo) => {
                 const macDinh = DEFAULT_WEIGHTS[bo.sourceType];
                 return (

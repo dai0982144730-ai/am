@@ -65,7 +65,7 @@ export default async function TrangPlaylist() {
 
   return (
     <KhungTrang emailNguoiDung={phien?.user?.email}>
-      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="text-xl font-semibold tracking-tight">Playlist</h1>
         <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
           Trợ lý <strong>chỉ đề xuất</strong>. Không có gì được ghi lên YouTube

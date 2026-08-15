@@ -435,6 +435,13 @@ model ContentClassification {
   extractedTopics          String[] @default([])
   extractedAuthorNameRaw   String?
   authorCreditedInDescription Boolean @default(false)
+  /// Tiêu đề dịch sang tiếng Việt, chỉ điền khi tiêu đề gốc là tiếng nước
+  /// ngoài. Nội dung tiếng Việt sẵn thì để trống và giao diện dùng tiêu đề gốc.
+  ///
+  /// Cần vì phần lớn nguồn khoa học và AI chất lượng cao đều là báo tiếng Anh —
+  /// chủ dự án lướt trang chủ mà gặp một hàng tiêu đề tiếng Anh thì không
+  /// quyết được nên mở cái nào.
+  titleVi                  String?
   contentQualityNotes      String?  @db.Text
   /// Điểm chất lượng 0–1 do Claude chấm sau khi đọc nội dung.
   ///

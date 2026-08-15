@@ -96,11 +96,16 @@ async function main() {
         data: {
           contentQualityScore: kq.ketQua.diemChatLuong,
           contentQualityNotes: kq.ketQua.nhanXetChatLuong,
+          titleVi: kq.ketQua.tieuDeTiengViet,
         },
       });
 
       console.log(
-        `  ${kq.ketQua.diemChatLuong.toFixed(2)} [${muc.source.type}] ${muc.title.slice(0, 56)}`,
+        `  ${kq.ketQua.diemChatLuong.toFixed(2)} ${
+          kq.ketQua.tieuDeTiengViet
+            ? `→ ${kq.ketQua.tieuDeTiengViet.slice(0, 60)}`
+            : muc.title.slice(0, 60)
+        }`,
       );
       xong += 1;
     } catch (e) {

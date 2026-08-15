@@ -96,8 +96,8 @@ export function ThanhTrongSo({
   }
 
   return (
-    <div className="rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-      <div className="mb-4 flex items-baseline justify-between">
+    <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
+      <div className="mb-3 flex items-baseline justify-between">
         <h3 className="text-sm font-semibold">{tenHienThi}</h3>
         {macDinh ? (
           <button
@@ -114,7 +114,7 @@ export function ThanhTrongSo({
         ) : null}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {CAC_TRU.map((tru) => {
           const giaTri = trongSo[tru.khoa];
           const phanTram = tong > 0 ? (giaTri / tong) * 100 : 0;
@@ -124,7 +124,8 @@ export function ThanhTrongSo({
               <div className="flex items-baseline justify-between gap-3">
                 <label
                   htmlFor={`${loaiNguon}-${tru.khoa}`}
-                  className="text-xs font-medium text-neutral-700 dark:text-neutral-300"
+                  title={tru.moTa}
+                  className="cursor-help text-xs font-medium text-neutral-700 decoration-dotted underline-offset-2 hover:underline dark:text-neutral-300"
                 >
                   {tru.ten}
                 </label>
@@ -141,18 +142,16 @@ export function ThanhTrongSo({
                 value={giaTri}
                 disabled={!choSua}
                 onChange={(e) => doi(tru.khoa, Number(e.target.value))}
-                className="mt-1 w-full accent-neutral-900 disabled:opacity-40 dark:accent-neutral-100"
+                className="mt-0.5 w-full accent-cam-600 disabled:opacity-40 dark:accent-cam-500"
               />
-              <p className="mt-0.5 text-[11px] leading-snug text-neutral-400 dark:text-neutral-500">
-                {tru.moTa}
-              </p>
+
             </div>
           );
         })}
       </div>
 
       {choSua ? (
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-3 flex items-center gap-3">
           <button
             type="button"
             onClick={luu}

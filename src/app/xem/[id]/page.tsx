@@ -124,6 +124,7 @@ export default async function TrangXem({
       narrationAsset: { select: { id: true } },
       classification: {
         select: {
+          titleVi: true,
           contentQualityNotes: true,
           extractedTopics: true,
           extractedAuthorNameRaw: true,
@@ -175,20 +176,33 @@ export default async function TrangXem({
                 soLanDaXem={tinhTrang.soLanDaXem}
               />
             ) : (
-              <div className="rounded-xl border border-neutral-200 p-8 text-center dark:border-neutral-800">
-                <p className="text-sm text-neutral-500">
-                  Nội dung này là bài viết, không có video để phát.
-                </p>
-                {muc.url ? (
-                  <a
-                    href={muc.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 inline-block text-sm underline"
-                  >
-                    Mở bài gốc
-                  </a>
-                ) : null}
+              // KHÔNG có nút "mở bài gốc" ở đây, và đừng thêm lại.
+              //
+              // Chủ dự án nói thẳng: *"link tới một trang toàn tiếng Anh cũng
+              // vô giá trị vì tôi không có nhu cầu mở trang khác. Nhu cầu kiểu
+              // đó tôi dùng Google."* Đẩy người dùng ra ngoài app để tiêu thụ
+              // nội dung là đi ngược mục đích của cả cái web này.
+              //
+              // Đường duy nhất để bài viết dùng được: Am đọc, dịch, kể lại
+              // bằng tiếng Việt — phần "Bản thuật lại" ngay bên dưới.
+              <div className="rounded-xl border border-dashed border-neutral-300 p-8 text-center dark:border-neutral-700">
+                {muc.narrationAsset ? (
+                  <p className="text-sm text-neutral-600 dark:text-neutral-300">
+                    Đây là bài viết. Bản kể lại bằng tiếng Việt nằm ngay bên
+                    dưới.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm text-neutral-600 dark:text-neutral-300">
+                      Đây là bài viết, chưa có bản tiếng Việt.
+                    </p>
+                    <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+                      Am sẽ đọc và kể lại bằng tiếng Việt trong lượt chạy đêm.
+                      Chạy ngay bằng{" "}
+                      <code>npx tsx scripts/thuat-lai.ts</code>
+                    </p>
+                  </>
+                )}
               </div>
             )}
 

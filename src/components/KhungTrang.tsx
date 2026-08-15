@@ -1,88 +1,17 @@
 /**
- * Khung chung của web: thanh trên cùng và cột điều hướng bên trái.
+ * Khung chung của web — lớp vỏ chạy ở máy chủ.
  *
- * Bám theo bản demo `docs/demo-ui.html`, vốn cố ý làm giống YouTube cho quen
- * tay. Những mục chưa có trang thật thì vẫn hiện nhưng làm mờ và không bấm
- * được — để thấy rõ web sẽ đi tới đâu, thay vì bấm vào rồi gặp trang trống.
+ * Việc duy nhất của file này là dựng sẵn nút Đăng xuất rồi giao toàn bộ phần
+ * còn lại cho `KhungDieuHuong`.
+ *
+ * VÌ SAO PHẢI TÁCH LÀM HAI: lệnh đăng xuất bắt buộc chạy ở máy chủ, còn thanh
+ * điều hướng thì cần nhớ trạng thái co/bung và biết đang ở trang nào — hai
+ * việc chỉ làm được ở trình duyệt. Gộp một file thì hoặc mất nút đăng xuất,
+ * hoặc mất phần co/bung.
  */
 
-import Link from "next/link";
-
 import { signOut } from "@/auth";
-
-interface MucDieuHuong {
-  ten: string;
-  bieuTuong: string;
-  duongDan?: string;
-  /** Phase nào sẽ làm mục này — hiện ra khi rê chuột */
-  seLamO?: string;
-}
-
-const NHOM_CHINH: MucDieuHuong[] = [
-  { ten: "Trang chủ", bieuTuong: "⌂", duongDan: "/" },
-  { ten: "Am nói với bạn", bieuTuong: "◈", duongDan: "/ban-tin" },
-  { ten: "Khám phá", bieuTuong: "⌕", duongDan: "/kham-pha" },
-  { ten: "New", bieuTuong: "✦", duongDan: "/quan-tam" },
-];
-
-const NHOM_CUA_BAN: MucDieuHuong[] = [
-  { ten: "Lịch sử xem", bieuTuong: "↺", duongDan: "/lich-su" },
-  { ten: "Thư viện", bieuTuong: "☰", duongDan: "/thu-vien" },
-  { ten: "Playlist", bieuTuong: "≡", duongDan: "/playlist" },
-  { ten: "Ghi chú", bieuTuong: "✎", duongDan: "/ghi-chu" },
-  { ten: "Tủ sách", bieuTuong: "◫", seLamO: "Phase 6" },
-];
-
-const NHOM_TRO_LY: MucDieuHuong[] = [
-  { ten: "Trò chuyện", bieuTuong: "☁", seLamO: "Phase 13" },
-  { ten: "Cài đặt", bieuTuong: "⚙", duongDan: "/cai-dat" },
-];
-
-function MotMuc({ muc }: { muc: MucDieuHuong }) {
-  const kieuChung =
-    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors";
-
-  if (!muc.duongDan) {
-    return (
-      <span
-        title={`Chưa làm — dự kiến ${muc.seLamO}`}
-        className={`${kieuChung} cursor-default text-neutral-300 dark:text-neutral-600`}
-      >
-        <span aria-hidden className="w-5 text-center text-base">
-          {muc.bieuTuong}
-        </span>
-        {muc.ten}
-      </span>
-    );
-  }
-
-  return (
-    <Link
-      href={muc.duongDan}
-      className={`${kieuChung} text-neutral-700 hover:bg-cam-100 hover:text-cam-700 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:hover:text-cam-300`}
-    >
-      <span aria-hidden className="w-5 text-center text-base">
-        {muc.bieuTuong}
-      </span>
-      {muc.ten}
-    </Link>
-  );
-}
-
-function NhomMuc({ nhan, cacMuc }: { nhan?: string; cacMuc: MucDieuHuong[] }) {
-  return (
-    <div className="py-2">
-      {nhan ? (
-        <p className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
-          {nhan}
-        </p>
-      ) : null}
-      {cacMuc.map((m) => (
-        <MotMuc key={m.ten} muc={m} />
-      ))}
-    </div>
-  );
-}
+import { KhungDieuHuong } from "@/components/KhungDieuHuong";
 
 export function KhungTrang({
   children,
@@ -91,70 +20,25 @@ export function KhungTrang({
   children: React.ReactNode;
   emailNguoiDung?: string | null;
 }) {
+  const nutDangXuat = (
+    <form
+      action={async () => {
+        "use server";
+        await signOut({ redirectTo: "/" });
+      }}
+    >
+      <button
+        type="submit"
+        className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+      >
+        Đăng xuất
+      </button>
+    </form>
+  );
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-neutral-200 bg-nen-menu/90 px-4 backdrop-blur dark:border-neutral-800">
-        <Link href="/" className="text-lg font-bold tracking-tight text-cam-600 dark:text-cam-500">
-          Am
-        </Link>
-
-        <form action="/kham-pha" className="mx-auto w-full max-w-xl">
-          <input
-            type="search"
-            name="q"
-            placeholder="Tìm trong nội dung đã quét…"
-            className="w-full rounded-full border border-neutral-200 bg-background px-4 py-1.5 text-sm placeholder:text-neutral-400 focus:border-cam-500 focus:outline-none dark:border-neutral-800"
-          />
-        </form>
-
-        {emailNguoiDung ? (
-          <div className="flex shrink-0 items-center gap-2">
-            <span
-              title={emailNguoiDung}
-              className="hidden max-w-[180px] truncate text-xs text-neutral-500 sm:block dark:text-neutral-400"
-            >
-              {emailNguoiDung}
-            </span>
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/" });
-              }}
-            >
-              <button
-                type="submit"
-                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-              >
-                Đăng xuất
-              </button>
-            </form>
-          </div>
-        ) : (
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-xs text-neutral-400 md:block dark:text-neutral-500">
-              Đang xem với tư cách khách
-            </span>
-            <Link
-              href="/dang-nhap"
-              className="rounded-lg bg-cam-600 px-3.5 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 dark:bg-cam-500 dark:text-white"
-            >
-              Đăng nhập
-            </Link>
-          </div>
-        )}
-      </header>
-
-      <div className="flex">
-        <nav className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-neutral-200 bg-nen-menu px-2 py-2 lg:block dark:border-neutral-800">
-          <NhomMuc cacMuc={NHOM_CHINH} />
-          <div className="border-t border-neutral-100 dark:border-neutral-900" />
-          <NhomMuc nhan="Của bạn" cacMuc={NHOM_CUA_BAN} />
-          <div className="border-t border-neutral-100 dark:border-neutral-900" />
-          <NhomMuc nhan="Trợ lý" cacMuc={NHOM_TRO_LY} />
-        </nav>
-
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
-    </div>
+    <KhungDieuHuong emailNguoiDung={emailNguoiDung} dangXuat={nutDangXuat}>
+      {children}
+    </KhungDieuHuong>
   );
 }

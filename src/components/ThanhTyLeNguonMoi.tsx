@@ -36,7 +36,7 @@ function MotThanh({
   const [dangLuu, batDau] = useTransition();
 
   return (
-    <div className="py-4">
+    <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-sm font-medium">{muc.ten}</span>
         <span className="text-sm tabular-nums text-neutral-600 dark:text-neutral-300">
@@ -65,10 +65,10 @@ function MotThanh({
             setThongDiep(kq.thongDiep);
           })
         }
-        className="mt-2 w-full accent-cam-600 disabled:opacity-40 dark:accent-cam-500"
+        className="mt-1.5 w-full accent-cam-600 disabled:opacity-40 dark:accent-cam-500"
       />
 
-      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+      <p className="mt-1 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
         {muc.goiY}
       </p>
       {thongDiep ? (
@@ -117,7 +117,9 @@ export function ThanhTyLeNguonMoi({
         </p>
       ) : null}
 
-      <div className="mt-2 divide-y divide-neutral-200 dark:divide-neutral-800">
+      {/* Hai cột như khối trọng số bên trên — năm chuyên mục xếp dọc một cột
+          thì trang dài lê thê mà mỗi mục chỉ cao vài dòng */}
+      <div className="mt-3 grid gap-3 xl:grid-cols-2">
         {cacMuc.map((m) => (
           <MotThanh key={m.ma} muc={m} laChu={laChu} />
         ))}

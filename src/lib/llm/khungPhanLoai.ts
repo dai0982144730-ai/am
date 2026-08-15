@@ -56,6 +56,25 @@ export const KhungPhanLoai = z.object({
     .boolean()
     .describe("Phần mô tả có ghi công tác giả gốc không."),
 
+  ngonNguNoiDung: z
+    .enum(["vi", "khac"])
+    .describe(
+      "Ngôn ngữ NGƯỜI NÓI/NGƯỜI VIẾT dùng trong nội dung, không phải ngôn ngữ " +
+        "của tiêu đề. 'vi' khi nghe/đọc bằng tiếng Việt là hiểu được; 'khac' " +
+        "với mọi ngôn ngữ khác. Đây là trường quan trọng: chủ nhà không biết " +
+        "tiếng Anh nên nội dung 'khac' sẽ bị giấu đi cho tới khi có bản thuật " +
+        "lại tiếng Việt.",
+    ),
+
+  tieuDeTiengViet: z
+    .string()
+    .nullable()
+    .describe(
+      "Chỉ điền khi tiêu đề gốc KHÔNG phải tiếng Việt: dịch tiêu đề sang tiếng " +
+        "Việt tự nhiên, giữ nguyên tên riêng và thuật ngữ đã quen dùng bằng " +
+        "tiếng Anh (AI, GPU, token…). Tiêu đề vốn đã là tiếng Việt thì để null.",
+    ),
+
   nhanXetChatLuong: z
     .string()
     .describe(

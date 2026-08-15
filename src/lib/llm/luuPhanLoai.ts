@@ -76,6 +76,7 @@ function dichSangDatabase(kq: KetQuaPhanLoai, thoiLuongGiay: number | null) {
     extractedTopics: kq.chuDe,
     extractedAuthorNameRaw: kq.tenTacGiaThoNhat,
     authorCreditedInDescription: kq.tacGiaDuocGhiTrongMoTa,
+    titleVi: kq.tieuDeTiengViet,
     contentQualityNotes: kq.nhanXetChatLuong,
     contentQualityScore: kq.diemChatLuong,
 
@@ -251,6 +252,9 @@ export async function phanLoaiHangLoat(
             data: {
               contentGroup: kq.nhom as ContentGroup,
               narrationType: kq.loaiGiongDoc as NarrationType,
+              // Claude đọc nội dung nên biết chắc hơn siêu dữ liệu của
+              // YouTube, vốn để trống ở phần lớn video
+              originalLanguage: kq.ngonNguNoiDung === "vi" ? "vi" : "khac",
               status: "classified",
             },
           }),
