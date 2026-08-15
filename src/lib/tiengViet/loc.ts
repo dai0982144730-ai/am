@@ -7,11 +7,10 @@
  * nghĩa gì hết"*. Tôi hiểu thành "vậy thì ẩn nó đi", và làm một bộ lọc giấu sạch
  * nội dung tiếng nước ngoài chưa có bản đọc tiếng Việt.
  *
- * Sai. Chủ dự án nói lại rất rõ (2026-08-15):
+ * Sai. Chủ dự án mở giao diện ra, thấy ngay, và hỏi (2026-08-15):
  *
- *   *"Nhiều clip hay bằng tiếng Anh không có thuyết minh thì hãy làm file mp3
- *   tiếng Việt cho nó. Clip nào có thuyết minh tiếng Anh thì chuyển thành
- *   thuyết minh tiếng Việt. Ẩn hết đi là sao?"*
+ *   *"AI có 28 mà hiện lên chỉ có 05 là sao? các bài từ blog, từ nguồn không
+ *   phải youtube biến mất sạch??"*
  *
  * Câu "vô tri" nói về **trạng thái chưa xử lý**, không phải bản án. Một clip AI
  * hay bằng tiếng Anh không phải thứ cần vứt đi — nó là thứ cần lồng tiếng. Ẩn

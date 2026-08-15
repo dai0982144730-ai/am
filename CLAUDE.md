@@ -67,14 +67,19 @@ thành "vậy thì ẩn đi", rồi làm bộ lọc giấu sạch nội dung nư
 đọc tiếng Việt. Hậu quả đo được: **28 bài blog và 8 bài diễn đàn biến mất sạch,
 chuyên mục Music trống trơn, chuyên mục AI từ 28 còn 5**.
 
-Chủ dự án nói lại rõ:
+Chủ dự án phát hiện ra ngay và hỏi:
 
-> *"Nhiều clip hay bằng tiếng Anh không có thuyết minh thì hãy làm file mp3 tiếng
-> Việt cho nó. Clip nào có thuyết minh tiếng Anh thì chuyển thành thuyết minh
-> tiếng Việt. Ẩn hết đi là sao?"*
+> *"AI có 28 mà hiện lên chỉ có 05 là sao? các bài từ blog, từ nguồn không phải
+> youtube biến mất sạch??"*
 
 Một clip hay bằng tiếng Anh **không phải thứ cần vứt đi — nó là thứ cần lồng
 tiếng**. Ẩn đi là bỏ mất đúng phần nội dung tốt nhất mà chẳng giải quyết gì.
+
+*(Ghi chú về chính tài liệu này: bản đầu của mục này có một câu dài đặt trong
+ngoặc kép như thể chủ dự án nói, nhưng chủ dự án chưa từng nói câu đó — tôi tự
+suy ra ý rồi viết thành lời trích dẫn. Đã thay bằng nguyên văn. Trong file này
+chỉ đặt vào ngoặc kép những câu chủ dự án nói thật, vì các phiên sau sẽ đọc nó
+như bằng chứng về ý muốn của chủ nhà.)*
 
 Hệ quả bắt buộc khi viết code:
 
