@@ -35,7 +35,13 @@
  * trạng thái đang kéo. Đây là lỗi kinh điển của kéo thả tự viết.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -51,7 +57,6 @@ import {
 
 import { BangTroChuyen } from "@/components/troChuyen/BangTroChuyen";
 import {
-  BAN_DAU,
   DAY_BAT_GOC,
   DAY_BAT_MEP,
   MOC_GO_NEO,
@@ -59,16 +64,17 @@ import {
   NOI_RONG_MIN,
   NOI_TY_LE_MAX,
   RONG_DAI_THU_GON,
-  datChoChua,
-  docTrangThai,
-  ghiTrangThai,
+  dangKyNgheKhung,
+  datKhung,
+  docKhung,
+  docKhungMayChu,
   hinhMacDinh,
   kep,
   kepNeoRong,
   kepVaoManHinh,
   vungDinhTai,
+  xoaChoChua,
   type BenNeo,
-  type TrangThaiKhung,
   type VungDinh,
 } from "@/lib/giaoDien/khungChat";
 
@@ -111,66 +117,46 @@ interface GocKeo {
 }
 
 export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
-  const [s, datS] = useState<TrangThaiKhung>(BAN_DAU);
-  // Chỉ vẽ sau khi đã đọc bộ nhớ máy. Vẽ trước rồi sửa sau thì lần vẽ ở máy chủ
-  // và lần vẽ ở trình duyệt lệch nhau, React báo lỗi đỏ.
-  const [daGanVao, datDaGanVao] = useState(false);
+  /**
+   * Trạng thái khung nằm NGOÀI React, ở `lib/giaoDien/khungChat.ts`.
+   *
+   * VÌ SAO KHÔNG `useState` + `useEffect`: đọc bộ nhớ máy rồi `setState` ngay
+   * trong effect là kiểu ESLint chặn thẳng, và chặn có lý — React vẽ hai lần
+   * liên tiếp mỗi lần mở trang. Đây là lần thứ ba dự án vấp đúng lỗi này (hai
+   * lần trước ở ô nhập ghi chú và ở menu điều hướng), nên lần này làm đúng
+   * khuôn ngay từ đầu.
+   *
+   * Lần vẽ đầu ở cả máy chủ lẫn trình duyệt đều ra `BAN_DAU` nên khớp nhau,
+   * không báo lỗi lệch. Ngay sau đó kho báo về giá trị thật và React vẽ lại.
+   */
+  const s = useSyncExternalStore(dangKyNgheKhung, docKhung, docKhungMayChu);
   const [vungDinh, datVungDinh] = useState<VungDinh>(null);
 
-  const oPanel = useRef<HTMLDivElement>(null);
   const goc = useRef<GocKeo | null>(null);
 
-  useEffect(() => {
-    datS(docTrangThai());
-    datDaGanVao(true);
-  }, []);
-
-  /** Ghi trạng thái và cập nhật chỗ chừa cho nội dung. */
-  const luu = useCallback((moi: TrangThaiKhung, dangKeo = false) => {
-    datS(moi);
-    ghiTrangThai(moi);
-
-    const dangNeoThat = moi.moRa && moi.cheDo === "neo";
-    const be = dangNeoThat
-      ? moi.thuGon
-        ? RONG_DAI_THU_GON
-        : moi.neoRong
-      : 0;
-    datChoChua(
-      dangNeoThat && moi.benNeo === "trai" ? be : 0,
-      dangNeoThat && moi.benNeo === "phai" ? be : 0,
-      dangKeo,
-    );
-  }, []);
-
-  // Đặt chỗ chừa ngay khi gắn vào, và trả về 0 khi gỡ ra
-  useEffect(() => {
-    if (!daGanVao) return;
-    luu(s);
-    return () => datChoChua(0, 0, false);
-    // Chỉ chạy một lần sau khi đọc xong bộ nhớ máy — những lần sau do `luu` lo
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [daGanVao]);
+  // Gỡ khung ra khỏi trang thì trả chỗ chừa về 0. Effect này CHỈ có phần dọn
+  // dẹp, không đặt trạng thái nào — nên không vướng luật trên.
+  useEffect(() => xoaChoChua, []);
 
   // Màn hình đổi kích thước thì kẹp lại, kẻo panel lạc ra ngoài
   useEffect(() => {
-    if (!daGanVao) return;
-    const doi = () => luu(kepVaoManHinh(s));
+    const doi = () => datKhung(kepVaoManHinh(docKhung()));
     window.addEventListener("resize", doi);
     return () => window.removeEventListener("resize", doi);
-  }, [daGanVao, s, luu]);
+  }, []);
 
   // Ctrl+K bật tắt
   useEffect(() => {
     const phim = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        luu({ ...s, moRa: !s.moRa, thuGon: false });
+        const nay = docKhung();
+        datKhung({ ...nay, moRa: !nay.moRa, thuGon: false });
       }
     };
     window.addEventListener("keydown", phim);
     return () => window.removeEventListener("keydown", phim);
-  }, [s, luu]);
+  }, []);
 
   // ----- Kéo và đổi kích thước -----
 
@@ -219,7 +205,7 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
         // Neo trái thì kéo sang phải là rộng ra; neo phải thì ngược lại
         const moi =
           g.benNeo === "trai" ? g.rong + dx : g.rong - dx;
-        luu({ ...s, neoRong: kepNeoRong(moi) }, true);
+        datKhung({ ...s, neoRong: kepNeoRong(moi) }, true);
         return;
       }
 
@@ -242,7 +228,7 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
             x: Math.round(e.clientX - g.rong / 2),
             y: Math.max(0, Math.round(e.clientY - 20)),
           };
-          luu(
+          datKhung(
             {
               ...s,
               cheDo: "noi",
@@ -258,7 +244,7 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
         }
 
         datVungDinh(vungDinhTai(e.clientX, e.clientY));
-        luu(
+        datKhung(
           {
             ...s,
             x: kep(g.x + dx, 0, vw - g.rong),
@@ -284,9 +270,9 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
         y = g.y + (g.cao - cao);
       }
 
-      luu({ ...s, x, y, rong, cao }, true);
+      datKhung({ ...s, x, y, rong, cao }, true);
     },
-    [s, luu],
+    [s],
   );
 
   const thoiKeo = useCallback(
@@ -307,9 +293,9 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
       // Thả trong vùng dính mép sau khi kéo tiêu đề
       if (g.kieu === "di" && s.cheDo === "noi" && vung) {
         if (vung === "goc") {
-          luu({ ...s, ...hinhMacDinh(), cheDo: "noi", thuGon: false });
+          datKhung({ ...s, ...hinhMacDinh(), cheDo: "noi", thuGon: false });
         } else {
-          luu({
+          datKhung({
             ...s,
             // Nhớ kích thước đang có trước khi neo, để gỡ neo còn trả về đúng
             nhoKhungNoi: { x: s.x, y: s.y, rong: s.rong, cao: s.cao },
@@ -321,15 +307,15 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
         return;
       }
 
-      luu(s);
+      datKhung(s);
     },
-    [s, luu],
+    [s],
   );
 
   // ----- Nút trên thanh tiêu đề -----
 
   const doiSangNeo = (ben: BenNeo) =>
-    luu({
+    datKhung({
       ...s,
       ...(s.cheDo === "noi"
         ? { nhoKhungNoi: { x: s.x, y: s.y, rong: s.rong, cao: s.cao } }
@@ -341,20 +327,18 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
 
   const doiSangNoi = () => {
     const hinh = s.nhoKhungNoi ?? hinhMacDinh();
-    luu(kepVaoManHinh({ ...s, ...hinh, cheDo: "noi", thuGon: false }));
+    datKhung(kepVaoManHinh({ ...s, ...hinh, cheDo: "noi", thuGon: false }));
   };
 
   const veMacDinh = () =>
-    luu({ ...s, ...hinhMacDinh(), cheDo: "noi", thuGon: false, nhoKhungNoi: undefined });
-
-  if (!daGanVao) return null;
+    datKhung({ ...s, ...hinhMacDinh(), cheDo: "noi", thuGon: false, nhoKhungNoi: undefined });
 
   // ----- Chưa mở: nút bong bóng góc phải dưới -----
   if (!s.moRa) {
     return (
       <button
         type="button"
-        onClick={() => luu({ ...s, moRa: true, thuGon: false })}
+        onClick={() => datKhung({ ...s, moRa: true, thuGon: false })}
         title="Trò chuyện với trợ lý (Ctrl+K)"
         className="fixed bottom-5 right-5 z-50 flex size-12 items-center justify-center rounded-full bg-cam-600 text-white shadow-lg transition-transform hover:scale-105 hover:bg-cam-500"
       >
@@ -369,7 +353,7 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
     return (
       <button
         type="button"
-        onClick={() => luu({ ...s, thuGon: false })}
+        onClick={() => datKhung({ ...s, thuGon: false })}
         title="Mở lại khung trò chuyện"
         style={{ width: RONG_DAI_THU_GON }}
         className={`fixed inset-y-0 z-50 flex flex-col items-center gap-3 border-neutral-800 bg-nen-menu py-4 transition-colors hover:bg-neutral-900 ${
@@ -420,7 +404,6 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
       ) : null}
 
       <div
-        ref={oPanel}
         style={{ ...kieuKhung, zIndex: 50 }}
         className={`flex flex-col overflow-hidden border-neutral-200 bg-nen-menu shadow-2xl dark:border-neutral-800 ${
           dangNeo
@@ -503,7 +486,7 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
             nhan="Mở cửa sổ riêng"
             onClick={() => {
               window.open("/tro-chuyen", "am-tro-chuyen", "width=460,height=720");
-              luu({ ...s, moRa: false });
+              datKhung({ ...s, moRa: false });
             }}
           >
             <Maximize2 size={14} />
@@ -511,12 +494,12 @@ export function KhungTroChuyen({ laChu }: { laChu: boolean }) {
           <NutNho
             nhan={dangNeo ? "Thu gọn thành dải" : "Thu nhỏ"}
             onClick={() =>
-              dangNeo ? luu({ ...s, thuGon: true }) : luu({ ...s, moRa: false })
+              dangNeo ? datKhung({ ...s, thuGon: true }) : datKhung({ ...s, moRa: false })
             }
           >
             <Minus size={14} />
           </NutNho>
-          <NutNho nhan="Đóng" onClick={() => luu({ ...s, moRa: false })}>
+          <NutNho nhan="Đóng" onClick={() => datKhung({ ...s, moRa: false })}>
             <X size={14} />
           </NutNho>
         </div>

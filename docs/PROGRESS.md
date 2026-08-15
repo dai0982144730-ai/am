@@ -1903,3 +1903,70 @@ phòng ban ngày có thể muốn khác nhau; lưu vào database thì hai máy g
 - Mở lần đầu, chưa lưu gì: `data-tong="toi"`, nền `#0e0e0e`, chữ `#f2f2f2`
 - Bấm Sáng → đổi ngay sang `#fdfbf7`; bấm Tối → về `#0e0e0e`. Cả hai chiều
 - 8 trang đều trả 200, không trang nào có lớp nền sáng thiếu `dark:`
+
+## Phase 13 — Khung trò chuyện với trợ lý: XONG (2026-08-15)
+
+Chủ dự án sửa lại mô tả trong bản thiết kế: trọng tâm là **giao diện cái khung**,
+không phải phần gọi API. Bản mẫu là `ChatWidget.tsx` của dự án QLDA.
+
+### Cái khung
+
+**Neo mép trái hoặc mép phải**, cao nguyên màn hình, mặc định neo phải rộng
+420px. Điểm quan trọng nhất: nó **đẩy nội dung sang bên chứ không che lên** —
+khung ghi hai biến CSS lên thẻ `<html>`, khung trang lấy làm khoảng đệm. Che mất
+nội dung thì vừa đọc vừa hỏi không được, mà đó đúng là lúc cần hỏi nhất.
+
+Thanh kéo mảnh ở mép trong để đổi bề rộng (320–720px, không quá nửa màn hình).
+Thu gọn còn dải dọc 40px dính đúng mép đang neo.
+
+**Khung nổi**: kéo thả tự do, đổi kích thước từ **cả 8 hướng** — 4 mép mỏng 6px
+và 4 góc ô vuông 14px đè lên mép (góc thắng ở phần chồng lấn). Kéo mép trên/trái
+đổi cả vị trí lẫn kích thước, mép dưới/phải chỉ đổi kích thước.
+
+**Dính mép kiểu Windows**: kéo vào dải 80px sát mép thì xem trước rồi thả là neo;
+kéo vào ô 220×220 góc phải dưới thì về khung nhỏ mặc định. Đang neo mà kéo tiêu
+đề rời mép quá 120px thì gỡ neo **ngay giữa chừng**, panel bám tay trong cùng một
+thao tác chứ không phải thả ra rồi kéo lại.
+
+Nhớ kích thước khung nổi trước mỗi lần neo, để gỡ neo ra thì trả về đúng kích
+thước người dùng đã chỉnh chứ không về mặc định.
+
+Nút ⧉ mở cửa sổ riêng (`/tro-chuyen`), Ctrl+K bật tắt, mọi thứ nhớ vào bộ nhớ máy.
+
+### Phần trả lời — đi đường Claude CLI
+
+`hoiTroLy` của Phase 15 làm gần đúng việc này rồi nhưng gọi **qua khoá API**,
+tính tiền theo chữ. Khung trò chuyện là chỗ gọi Claude nhiều nhất trong cả app
+nên để nó đi đường đó thì mỗi lần trò chuyện là một lần trừ tiền thật. Viết
+`lib/troChuyen/traLoi.ts` riêng, đi Claude CLI như mọi phần khác của dự án.
+`hoiTroLy` giữ nguyên cho app Android — nó chạy trên máy chủ xa, chỗ đó không có
+Claude CLI.
+
+Trợ lý **chỉ dựa vào kho**, không trả lời bằng kiến thức chung: hỏi "Grok Bot là
+gì" mà nhận về một đoạn Wikipedia thì vô nghĩa, chủ nhà đã có Google. Mỗi câu trả
+lời kèm danh sách nguồn đã đọc, bấm vào là mở ra nghe.
+
+### Lần thứ ba vấp lỗi `setState` trong effect
+
+Bản đầu đọc bộ nhớ máy rồi `setState` trong effect — ESLint chặn thẳng. Đây là
+lần thứ ba dự án vấp (trước đó ở ô nhập ghi chú và menu điều hướng). Đã chuyển
+sang khuôn `useSyncExternalStore`: trạng thái nằm ngoài React, React chỉ đăng ký
+nghe; máy chủ luôn đọc ra `BAN_DAU` nên lần vẽ đầu hai bên khớp nhau.
+
+### Cạm bẫy khi kiểm bằng trình duyệt trong app
+
+Đo thấy `padding-right` bằng `0px` dù biến CSS đã là `420px`, tưởng hỏng. **Không
+hỏng**: khung xem trong app không vẽ khung hình nên hiệu ứng `transition` đứng im
+tại giá trị đầu, `getComputedStyle` trả về giá trị đang chuyển động dở. Đặt
+`transition: none` rồi đo lại thì ra đúng `420px`.
+
+Ghi lại vì lần sau đo bất cứ thuộc tính nào **có hiệu ứng chuyển động** trong
+khung xem đó đều sẽ gặp y hệt.
+
+### Đã kiểm thật
+
+- Neo phải → biến `--chat-neo-phai` 420px; đổi neo trái → chuyển sang biến trái
+- Khung nổi → cả hai biến về 0, đếm đủ **8 tay nắm kéo**
+- Thu gọn → dải 40px; về mặc định → 400×600
+- Ctrl+K đóng mở đúng cả hai chiều
+- Hỏi thật hai câu: trả lời đúng, bằng tiếng Việt, kèm nguồn, mỗi câu ~16 giây
