@@ -71,7 +71,8 @@ const TRUONG_THE = {
       subscriptionStatus: true,
     },
   },
-  narrationAsset: { select: { id: true } },
+  originalLanguage: true,
+  narrationAsset: { select: { id: true, ttsAudioUrl: true } },
   classification: {
     select: {
       titleVi: true,

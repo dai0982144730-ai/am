@@ -10,6 +10,7 @@
 import Link from "next/link";
 
 import type { TheNoiDung } from "@/lib/nghiepVu/layNoiDungTrangChu";
+import { ngheDuocBangTiengViet } from "@/lib/tiengViet/loc";
 
 /** Đổi giây thành dạng "12:04" hoặc "1:02:40". */
 function docThoiLuong(giay: number | null): string | null {
@@ -73,9 +74,20 @@ const TEN_CHU_DE_AI: Record<string, string> = {
 
 /** Nhãn nổi ở góc trái ảnh — mỗi chuyên mục một kiểu thông tin. */
 function nhanGoc(muc: NonNullable<TheNoiDung>): string | null {
-  // Bài nước ngoài đã có bản tiếng Việt — thông tin quan trọng nhất với người
-  // dùng, nên ưu tiên hiện trước mọi nhãn khác
-  if (muc.narrationAsset) return "ĐÃ THUẬT LẠI";
+  // NGHE ĐƯỢC hay CHƯA là thông tin quan trọng nhất với chủ nhà, nên nó đứng
+  // trước mọi nhãn khác.
+  //
+  // ĐIỀU KIỆN LÀ **CÓ TIẾNG**, KHÔNG PHẢI CÓ CHỮ. Bản trước chỉ hỏi
+  // `muc.narrationAsset` nên dán "ĐÃ THUẬT LẠI" cả lên bài mới dịch xong phần
+  // chữ mà chưa đọc thành tiếng. Nhãn đó nói dối: chủ nhà thấy vậy tưởng bấm
+  // vào là nghe được, mở ra thì chỉ có một bức tường chữ — đúng thứ app này
+  // sinh ra để tránh.
+  if (muc.narrationAsset?.ttsAudioUrl) return "ĐÃ THUẬT LẠI";
+
+  // Tiếng nước ngoài mà chưa có tiếng Việt thì nói thẳng, đừng để lẫn vào như
+  // thể nghe được. Đây KHÔNG phải để chê nội dung — nó đang xếp hàng lồng
+  // tiếng. Xem lib/tiengViet/loc.ts.
+  if (!ngheDuocBangTiengViet(muc)) return "CHỜ LỒNG TIẾNG";
 
   const pl = muc.classification;
   if (!pl) return null;

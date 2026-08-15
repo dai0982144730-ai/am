@@ -35,7 +35,10 @@ const TRUONG_CAN_LAY = {
       subscriptionStatus: true,
     },
   },
-  narrationAsset: { select: { id: true } },
+  // `originalLanguage` va `ttsAudioUrl`: de the biet dan nhan NGHE DUOC hay
+  // CHO LONG TIENG. Xem `nhanGoc` trong components/TheNoiDung.tsx.
+  originalLanguage: true,
+  narrationAsset: { select: { id: true, ttsAudioUrl: true } },
   classification: {
     select: {
       titleVi: true,
