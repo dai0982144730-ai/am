@@ -13,6 +13,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { doiHoiChuDuAn } from "@/lib/quyen";
 import { CAC_GIONG } from "@/lib/tts/giong";
+import { TOC_DO_MAX, TOC_DO_MIN } from "@/components/TrinhPhatAmThanh";
 import type { ContentGroup, SourceType } from "@/generated/prisma/enums";
 
 /**
@@ -164,4 +165,43 @@ export async function chonGiongDoc(
       `${giong.tranMienPhi.toLocaleString("vi-VN")} ký tự mỗi tháng. ` +
       `Bản âm thanh đã tạo trước đó vẫn giữ giọng cũ.`,
   };
+}
+
+/**
+ * Đặt tốc độ đọc mặc định.
+ *
+ * Chỉ là mặc định — trên từng trình phát vẫn đổi được, và đổi ở đó không ghi
+ * đè lựa chọn ở đây. Nghe một bài dài mà muốn nhanh hơn thì bấm ngay tại chỗ,
+ * không phải vào Cài đặt.
+ */
+export async function luuTocDoDoc(
+  tocDo: number,
+): Promise<{ ok: boolean; thongDiep: string }> {
+  try {
+    await doiHoiChuDuAn("đổi tốc độ đọc");
+  } catch (e) {
+    return {
+      ok: false,
+      thongDiep: e instanceof Error ? e.message : "Không có quyền.",
+    };
+  }
+
+  const lamTron = Number(tocDo.toFixed(1));
+  if (lamTron < TOC_DO_MIN || lamTron > TOC_DO_MAX) {
+    return {
+      ok: false,
+      thongDiep: `Tốc độ phải từ ${Math.round(TOC_DO_MIN * 100)}% đến ${Math.round(TOC_DO_MAX * 100)}%.`,
+    };
+  }
+
+  await prisma.userAssistantSettings.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", ttsSpeed: lamTron },
+    update: { ttsSpeed: lamTron },
+  });
+
+  revalidatePath("/cai-dat");
+  revalidatePath("/ban-tin");
+
+  return { ok: true, thongDiep: `Tốc độ mặc định: ${Math.round(lamTron * 100)}%.` };
 }

@@ -15,19 +15,26 @@
 
 import { useState, useTransition } from "react";
 
-import { chonGiongDoc } from "@/app/cai-dat/actions";
+import { chonGiongDoc, luuTocDoDoc } from "@/app/cai-dat/actions";
+import {
+  CAC_MUC_TOC_DO,
+  docTocDo,
+} from "@/components/TrinhPhatAmThanh";
 import type { GiongDoc } from "@/lib/tts/giong";
 
 export function ChonGiongDoc({
   cacGiong,
   dangChon,
+  tocDoDangDung,
   laChu,
 }: {
   cacGiong: GiongDoc[];
   dangChon: string;
+  tocDoDangDung: number;
   laChu: boolean;
 }) {
   const [chon, setChon] = useState(dangChon);
+  const [tocDo, setTocDo] = useState(tocDoDangDung);
   const [thongDiep, setThongDiep] = useState<string | null>(null);
   const [dangLuu, batDau] = useTransition();
 
@@ -77,6 +84,42 @@ export function ChonGiongDoc({
             </button>
           );
         })}
+      </div>
+
+      <div className="mt-4">
+        <p className="text-sm font-medium">Tốc độ đọc</p>
+        <p className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+          Giọng máy đọc chậm hơn người thật nên nghe bài dài ở tốc độ gốc khá
+          mỏi. Quá 150% thì tiếng Việt có dấu bắt đầu díu vào nhau, nghe mệt hơn
+          là tiết kiệm được thời gian — nên dải dừng ở đó. Đây chỉ là mặc định,
+          trên từng trình phát vẫn đổi được.
+        </p>
+
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {CAC_MUC_TOC_DO.map((m) => (
+            <button
+              key={m}
+              type="button"
+              disabled={!laChu || dangLuu}
+              onClick={() => {
+                const truoc = tocDo;
+                setTocDo(m);
+                batDau(async () => {
+                  const kq = await luuTocDoDoc(m);
+                  if (!kq.ok) setTocDo(truoc);
+                  setThongDiep(kq.thongDiep);
+                });
+              }}
+              className={`rounded-lg border px-3 py-1.5 text-xs tabular-nums transition-colors disabled:opacity-50 ${
+                Math.abs(m - tocDo) < 0.001
+                  ? "border-cam-600 bg-cam-600 font-medium text-white"
+                  : "border-neutral-200 text-neutral-600 hover:border-neutral-400 dark:border-neutral-800 dark:text-neutral-300"
+              }`}
+            >
+              {docTocDo(m)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {thongDiep ? (

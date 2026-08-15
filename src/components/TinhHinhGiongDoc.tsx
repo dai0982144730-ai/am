@@ -28,11 +28,13 @@ export function TinhHinhGiongDoc({
   tinhHinh,
   daCoKhoa,
   giongDangChon,
+  tocDoDangDung,
   laChu,
 }: {
   tinhHinh: TinhHinhTts;
   daCoKhoa: boolean;
   giongDangChon: string;
+  tocDoDangDung: number;
   laChu: boolean;
 }) {
   const phanTram = Math.min(100, Math.round(tinhHinh.phanTram * 100));
@@ -123,6 +125,7 @@ export function TinhHinhGiongDoc({
       <ChonGiongDoc
         cacGiong={CAC_GIONG}
         dangChon={giongDangChon}
+        tocDoDangDung={tocDoDangDung}
         laChu={laChu}
       />
 

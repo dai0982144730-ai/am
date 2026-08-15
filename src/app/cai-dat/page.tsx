@@ -32,7 +32,7 @@ export default async function TrangCaiDat() {
 
   const caiDatTroLy = await prisma.userAssistantSettings.findUnique({
     where: { id: "singleton" },
-    select: { ttsVoice: true },
+    select: { ttsVoice: true, ttsSpeed: true },
   });
 
   // Khách vẫn xem được trang này để biết hệ thống chấm điểm thế nào — chỉ không
@@ -132,6 +132,7 @@ export default async function TrangCaiDat() {
           tinhHinh={tinhHinhTts}
           daCoKhoa={daCauHinh()}
           giongDangChon={caiDatTroLy?.ttsVoice ?? GIONG_MAC_DINH}
+          tocDoDangDung={caiDatTroLy?.ttsSpeed ?? 1}
           laChu={laChu}
         />
 

@@ -917,6 +917,12 @@ model UserAssistantSettings {
   digestDensity   DigestDensity @default(vua)
   autoScanEnabled Boolean       @default(true)
   ttsVoice        String?
+  /// Tốc độ phát mặc định, 1.0 = tốc độ gốc. Dải cho phép 1.0–1.5.
+  ///
+  /// Giọng máy đọc chậm hơn người thật, nên nghe bài dài ở tốc độ gốc rất mỏi.
+  /// Nhưng quá 1.5 thì tiếng Việt có dấu bắt đầu díu vào nhau, nghe mệt hơn là
+  /// tiết kiệm được thời gian — nên chặn trần ở đó.
+  ttsSpeed        Float   @default(1.0)
 
   updatedAt DateTime @updatedAt
 }

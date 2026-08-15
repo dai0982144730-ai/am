@@ -90,11 +90,15 @@ function TheBanTin({ muc, anh }: { muc: MucGon; anh: string | null }) {
 }
 
 export default async function TrangBanTin() {
-  const [email, banTin] = await Promise.all([
+  const [email, banTin, caiDat] = await Promise.all([
     emailChuDuAn(),
     prisma.assistantBriefing.findFirst({
       orderBy: { deliveredAt: "desc" },
       include: { digestRun: true },
+    }),
+    prisma.userAssistantSettings.findUnique({
+      where: { id: "singleton" },
+      select: { ttsSpeed: true },
     }),
   ]);
 
@@ -152,6 +156,7 @@ export default async function TrangBanTin() {
                   <TrinhPhatAmThanh
                     duongDan={banTin.audioBriefingUrl}
                     nhan="Nghe bản tin"
+                    tocDoMacDinh={caiDat?.ttsSpeed ?? 1}
                     ghiChu="Nghe trong lúc pha cà phê — không cần nhìn màn hình."
                   />
                 ) : (

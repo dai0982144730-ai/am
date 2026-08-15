@@ -61,7 +61,7 @@ export default async function TrangXem({
 }) {
   const { id } = await params;
 
-  const [phien, muc] = await Promise.all([
+  const [phien, muc, caiDatTts] = await Promise.all([
     auth(),
     prisma.contentItem.findUnique({
       where: { id },
@@ -86,6 +86,10 @@ export default async function TrangXem({
           },
         },
       },
+    }),
+    prisma.userAssistantSettings.findUnique({
+      where: { id: "singleton" },
+      select: { ttsSpeed: true },
     }),
   ]);
 
@@ -290,6 +294,7 @@ export default async function TrangXem({
                   <TrinhPhatAmThanh
                     duongDan={muc.narrationAsset.ttsAudioUrl}
                     giong={muc.narrationAsset.ttsVoice}
+                    tocDoMacDinh={caiDatTts?.ttsSpeed ?? 1}
                     ghiChu="Claude đọc nội dung gốc rồi kể lại bằng lời văn riêng, không dịch nguyên văn."
                   />
                 ) : (
