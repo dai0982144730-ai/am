@@ -19,7 +19,6 @@
 
 import type { ContentGroup } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
-import { ngheDuocTiengViet } from "@/lib/tiengViet/loc";
 
 /** Bốn chuyên mục vào bản tin. Nhóm "khác" cố ý không có mặt. */
 const CHUYEN_MUC_VAO_BAN_TIN: { ma: ContentGroup; ten: string }[] = [
@@ -91,11 +90,13 @@ export async function chonNoiDungChoBanTin(
 ): Promise<NoiDungBanTin> {
   const tuLuc = new Date(Date.now() - soGioGanDay * 3_600_000);
 
-  // Bản tin tuyệt đối không được nhắc tới thứ chủ nhà nghe không hiểu
-  const dieuKienChung = ngheDuocTiengViet({
+  // Không loại nội dung tiếng nước ngoài ra khỏi bản tin. Hướng xử lý của dự
+  // án là **lồng tiếng Việt cho nó**, không phải giấu đi — chủ dự án chốt
+  // 2026-08-15. Xem lib/tiengViet/loc.ts.
+  const dieuKienChung = {
     status: "classified" as const,
     createdAt: { gte: tuLuc },
-  });
+  };
 
   const noiBat: MucTheoChuyenMuc[] = [];
   const daChon = new Set<string>();

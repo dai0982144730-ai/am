@@ -25,7 +25,6 @@ import type {
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { chuaLuotQua } from "@/lib/lichSu/loc";
-import { ngheDuocTiengViet } from "@/lib/tiengViet/loc";
 
 export type KieuSapXep = "phu_hop_nhat" | "chat_luong_cao_nhat" | "moi_nhat";
 
@@ -197,9 +196,12 @@ export async function timNoiDung(loc: BoLoc): Promise<KetQuaTim> {
   // ô tìm kiếm thường là để lần lại đúng cái vừa xem hôm qua. Chỉ lúc lướt
   // không mục đích mới cần giấu.
   const dangTimCuThe = Boolean(loc.tuKhoa?.trim());
-  const dieuKien = ngheDuocTiengViet(
-    dangTimCuThe ? dungDieuKien(loc) : chuaLuotQua(dungDieuKien(loc)),
-  );
+  // KHÔNG giấu nội dung tiếng nước ngoài. Đã thử và sai: chủ dự án nói rõ nội
+  // dung hay bằng tiếng Anh thì phải **lồng tiếng Việt cho nó**, chứ ẩn đi là
+  // mất luôn phần nội dung tốt nhất. Xem lib/tiengViet/loc.ts.
+  const dieuKien = dangTimCuThe
+    ? dungDieuKien(loc)
+    : chuaLuotQua(dungDieuKien(loc));
 
   const [cacThe, tongSo] = await Promise.all([
     prisma.contentItem.findMany({
@@ -220,11 +222,22 @@ export async function timNoiDung(loc: BoLoc): Promise<KetQuaTim> {
   };
 }
 
-/** Đếm số nội dung mỗi chuyên mục, để hiện cạnh chip lọc. */
+/**
+ * Đếm số nội dung mỗi chuyên mục, để hiện cạnh chip lọc.
+ *
+ * PHẢI LỌC Y HỆT DANH SÁCH BÊN DƯỚI. Bản đầu chỉ đếm `status: "classified"`,
+ * bỏ qua cả bộ lọc tiếng Việt lẫn bộ lọc "đã xem rồi" — nên chip ghi **AI 28**
+ * mà bấm vào chỉ ra **5 nội dung**. Chủ dự án phát hiện đúng chỗ này và hỏi
+ * thẳng "28 mà hiện lên chỉ có 05 là sao?".
+ *
+ * Con số trên chip là một lời hứa: bấm vào sẽ thấy chừng đó. Đếm theo một công
+ * thức rồi hiển thị theo công thức khác thì con số ấy thành nói dối, mà lại là
+ * kiểu nói dối không ai báo lỗi.
+ */
 export async function demTheoNhom(): Promise<Record<string, number>> {
   const nhom = await prisma.contentItem.groupBy({
     by: ["contentGroup"],
-    where: { status: "classified" },
+    where: chuaLuotQua({ status: "classified" }),
     _count: { _all: true },
   });
   return Object.fromEntries(nhom.map((n) => [n.contentGroup, n._count._all]));

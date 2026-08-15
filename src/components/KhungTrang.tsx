@@ -12,6 +12,7 @@
 
 import { signOut } from "@/auth";
 import { KhungDieuHuong } from "@/components/KhungDieuHuong";
+import { KhungTroChuyen } from "@/components/troChuyen/KhungTroChuyen";
 
 export function KhungTrang({
   children,
@@ -37,8 +38,16 @@ export function KhungTrang({
   );
 
   return (
-    <KhungDieuHuong emailNguoiDung={emailNguoiDung} dangXuat={nutDangXuat}>
-      {children}
-    </KhungDieuHuong>
+    <>
+      <KhungDieuHuong emailNguoiDung={emailNguoiDung} dangXuat={nutDangXuat}>
+        {children}
+      </KhungDieuHuong>
+
+      {/* Khung trò chuyện nằm NGOÀI khung điều hướng, không nằm trong.
+          Nó là lớp nổi phủ lên toàn màn hình — đặt vào bên trong thì phần đệm
+          mà chính nó tạo ra sẽ đẩy luôn cả nó, panel neo trái tự đẩy mình sang
+          phải rồi rời khỏi mép. */}
+      <KhungTroChuyen laChu={Boolean(emailNguoiDung)} />
+    </>
   );
 }

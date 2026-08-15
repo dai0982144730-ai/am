@@ -222,7 +222,19 @@ export function KhungDieuHuong({
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="min-h-screen bg-background"
+      // Chừa chỗ cho khung trò chuyện khi nó đang neo mép.
+      //
+      // ĐÂY LÀ CHỖ LÀM NÊN KHÁC BIỆT: panel đẩy nội dung sang bên chứ không đè
+      // lên. Che mất nội dung thì vừa đọc vừa hỏi không được — mà đó đúng là
+      // lúc cần hỏi nhất. Hai biến do `KhungTroChuyen` ghi lên thẻ <html>.
+      style={{
+        paddingLeft: "var(--chat-neo-trai, 0px)",
+        paddingRight: "var(--chat-neo-phai, 0px)",
+        transition: "padding var(--chat-neo-nhip, 150ms) ease",
+      }}
+    >
       <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-neutral-200 bg-nen-menu/95 px-4 backdrop-blur dark:border-neutral-800">
         <button
           type="button"

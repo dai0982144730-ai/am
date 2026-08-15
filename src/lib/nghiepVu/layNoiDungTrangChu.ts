@@ -12,7 +12,6 @@
 import type { ContentGroup } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { chuaLuotQua } from "@/lib/lichSu/loc";
-import { ngheDuocTiengViet } from "@/lib/tiengViet/loc";
 import { layTronTheoTyLe } from "@/lib/nguonMoi/tron";
 
 /** Các trường cần cho một thẻ nội dung trên trang chủ. */
@@ -118,7 +117,7 @@ async function layMotMuc(
   // Thứ đã lướt qua rồi thì không bày lại — trừ khi đã cất vào thư viện
   // Hai lớp lọc, cả hai đều bắt buộc: đã lướt qua thì đừng bày lại, và không
   // nghe được bằng tiếng Việt thì đừng bày ra ngay từ đầu
-  const loc = ngheDuocTiengViet(chuaLuotQua(dieuKien));
+  const loc = chuaLuotQua(dieuKien);
 
   // Trộn nguồn quen với nguồn lạ theo tỉ lệ chủ nhà đặt cho chuyên mục này
   const [tron, tongSo] = await Promise.all([

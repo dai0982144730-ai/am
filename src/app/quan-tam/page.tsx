@@ -6,7 +6,6 @@ import { KhungTrang } from "@/components/KhungTrang";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
 import { prisma } from "@/lib/db/prisma";
 import { chuaLuotQua } from "@/lib/lichSu/loc";
-import { ngheDuocTiengViet } from "@/lib/tiengViet/loc";
 import { nganSachMoiNgay } from "@/lib/youtube/hanMuc";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +35,7 @@ export default async function TrangQuanTam() {
       // Quan hệ tới `AdHocInterest` mới là thứ bền: nó ghi "bài này có được
       // là nhờ chủ nhà gõ từ khoá kia". Một video AI tìm ra từ từ khoá
       // "AI agent" thì vừa nằm ở hàng AI, vừa nằm ở đây — đúng cả hai.
-      where: ngheDuocTiengViet(chuaLuotQua({ adHocInterestId: { not: null } })),
+      where: chuaLuotQua({ adHocInterestId: { not: null } }),
       orderBy: [
         { score: { compositeScore: { sort: "desc", nulls: "last" } } },
         { publishedAt: "desc" },

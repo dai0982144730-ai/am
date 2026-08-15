@@ -1,18 +1,30 @@
 /**
- * Chỉ hiện thứ nghe/xem được bằng tiếng Việt.
+ * Nội dung nước ngoài: LỒNG TIẾNG, KHÔNG ẨN.
  *
- * ĐÂY LÀ NGUYÊN TẮC NỀN, không phải một bộ lọc tuỳ chọn. Chủ dự án chốt ngày
- * 2026-08-15: *"Ngôn ngữ là tiếng Việt. Mọi ngôn ngữ khác mà dùng tiếng Anh
- * gọi là vô tri, không có ý nghĩa gì hết."*
+ * ## Tôi đã hiểu sai một lần, ghi lại để không lặp
  *
- * Nghĩa là một video hay tới đâu, điểm cao tới mấy, mà chỉ có tiếng Anh thì
- * với chủ nhà **bằng không**. Để nó nằm trên trang chủ không phải là "cho thêm
- * lựa chọn" — đó là chiếm mất chỗ của thứ dùng được.
+ * Chủ dự án nói *"mọi ngôn ngữ khác mà dùng tiếng Anh gọi là vô tri, không có ý
+ * nghĩa gì hết"*. Tôi hiểu thành "vậy thì ẩn nó đi", và làm một bộ lọc giấu sạch
+ * nội dung tiếng nước ngoài chưa có bản đọc tiếng Việt.
  *
- * ĐƯỜNG SỐNG DUY NHẤT cho nội dung nước ngoài: Am đọc, dịch, kể lại bằng tiếng
- * Việt **và đọc thành tiếng**. Điều kiện là bản ÂM THANH, không phải bản chữ —
- * chủ dự án nói nguyên văn: *"có bản âm thanh tiếng việt đi kèm"* thì chữ dài
- * cũng được. Bản chữ không kèm tiếng thì vẫn là bắt đọc, mà đây là app nghe.
+ * Sai. Chủ dự án nói lại rất rõ (2026-08-15):
+ *
+ *   *"Nhiều clip hay bằng tiếng Anh không có thuyết minh thì hãy làm file mp3
+ *   tiếng Việt cho nó. Clip nào có thuyết minh tiếng Anh thì chuyển thành
+ *   thuyết minh tiếng Việt. Ẩn hết đi là sao?"*
+ *
+ * Câu "vô tri" nói về **trạng thái chưa xử lý**, không phải bản án. Một clip AI
+ * hay bằng tiếng Anh không phải thứ cần vứt đi — nó là thứ cần lồng tiếng. Ẩn
+ * đi là bỏ mất đúng phần nội dung tốt nhất mà lại chẳng giải quyết gì.
+ *
+ * Hậu quả đo được của cách hiểu sai: **28 bài blog và 8 bài diễn đàn biến mất
+ * sạch** khỏi giao diện, chuyên mục Music trống trơn, chuyên mục AI từ 28 còn 5.
+ *
+ * ## Nên giờ ở đây không có bộ lọc nào nữa
+ *
+ * File này chỉ còn giữ cách **nhận biết** nội dung chưa nghe được bằng tiếng
+ * Việt, để giao diện dán nhãn và để hàng đợi lồng tiếng biết phải làm gì trước.
+ * Nhận biết thì có, giấu thì không.
  */
 
 import type { Prisma } from "@/generated/prisma/client";
@@ -20,67 +32,40 @@ import type { Prisma } from "@/generated/prisma/client";
 /**
  * Dấu Claude ghi khi ĐỌC nội dung và thấy không phải tiếng Việt.
  *
- * Cố ý không phải mã ngôn ngữ chuẩn, để phân biệt với thứ YouTube khai báo.
+ * Cố ý không phải mã ngôn ngữ chuẩn, để phân biệt với thứ YouTube khai báo —
+ * mã của YouTube sai nhiều tới mức nguy hiểm. Đo thật trong kho: một bài giảng
+ * tiếng Việt khai là `en`, bốn video nhạc Việt khai là `nl-NL`.
  */
 export const KHAC_TIENG_VIET = "khac";
 
 /**
- * Bọc điều kiện sẵn có thêm ràng buộc "nghe được bằng tiếng Việt".
+ * Nội dung này chủ nhà đã nghe được bằng tiếng Việt chưa.
  *
- * CHỈ GIẤU THỨ CLAUDE ĐÃ ĐỌC VÀ KHẲNG ĐỊNH LÀ TIẾNG NƯỚC NGOÀI. Không tin mã
- * ngôn ngữ do YouTube khai — nó sai nhiều tới mức nguy hiểm. Đo thật trong kho:
- *
- *   - *"SỐNG CÓ ĐỨC – VƯỢT QUA NGHIỆP NẶNG, TÂM AN, ĐỜI TỰ NHIÊN"* khai là `en`
- *   - Bốn video nhạc Việt "DIGIDI DIGIDI" khai là `nl-NL` (tiếng Hà Lan)
- *
- * Tin mã đó thì giấu mất đúng nội dung tiếng Việt mà chủ nhà cần. Nên nguyên
- * tắc ở đây là **thà lọt còn hơn giấu nhầm**: chỉ chặn khi Claude đã thật sự
- * đọc và kết luận, còn lại để hiện.
- *
- * Nội dung nước ngoài chỉ được hiện khi bản thuật lại **đã đọc thành tiếng**.
- *
- * ĐÃ ĐO VÀ SỬA (2026-08-15): bản đầu chỉ hỏi "có bản thuật lại không", nên 7 bài
- * blog tiếng Anh mới dịch xong phần chữ mà chưa kịp đọc thành tiếng vẫn nằm
- * trên trang chính. Đó là bắt chủ nhà đọc một bức tường chữ — đúng thứ app này
- * sinh ra để tránh. Điều kiện thật là **có tiếng**, không phải có chữ.
- *
- * Dùng `AND` chứ không trải thẳng, vì bên trong có `OR` và nơi gọi cũng thường
- * đã có `OR` riêng — trải thẳng thì cái sau đè mất cái trước, lỗi không báo gì
- * mà lặng lẽ cho kết quả sai. Đã vấp đúng kiểu này ở bộ lọc lịch sử xem.
+ * `false` nghĩa là **cần lồng tiếng**, không phải "bỏ đi".
  */
-export function ngheDuocTiengViet(
-  dieuKien: Prisma.ContentItemWhereInput,
-): Prisma.ContentItemWhereInput {
-  return {
-    AND: [
-      dieuKien,
-      {
-        OR: [
-          // Ô trống phải liệt kê RIÊNG. Trong SQL, `NOT (cột = 'khac')` với ô
-          // trống cho ra NULL chứ không phải "đúng", nên dòng dưới một mình sẽ
-          // loại luôn mọi nội dung chưa biết ngôn ngữ. Đã đo: 29 mục biến mất
-          // oan dù chưa lượt phân loại nào ghi giá trị "khac" cả.
-          { originalLanguage: null },
-          { NOT: { originalLanguage: KHAC_TIENG_VIET } },
-          // Có bản ĐỌC THÀNH TIẾNG, không phải chỉ có bản chữ
-          { narrationAsset: { ttsAudioUrl: { not: null } } },
-        ],
-      },
-    ],
-  };
-}
-
-/**
- * Nội dung này chủ nhà nghe được không.
- *
- * Phải khớp từng chữ với `ngheDuocTiengViet` ở trên — hai hàm lệch nhau thì
- * trang danh sách và trang chi tiết bất đồng, kiểu "bấm vào thẻ thì báo không
- * xem được".
- */
-export function tiengVietDungDuoc(muc: {
+export function ngheDuocBangTiengViet(muc: {
   originalLanguage: string | null;
+  contentGroup?: string | null;
   narrationAsset?: { ttsAudioUrl: string | null } | null;
 }): boolean {
+  // Nhạc luôn nghe được: nghe giai điệu chứ không phải hiểu lời. Bản thiết kế
+  // cũng không cho LLM đọc sâu nhánh nhạc, nên kết luận ngôn ngữ của nhạc chỉ
+  // dựa vào mỗi cái tiêu đề — tức là đoán mò.
+  if (muc.contentGroup === "music") return true;
   if (muc.narrationAsset?.ttsAudioUrl) return true;
   return muc.originalLanguage !== KHAC_TIENG_VIET;
 }
+
+/**
+ * Điều kiện Prisma cho "đang chờ lồng tiếng".
+ *
+ * Dùng để xếp hàng đợi lồng tiếng và để đếm, KHÔNG dùng để giấu khỏi giao diện.
+ */
+export const CHO_LONG_TIENG: Prisma.ContentItemWhereInput = {
+  originalLanguage: KHAC_TIENG_VIET,
+  NOT: { contentGroup: "music" },
+  OR: [
+    { narrationAsset: { is: null } },
+    { narrationAsset: { is: { ttsAudioUrl: null } } },
+  ],
+};

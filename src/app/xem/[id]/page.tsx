@@ -228,9 +228,18 @@ export default async function TrangXem({
               </div>
             )}
 
+            {/* Tiêu đề tiếng Việt lên trước, tiêu đề gốc để nhỏ bên dưới.
+                Chủ dự án nói thẳng: "tiêu đề để nguyên tiếng Anh thì bố ai mà
+                đọc được". Thẻ ngoài trang chủ đã ưu tiên bản tiếng Việt rồi mà
+                trang này thì chưa — bấm vào là đập ngay vào mắt tiếng Anh. */}
             <h1 className="mt-4 text-xl font-semibold leading-snug">
-              {muc.title}
+              {pl?.titleVi || muc.title}
             </h1>
+            {pl?.titleVi ? (
+              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                {muc.title}
+              </p>
+            ) : null}
 
             <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-neutral-500 dark:text-neutral-400">
               <span className="font-medium text-neutral-700 dark:text-neutral-300">
