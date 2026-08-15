@@ -52,3 +52,7 @@ coverage/
 # File âm thanh sinh ra (TTS/voice note) — không đưa lên repo
 /public/generated/
 /storage/
+
+# File âm thanh sinh ra để nghe thử — không thuộc mã nguồn
+/mau-giong/
+*.mp3

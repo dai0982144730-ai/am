@@ -12,6 +12,10 @@
 
 import { Buffer } from "node:buffer";
 
+import { prisma } from "@/lib/db/prisma";
+
+import { timGiong } from "./giong";
+
 import {
   conDocDuoc,
   ghiNhanDaDoc,
@@ -28,8 +32,20 @@ import {
  */
 const TOI_DA_MOI_DOAN = 2_500;
 
-/** Giọng mặc định. Đổi được qua `.env` mà không phải sửa code. */
-const GIONG_MAC_DINH = process.env.TTS_GIONG?.trim() || "vi-VN-Standard-A";
+/**
+ * Giọng đang chọn, đọc từ màn hình Cài đặt.
+ *
+ * Để trong database chứ không trong `.env` vì đây là **lựa chọn về cảm giác
+ * nghe**, chủ nhà đổi lúc nào cũng được và không phải khởi động lại máy chủ.
+ * Khác hẳn khoá API — thứ đó là bí mật nên ở nguyên trong `.env`.
+ */
+async function giongDangChon(): Promise<string> {
+  const caiDat = await prisma.userAssistantSettings.findUnique({
+    where: { id: "singleton" },
+    select: { ttsVoice: true },
+  });
+  return timGiong(caiDat?.ttsVoice).ma;
+}
 
 export class ChuaCauHinhTts extends Error {
   constructor() {
@@ -128,8 +144,9 @@ export interface KetQuaDoc {
  */
 export async function docThanhTieng(
   vanBan: string,
-  giong = GIONG_MAC_DINH,
+  giongChiDinh?: string,
 ): Promise<KetQuaDoc> {
+  const giong = giongChiDinh ?? (await giongDangChon());
   const sach = vanBan.trim();
   if (sach.length === 0) throw new Error("Không có chữ nào để đọc.");
 

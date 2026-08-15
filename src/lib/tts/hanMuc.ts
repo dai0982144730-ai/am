@@ -14,13 +14,24 @@
 
 import { prisma } from "@/lib/db/prisma";
 
+import { timGiong } from "./giong";
+
 /**
- * Mức miễn phí mỗi tháng, tính bằng ký tự.
+ * Trần miễn phí lấy từ CHÍNH GIỌNG ĐANG CHỌN, không phải một con số cấu hình
+ * riêng.
  *
- * 4 triệu là mức của giọng Standard. Giọng WaveNet chỉ được 1 triệu — đổi giọng
- * thì phải sửa con số này, kẻo phanh đặt sai chỗ và tháng đó nhận hoá đơn.
+ * Giọng Standard được 4 triệu ký tự mỗi tháng, Wavenet chỉ 1 triệu. Nếu để
+ * trần là một biến riêng thì chỉ cần đổi sang Wavenet mà quên sửa trần là cái
+ * phanh 90% đặt sai chỗ — tưởng còn nhiều, thực ra đã vượt và đang tính tiền.
+ * Buộc hai thứ vào nhau thì không có cách nào sai.
  */
-export const TRAN_MIEN_PHI = Number(process.env.TTS_TRAN_MIEN_PHI) || 4_000_000;
+export async function tranMienPhi(): Promise<number> {
+  const caiDat = await prisma.userAssistantSettings.findUnique({
+    where: { id: "singleton" },
+    select: { ttsVoice: true },
+  });
+  return timGiong(caiDat?.ttsVoice).tranMienPhi;
+}
 
 /**
  * Ngưỡng cảnh báo và ngưỡng khoá.
@@ -57,17 +68,18 @@ export async function xemTinhHinh(): Promise<TinhHinhTts> {
   const thang = thangNay();
   const dong = await prisma.ttsUsage.findUnique({ where: { month: thang } });
 
+  const tran = await tranMienPhi();
   const daDung = dong?.charactersUsed ?? 0;
-  const phanTram = TRAN_MIEN_PHI > 0 ? daDung / TRAN_MIEN_PHI : 0;
+  const phanTram = tran > 0 ? daDung / tran : 0;
 
   return {
     thang,
     daDung,
-    tran: TRAN_MIEN_PHI,
+    tran,
     phanTram,
     sapHet: phanTram >= NGUONG_CANH_BAO,
     daKhoa: phanTram >= NGUONG_KHOA,
-    conLai: Math.max(0, TRAN_MIEN_PHI - daDung),
+    conLai: Math.max(0, tran - daDung),
     lanGoiGanNhat: dong?.lastCallAt ?? null,
     loiGanNhat: dong?.lastError ?? null,
   };
@@ -109,7 +121,7 @@ export async function conDocDuoc(soKyTu: number): Promise<{
     };
   }
 
-  const sauKhiGoi = (tinhHinh.daDung + soKyTu) / TRAN_MIEN_PHI;
+  const sauKhiGoi = (tinhHinh.daDung + soKyTu) / tinhHinh.tran;
   if (sauKhiGoi >= NGUONG_KHOA) {
     return {
       duoc: false,

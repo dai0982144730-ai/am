@@ -9,6 +9,8 @@
  * lưu, vào mọi chỗ không nên có.
  */
 
+import { ChonGiongDoc } from "@/components/ChonGiongDoc";
+import { CAC_GIONG } from "@/lib/tts/giong";
 import {
   NGUONG_CANH_BAO,
   NGUONG_KHOA,
@@ -25,9 +27,13 @@ const KY_TU_MOI_GIO = 45_000;
 export function TinhHinhGiongDoc({
   tinhHinh,
   daCoKhoa,
+  giongDangChon,
+  laChu,
 }: {
   tinhHinh: TinhHinhTts;
   daCoKhoa: boolean;
+  giongDangChon: string;
+  laChu: boolean;
 }) {
   const phanTram = Math.min(100, Math.round(tinhHinh.phanTram * 100));
   const soGio = tinhHinh.conLai / KY_TU_MOI_GIO;
@@ -114,7 +120,13 @@ export function TinhHinhGiongDoc({
         </div>
       )}
 
-      <p className="mt-3 text-xs leading-relaxed text-neutral-400 dark:text-neutral-500">
+      <ChonGiongDoc
+        cacGiong={CAC_GIONG}
+        dangChon={giongDangChon}
+        laChu={laChu}
+      />
+
+      <p className="mt-4 text-xs leading-relaxed text-neutral-400 dark:text-neutral-500">
         Cảnh báo ở {Math.round(NGUONG_CANH_BAO * 100)}%, tự khoá ở{" "}
         {Math.round(NGUONG_KHOA * 100)}%. Chừa 10% cuối làm vùng đệm vì cách đếm
         của Am và cách đếm của Google không khớp tuyệt đối — Google tính cả phần

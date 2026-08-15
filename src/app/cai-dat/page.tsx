@@ -9,6 +9,7 @@ import { emailChuDuAn, laChuDuAn } from "@/lib/quyen";
 import { CHUYEN_MUC_CHINH_DUOC, docTyLeNguonMoi } from "@/lib/nguonMoi/tyLe";
 import { DEFAULT_WEIGHTS } from "@/lib/scoring/normalize";
 import { daCauHinh } from "@/lib/tts/doc";
+import { GIONG_MAC_DINH } from "@/lib/tts/giong";
 import { xemTinhHinh as xemTinhHinhTts } from "@/lib/tts/hanMuc";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,11 @@ export default async function TrangCaiDat() {
     docTyLeNguonMoi(),
     xemTinhHinhTts(),
   ]);
+
+  const caiDatTroLy = await prisma.userAssistantSettings.findUnique({
+    where: { id: "singleton" },
+    select: { ttsVoice: true },
+  });
 
   // Khách vẫn xem được trang này để biết hệ thống chấm điểm thế nào — chỉ không
   // sửa được. Minh bạch thì tốt hơn là giấu đi.
@@ -122,7 +128,12 @@ export default async function TrangCaiDat() {
           }))}
         />
 
-        <TinhHinhGiongDoc tinhHinh={tinhHinhTts} daCoKhoa={daCauHinh()} />
+        <TinhHinhGiongDoc
+          tinhHinh={tinhHinhTts}
+          daCoKhoa={daCauHinh()}
+          giongDangChon={caiDatTroLy?.ttsVoice ?? GIONG_MAC_DINH}
+          laChu={laChu}
+        />
 
         <section className="mt-10">
           <h2 className="text-base font-semibold">Việc cần đăng nhập</h2>
