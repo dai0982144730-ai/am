@@ -656,6 +656,42 @@ thẻ con**, nên lệch thật bên trong vẫn báo bình thường. Chỉ an 
 Đừng rắc `suppressHydrationWarning` ra chỗ khác để cho hết lỗi — làm vậy là bịt
 miệng đúng thứ dùng để phát hiện lỗi thật.
 
+## Chi phí vận hành — đo thật, không ước lượng (2026-08-15)
+
+Đo từ chính kho dữ liệu: bản thuật lại trung bình **8.218 ký tự**, bản tin sáng
+**1.149 ký tự**, lời thoại video trung bình **23.444 ký tự**.
+
+Tiếng Việt đọc thành tiếng khoảng **45.000 ký tự một giờ**, nên mức miễn phí 4
+triệu ký tự của Google tương đương **88 giờ nghe mỗi tháng**.
+
+| Dùng vào | Ký tự mỗi tháng |
+|---|---|
+| Bản tin sáng × 30 | 34.000 |
+| 5 bài blog kể lại mỗi đêm | 1.230.000 |
+| **Nếu tiện ích lo phần video** | **1,27 triệu** (28 giờ nghe) |
+| Thêm 4 video tiếng Anh kể lại mỗi đêm | +1.080.000 |
+| **Nếu Am lo tất** | **2,35 triệu** (52 giờ nghe) |
+
+Cả hai kịch bản đều dưới 4 triệu → **giọng Standard không tốn đồng nào**.
+
+**Hai thứ đều tên "miễn phí" nhưng khác hẳn nhau**, đã tra để khỏi nhầm:
+
+- **300 đô trong 90 ngày**: quà tài khoản mới, hết hạn thật
+- **4 triệu ký tự mỗi tháng**: mức vĩnh viễn, cấp lại hằng tháng, **không hết
+  hạn**
+
+Khoá API của Google cũng không hết hạn. Dán vào `.env` một lần là xong, không
+có chuyện định kỳ phải dán lại.
+
+### Quyết định của chủ dự án: KHÔNG dọn lời thoại
+
+Database hiện 47 MB, trong đó 33 MB là lời thoại (1.039 bản, ~32 KB/bản). Mỗi
+đêm thêm ~115 MB/tháng, tức mức miễn phí 0,5 GB của Neon sẽ đầy sau khoảng bốn
+tháng.
+
+Chủ dự án chốt **không thêm bước dọn dẹp**: khi chạy thật sẽ dùng máy chủ
+riêng, giai đoạn này chỉ code. Nên đừng tự ý thêm cơ chế xoá lời thoại.
+
 ## Tự đi tìm nguồn mới (2026-08-15)
 
 File: `src/lib/khamPha/timNguonMoi.ts`, `locSoBo.ts`, `uyTinNguon.ts`,
