@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { KhungTrang } from "@/components/KhungTrang";
 import { ThanhTrongSo } from "@/components/ThanhTrongSo";
+import { ThemPodcast } from "@/components/ThemPodcast";
 import { ThanhTyLeNguonMoi } from "@/components/ThanhTyLeNguonMoi";
 import { TinhHinhGiongDoc } from "@/components/TinhHinhGiongDoc";
 import { prisma } from "@/lib/db/prisma";
@@ -39,6 +40,17 @@ export default async function TrangCaiDat() {
   // sửa được. Minh bạch thì tốt hơn là giấu đi.
   const cacBoTrongSo = await prisma.sourceQualityProfile.findMany({
     orderBy: { sourceType: "asc" },
+  });
+
+  const kenhPodcast = await prisma.source.findMany({
+    where: { type: "podcast_rss" },
+    select: {
+      id: true,
+      title: true,
+      externalId: true,
+      _count: { select: { contentItems: true } },
+    },
+    orderBy: { title: "asc" },
   });
 
   return (
@@ -125,6 +137,16 @@ export default async function TrangCaiDat() {
           cacMuc={CHUYEN_MUC_CHINH_DUOC.map((m) => ({
             ...m,
             tyLe: tyLeNguonMoi[m.ma] ?? 30,
+          }))}
+        />
+
+        <ThemPodcast
+          laChu={laChu}
+          daThem={kenhPodcast.map((k) => ({
+            id: k.id,
+            ten: k.title,
+            soTap: k._count.contentItems,
+            duongDanFeed: k.externalId,
           }))}
         />
 

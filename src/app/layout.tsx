@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { NhacKhoiDongLai } from "@/components/NhacKhoiDongLai";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin", "vietnamese"],
@@ -41,6 +43,18 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        {/* Dải nhắc khởi động lại nằm ở ĐÂY chứ không nằm trong khung trang,
+            và đó là chỗ duy nhất đúng.
+
+            Bản đầu tôi đặt nó trong `KhungTrang`, tức là bên trong từng trang.
+            Đặt vậy thì nó vô dụng đúng lúc cần nhất: khi máy chủ giữ bản Prisma
+            cũ, trang chết ngay ở bước lấy dữ liệu, chưa kịp vẽ ra khung nào cả
+            — người dùng chỉ thấy "A server error occurred". Đã tận mắt thấy nó
+            hỏng đúng như vậy.
+
+            Bố cục gốc thì vẫn dựng dù trang bên trong có chết, nên đặt ở đây
+            lời nhắc mới đến được đúng lúc. */}
+        <NhacKhoiDongLai />
         {children}
       </body>
     </html>

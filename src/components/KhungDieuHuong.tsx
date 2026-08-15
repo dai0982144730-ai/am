@@ -197,13 +197,10 @@ export function KhungDieuHuong({
   children,
   emailNguoiDung,
   dangXuat,
-  nhacKhoiDongLai,
 }: {
   children: React.ReactNode;
   emailNguoiDung?: string | null;
   dangXuat?: React.ReactNode;
-  /** Dải nhắc khởi động lại, dựng sẵn ở máy chủ */
-  nhacKhoiDongLai?: React.ReactNode;
 }) {
   const hienTai = usePathname();
   const coLai = useSyncExternalStore(
@@ -220,7 +217,6 @@ export function KhungDieuHuong({
 
   return (
     <div className="min-h-screen bg-background">
-      {nhacKhoiDongLai}
       <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-neutral-200 bg-nen-menu/95 px-4 backdrop-blur dark:border-neutral-800">
         <button
           type="button"

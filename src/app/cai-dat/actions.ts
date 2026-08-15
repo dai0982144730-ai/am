@@ -11,6 +11,8 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db/prisma";
+import { timPodcast, type KetQuaTim } from "@/lib/nguon/podcast";
+import { quetPodcast, themKenhPodcast } from "@/lib/nguon/quetPodcast";
 import { doiHoiChuDuAn } from "@/lib/quyen";
 import { CAC_GIONG } from "@/lib/tts/giong";
 import { TOC_DO_MAX, TOC_DO_MIN } from "@/components/TrinhPhatAmThanh";
@@ -204,4 +206,104 @@ export async function luuTocDoDoc(
   revalidatePath("/ban-tin");
 
   return { ok: true, thongDiep: `Tốc độ mặc định: ${Math.round(lamTron * 100)}%.` };
+}
+
+// ==========================================================================
+// Podcast
+// ==========================================================================
+
+/**
+ * Tìm podcast theo tên.
+ *
+ * Không ghi gì vào database nên **không đòi quyền chủ dự án** — khách xem thử
+ * được, chỉ không thêm được. Việc này cũng không gọi Claude nên không tốn gì.
+ */
+export async function timPodcastTheoTen(tuKhoa: string): Promise<{
+  ok: boolean;
+  thongDiep?: string;
+  ketQua: KetQuaTim[];
+}> {
+  const tu = tuKhoa.trim();
+  if (tu.length < 2) {
+    return { ok: false, thongDiep: "Gõ ít nhất hai chữ.", ketQua: [] };
+  }
+
+  try {
+    const ketQua = await timPodcast(tu);
+    return {
+      ok: true,
+      ketQua,
+      thongDiep: ketQua.length === 0 ? "Không tìm thấy kênh nào." : undefined,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      ketQua: [],
+      thongDiep: `Không tra cứu được: ${e instanceof Error ? e.message : e}`,
+    };
+  }
+}
+
+/** Thêm một kênh podcast rồi lấy luôn vài tập mới nhất về. */
+export async function themPodcast(duongDanFeed: string): Promise<{
+  ok: boolean;
+  thongDiep: string;
+  canhBao?: string;
+}> {
+  try {
+    await doiHoiChuDuAn("thêm kênh podcast");
+  } catch (e) {
+    return {
+      ok: false,
+      thongDiep: e instanceof Error ? e.message : "Không có quyền.",
+    };
+  }
+
+  const kq = await themKenhPodcast(duongDanFeed);
+  if (!kq.ok) return { ok: false, thongDiep: kq.thongDiep };
+
+  // Lấy luôn tập về: thêm một kênh rồi thấy trống trơn thì người dùng không
+  // biết là hỏng hay là chưa chạy. Có nội dung ngay mới thấy nó hoạt động.
+  const quet = await quetPodcast(5, 120);
+
+  revalidatePath("/cai-dat");
+  revalidatePath("/");
+
+  return {
+    ok: true,
+    thongDiep: `${kq.thongDiep} Đã lấy về ${quet.soTapThemMoi} tập mới nhất — chúng sẽ được xếp chuyên mục trong lượt chạy đêm.`,
+    canhBao: kq.canhBaoNgonNgu,
+  };
+}
+
+/** Bỏ một kênh podcast cùng toàn bộ tập của nó. */
+export async function boPodcast(idNguon: string): Promise<{
+  ok: boolean;
+  thongDiep: string;
+}> {
+  try {
+    await doiHoiChuDuAn("bỏ kênh podcast");
+  } catch (e) {
+    return {
+      ok: false,
+      thongDiep: e instanceof Error ? e.message : "Không có quyền.",
+    };
+  }
+
+  const nguon = await prisma.source.findFirst({
+    where: { id: idNguon, type: "podcast_rss" },
+    select: { title: true, _count: { select: { contentItems: true } } },
+  });
+
+  if (!nguon) return { ok: false, thongDiep: "Không tìm thấy kênh này." };
+
+  await prisma.source.delete({ where: { id: idNguon } });
+
+  revalidatePath("/cai-dat");
+  revalidatePath("/");
+
+  return {
+    ok: true,
+    thongDiep: `Đã bỏ "${nguon.title}" cùng ${nguon._count.contentItems} tập.`,
+  };
 }
