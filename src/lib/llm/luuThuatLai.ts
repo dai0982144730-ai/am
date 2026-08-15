@@ -52,11 +52,20 @@ export async function thuatLaiHangLoat(
 ): Promise<KetQuaThuatLaiHangLoat> {
   const cacBai = await prisma.contentItem.findMany({
     where: {
-      type: { in: ["blog_article", "forum_post"] },
+      // Có cả VIDEO, không chỉ bài viết. Một video tiếng Anh với chủ nhà cũng
+      // vô dụng y như một bài blog tiếng Anh — họ không nghe hiểu được. Bản
+      // thuật lại tiếng Việt là đường sống duy nhất của cả hai.
+      type: { in: ["blog_article", "forum_post", "video"] },
       narrationAsset: null,
       transcript: { fetchStatus: "success" },
     },
-    orderBy: { publishedAt: "desc" },
+    // Thuật lại thứ đáng thuật trước. Mỗi bản tốn hơn chục giây của Claude nên
+    // thứ tự quan trọng: xếp theo ngày đăng thì có đêm dùng hết lượt cho mấy
+    // bài tầm thường mà bỏ sót bài hay đăng hôm trước.
+    orderBy: [
+      { score: { compositeScore: { sort: "desc", nulls: "last" } } },
+      { publishedAt: "desc" },
+    ],
     take: gioiHan * 2, // lấy dư vì sẽ bỏ bớt bài tiếng Việt
     select: {
       id: true,
