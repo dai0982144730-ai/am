@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { NhacKhoiDongLai } from "@/components/NhacKhoiDongLai";
+import { MA_DAT_TONG_SOM, TONG_MAC_DINH } from "@/lib/giaoDien/tongMau";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,9 +40,22 @@ export default function RootLayout({
     // thật. Chỉ an toàn vì hai thẻ này không nhận dữ liệu động nào.
     <html
       lang="vi"
+      // Đặt sẵn tông mặc định ngay từ máy chủ. Đoạn mã trong <head> bên dưới sẽ
+      // sửa lại nếu người dùng đã chọn khác — nhưng đặt sẵn ở đây thì trường
+      // hợp phổ biến nhất (dùng mặc định) không phải chờ mã đó chạy.
+      data-tong={TONG_MAC_DINH}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Đặt tông màu TRƯỚC khi trang được vẽ.
+
+            Phải là thẻ script chặn nằm trong <head>, không thể thay bằng một
+            component React: đợi React chạy xong mới đổi màu thì người dùng nhìn
+            thấy một nháy nền trắng rồi mới chuyển sang đen. Nháy đó ngắn nhưng
+            chói mắt, và ở tông tối thì nó rất khó chịu. */}
+        <script dangerouslySetInnerHTML={{ __html: MA_DAT_TONG_SOM }} />
+      </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         {/* Dải nhắc khởi động lại nằm ở ĐÂY chứ không nằm trong khung trang,
             và đó là chỗ duy nhất đúng.

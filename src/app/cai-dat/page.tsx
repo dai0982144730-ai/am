@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { KhungTrang } from "@/components/KhungTrang";
+import { ChonTongMau } from "@/components/ChonTongMau";
 import { ThanhTrongSo } from "@/components/ThanhTrongSo";
 import { ThemPodcast } from "@/components/ThemPodcast";
 import { ThanhTyLeNguonMoi } from "@/components/ThanhTyLeNguonMoi";
@@ -77,7 +78,12 @@ export default async function TrangCaiDat() {
           </div>
         ) : null}
 
-        <section className="mt-8">
+        {/* Đặt lên đầu trang Cài đặt có chủ đích: đây là thứ thấy ngay bằng
+            mắt và đổi thường xuyên nhất, khác với trọng số chấm điểm vốn đặt
+            một lần rồi thôi. */}
+        <ChonTongMau />
+
+        <section className="mt-10">
           <h2 className="text-base font-semibold">
             Tiêu chí chất lượng theo nguồn
           </h2>

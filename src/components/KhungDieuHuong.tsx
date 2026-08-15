@@ -148,8 +148,11 @@ function MucBung({ muc, dangO }: { muc: MucDieuHuong; dangO: boolean }) {
       href={muc.duongDan}
       className={`${kieu} ${
         dangO
-          ? "bg-cam-100 font-medium text-cam-700 dark:bg-neutral-800 dark:text-cam-300"
-          : "text-neutral-700 hover:bg-cam-50 dark:text-neutral-200 dark:hover:bg-neutral-800"
+          ? // Nền mục đang mở ám cam chứ không xám trung tính. Ở tông tối,
+            // `cam-100` là nâu rất đậm (#2a1d16) — cùng họ với chữ cam nên
+            // trông là một khối, thay vì một mảng xám tình cờ có chữ cam.
+            "bg-cam-100 font-medium text-cam-700 dark:text-cam-300"
+          : "text-neutral-700 hover:bg-cam-50 dark:text-neutral-200 dark:hover:bg-cam-50"
       }`}
     >
       <Icon size={20} strokeWidth={dangO ? 2.25 : 1.75} className="shrink-0" />
@@ -183,8 +186,11 @@ function MucCo({ muc, dangO }: { muc: MucDieuHuong; dangO: boolean }) {
       title={muc.ten}
       className={`${kieu} ${
         dangO
-          ? "bg-cam-100 font-medium text-cam-700 dark:bg-neutral-800 dark:text-cam-300"
-          : "text-neutral-700 hover:bg-cam-50 dark:text-neutral-200 dark:hover:bg-neutral-800"
+          ? // Nền mục đang mở ám cam chứ không xám trung tính. Ở tông tối,
+            // `cam-100` là nâu rất đậm (#2a1d16) — cùng họ với chữ cam nên
+            // trông là một khối, thay vì một mảng xám tình cờ có chữ cam.
+            "bg-cam-100 font-medium text-cam-700 dark:text-cam-300"
+          : "text-neutral-700 hover:bg-cam-50 dark:text-neutral-200 dark:hover:bg-cam-50"
       }`}
     >
       <Icon size={24} strokeWidth={dangO ? 2.5 : 1.9} />

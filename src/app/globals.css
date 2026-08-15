@@ -1,22 +1,44 @@
 @import "tailwindcss";
 
 /**
- * Tông màu: nền be nhạt, điểm nhấn cam.
+ * Hai tông màu: TỐI (mặc định) và SÁNG.
  *
- * CÁCH LÀM: thay vì đi sửa hàng trăm chỗ trong code giao diện, ở đây **vẽ đè
- * lên bảng màu `neutral` có sẵn của Tailwind** bằng dải be ấm. Mọi
- * `bg-neutral-50`, `border-neutral-200`… đang rải khắp các trang tự động đổi
- * theo. Đổi tông sau này cũng chỉ sửa đúng file này.
+ * ## Cách làm — vì sao không đi sửa từng trang
  *
- * Dải be được chọn hơi ngả vàng đỏ (sắc độ ~35°) chứ không xám trung tính, để
- * đặt cạnh màu cam thì trông cùng một họ, không bị lệch thành hai gam rời nhau.
+ * Thay vì sửa hàng trăm chỗ trong code giao diện, ở đây **vẽ đè lên bảng màu
+ * `neutral` có sẵn của Tailwind**. Mọi `bg-neutral-50`, `border-neutral-200`…
+ * đang rải khắp các trang tự động đổi theo. Đổi tông sau này cũng chỉ sửa đúng
+ * file này.
  *
- * Chỉ ba màu ngoài dải be: cam (nhấn), vàng hổ phách (cảnh báo, có sẵn của
- * Tailwind), đỏ (đang thu âm). Thêm màu nữa thì giao diện bắt đầu ồn.
+ * ## Vì sao chọn theo thuộc tính `data-tong` chứ không theo cài đặt máy
+ *
+ * Bản trước chỉ dùng `@media (prefers-color-scheme: dark)`, tức là phụ thuộc
+ * hoàn toàn vào cài đặt Windows. Chủ dự án chưa từng nhìn thấy chế độ tối vì
+ * máy đang để chế độ sáng — mà lại muốn nền đen. Giờ thẻ `<html>` mang
+ * `data-tong="toi"` hoặc `data-tong="sang"`, do người dùng chọn trong Cài đặt.
+ * Ai chọn "theo máy" thì đoạn mã nhỏ ở `layout.tsx` quy đổi ra một trong hai
+ * giá trị đó trước khi trang được vẽ — CSS ở đây không bao giờ phải xử lý ba
+ * trạng thái.
+ *
+ * ## Bảng màu tối lấy theo giao diện chủ dự án gửi
+ *
+ * Nền gần đen, khối nội dung **sáng hơn nền** một bậc, viền rất mảnh, chữ trắng
+ * ngà chứ không trắng gắt. Điểm nhấn cam dịu hơn bản dùng trên nền sáng: cam
+ * đậm đặt trên nền đen thì chói và rung mắt.
+ *
+ * Riêng menu trái vẫn **đậm hơn vùng nội dung một chút**, đúng yêu cầu chủ dự
+ * án nêu từ đầu — ở tông tối thì "đậm hơn" nghĩa là đen sâu hơn.
  */
 
+/* Biến thể `dark:` bám vào `data-tong` thay vì cài đặt máy. Dùng `:where()` để
+   không làm tăng độ ưu tiên — nếu tăng, `dark:` sẽ đè cả những chỗ không mong
+   muốn và rất khó lần ra. */
+@custom-variant dark (&:where([data-tong="toi"], [data-tong="toi"] *));
+
 @theme {
-  /* ----- Dải be, thay chỗ của neutral ----- */
+  /* ----- Dải be, thay chỗ của neutral (tông SÁNG) -----
+     Chọn hơi ngả vàng đỏ (sắc độ ~35°) chứ không xám trung tính, để đặt cạnh
+     màu cam thì trông cùng một họ, không lệch thành hai gam rời nhau. */
   --color-neutral-50: #fbf8f3;
   --color-neutral-100: #f4eee4;
   --color-neutral-200: #e7ddcd;
@@ -44,6 +66,45 @@
   --foreground: #2c2720;
   /* Nền menu trái: đậm hơn một chút để tách khỏi vùng nội dung */
   --nen-menu: #f2ebdf;
+  color-scheme: light;
+}
+
+/**
+ * Tông TỐI.
+ *
+ * Chỉ vẽ đè phần đậm của dải neutral (200 trở lên), **không đảo ngược cả dải**.
+ * Đảo ngược thì `bg-neutral-50` ở những chỗ chưa kèm biến thể `dark:` sẽ hoá
+ * thành mảng trắng giữa nền đen — một lỗi rất dễ lọt mà lại khó tìm. Giữ chiều
+ * "số nhỏ = sáng, số lớn = đậm" thì chỗ nào quên `dark:` cũng chỉ hơi lệch tông
+ * chứ không vỡ hẳn.
+ */
+[data-tong="toi"] {
+  --background: #0e0e0e;
+  --foreground: #f2f2f2;
+  /* Menu trái đen sâu hơn vùng nội dung */
+  --nen-menu: #070707;
+  color-scheme: dark;
+
+  /* Chữ phụ và chữ mờ */
+  --color-neutral-200: #e8e8e8;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a8a8a8;
+  --color-neutral-500: #8a8a8a;
+  --color-neutral-600: #6a6a6a;
+  /* Viền: 700 cho viền rõ, 800 cho viền mảnh */
+  --color-neutral-700: #3a3a3a;
+  --color-neutral-800: #2a2a2a;
+  /* Khối nội dung — SÁNG HƠN nền, đúng cách giao diện tham khảo làm */
+  --color-neutral-900: #1a1a1a;
+  --color-neutral-950: #0a0a0a;
+
+  /* Cam dịu lại: cam đậm trên nền đen thì chói và rung mắt */
+  --color-cam-50: #1c1310;
+  --color-cam-100: #2a1d16;
+  --color-cam-300: #e0a184;
+  --color-cam-500: #d4845f;
+  --color-cam-600: #c2724f;
+  --color-cam-700: #a85f3f;
 }
 
 @theme inline {
@@ -54,18 +115,26 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Chế độ tối cũng giữ sắc ấm, chỉ đảo sáng tối — nền nâu rất đậm chứ
-       không phải đen thuần, để vẫn cùng họ với màu cam */
-    --background: #17140f;
-    --foreground: #ede5d8;
-    --nen-menu: #100e0a;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Thanh cuộn theo tông, kẻo giữa nền đen lại thò ra một dải xám sáng của
+   Windows. `color-scheme` ở trên lo phần lớn việc này, đây là phần tinh chỉnh
+   cho trình duyệt nhân Chromium. */
+[data-tong="toi"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+[data-tong="toi"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-tong="toi"] ::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 5px;
+}
+[data-tong="toi"] ::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
 }

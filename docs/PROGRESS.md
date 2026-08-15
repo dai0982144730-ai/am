@@ -1850,3 +1850,56 @@ npx tsx scripts/phan-loai.ts --podcast
 Cờ `--podcast` là cần thiết chứ không phải tiện tay: hàng chờ phân loại xếp theo
 ngày đăng, mà tin thời sự YouTube ra hàng ngày còn podcast vài tuần một tập. Đo
 thật lúc thêm kênh đầu tiên: **765 mục đứng trước 5 tập podcast vừa lấy về**.
+
+## Tông màu tối — mặc định, có nút chuyển (2026-08-15)
+
+Chủ dự án chỉ vào giao diện QLDA và nói thẳng: "giao diện tôi gửi là giao diện
+màu đen cơ mà chưa làm". Đúng — trước đó tôi làm nền be theo yêu cầu cũ, và
+chế độ tối tuy có nhưng là **nâu đậm** chứ không phải đen, lại chỉ bật khi
+Windows đang để chế độ tối. Máy chủ dự án để chế độ sáng nên chưa từng nhìn thấy.
+
+**Chốt**: mặc định nền đen, thêm nút chọn Sáng / Tối / Theo máy trong Cài đặt.
+
+### Bảng màu tối, lấy theo giao diện tham khảo
+
+| Chỗ | Màu |
+|---|---|
+| Menu trái | `#070707` — đen sâu nhất, đúng luật "menu đậm hơn nội dung" |
+| Nền nội dung | `#0e0e0e` |
+| Khối, thẻ | `#1a1a1a` — **sáng hơn nền**, đúng cách bản mẫu làm |
+| Viền mảnh | `#2a2a2a` |
+| Chữ | `#f2f2f2`, chữ phụ `#a8a8a8`, chữ mờ `#8a8a8a` |
+| Điểm nhấn | `#c2724f` — dịu hơn cam nền sáng, vì cam đậm trên nền đen thì chói |
+| Mục menu đang mở | nền `#2a1d16` ám cam + chữ `#e0a184` |
+
+### Ba chỗ quyết định về kỹ thuật
+
+**1. Bám `data-tong` chứ không bám `@media (prefers-color-scheme)`.** Bản cũ phụ
+thuộc hoàn toàn vào cài đặt Windows nên người dùng không tự chọn được. Giờ thẻ
+`<html>` mang `data-tong="toi"` hoặc `"sang"`. Ai chọn "theo máy" thì được quy
+đổi ra một trong hai **trước khi** CSS nhìn thấy — CSS không bao giờ phải xử lý
+ba trạng thái, và không phải trộn `@media` với `[data-tong]`, vốn là chỗ rất dễ
+sinh lỗi kiểu "đổi được một chiều nhưng không đổi lại được".
+
+**2. Không đảo ngược cả dải màu.** Ở tông tối chỉ vẽ đè phần đậm (neutral-200
+trở lên), giữ nguyên chiều "số nhỏ = sáng, số lớn = đậm". Đảo ngược thì chỗ nào
+quên biến thể `dark:` sẽ hoá thành mảng trắng giữa nền đen — lỗi dễ lọt mà khó
+tìm. Giữ chiều thì chỗ quên chỉ hơi lệch tông chứ không vỡ.
+
+Đã đo lại sau khi làm: **8 trang không có một lớp nền sáng nào thiếu biến thể
+`dark:`**, và trang chủ không có mảng sáng nào. Code sẵn có viết `dark:` rất đều
+nên đổi tông gần như không phải sửa giao diện.
+
+**3. Đoạn mã đặt tông nằm thẳng trong `<head>`.** Không thể thay bằng component
+React: đợi React chạy xong mới đổi màu thì người dùng thấy một nháy nền trắng
+rồi mới sang đen. Nháy đó ngắn nhưng chói, ở tông tối rất khó chịu.
+
+Lựa chọn lưu trong bộ nhớ máy chứ không lưu database, có chủ đích: nó thuộc về
+**cái máy đang ngồi**. Chủ dự án làm trên hai máy, máy nhà buổi tối và máy văn
+phòng ban ngày có thể muốn khác nhau; lưu vào database thì hai máy giẫm chân nhau.
+
+### Đã kiểm thật
+
+- Mở lần đầu, chưa lưu gì: `data-tong="toi"`, nền `#0e0e0e`, chữ `#f2f2f2`
+- Bấm Sáng → đổi ngay sang `#fdfbf7`; bấm Tối → về `#0e0e0e`. Cả hai chiều
+- 8 trang đều trả 200, không trang nào có lớp nền sáng thiếu `dark:`

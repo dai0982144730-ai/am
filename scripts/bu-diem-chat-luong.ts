@@ -100,6 +100,16 @@ async function main() {
         },
       });
 
+      // Ghi luôn kết luận ngôn ngữ. Bản đầu không làm việc này, và đó là phí
+      // phạm thật: Claude đã đọc xong và đã trả lời ngôn ngữ nào rồi, câu trả
+      // lời nằm ngay trong `kq`, mà lại vứt đi. Xem scripts/sua-ngon-ngu.ts.
+      await prisma.contentItem.update({
+        where: { id: muc.id },
+        data: {
+          originalLanguage: kq.ketQua.ngonNguNoiDung === "vi" ? "vi" : "khac",
+        },
+      });
+
       console.log(
         `  ${kq.ketQua.diemChatLuong.toFixed(2)} ${
           kq.ketQua.tieuDeTiengViet

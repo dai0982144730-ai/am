@@ -401,9 +401,9 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 | **8** | Trợ lý ghi chú: `Note` (text/voice), auto-tag, `KnowledgeCollection` + wiki, `ActionItem` — **xong 2026-08-15**, phần wiki tổng hợp định kỳ chưa làm |
 | **9** | Personalization engine: taste profile, embeddings, mood-theo-giờ, cold-start onboarding |
 | **10** | Trợ lý chủ động: `DigestRun`, `AssistantBriefing` + audio briefing, dedup, checklist AI — **xong phần chữ 2026-08-15**, audio chờ khoá TTS |
-| **11** | Mở rộng nguồn: Podcast RSS → SoundCloud |
+| **11** | Mở rộng nguồn: Podcast RSS → SoundCloud — **podcast xong 2026-08-15**, tìm kênh bằng cách gõ tên qua API tra cứu miễn phí của Apple; SoundCloud chưa làm |
 | **12** | Audio-only & smart queue (kể cả hàng đợi theo BPM) |
-| **13** | Chat agent tool-use tích hợp toàn bộ API |
+| **13** | **Khung trò chuyện với trợ lý** — trọng tâm là **giao diện**, không phải phần gọi API. Chủ dự án chốt 2026-08-15 khi chỉ vào `ChatWidget.tsx` của QLDA: khung **neo được mép trái hoặc mép phải**, kéo thanh dọc đổi bề rộng, và **đẩy nội dung sang bên chứ không che lên**; hoặc chuyển sang **khung nổi** kéo thả tự do, đổi kích thước từ cả 8 hướng, kéo sát mép thì tự dính như cửa sổ Windows, thu gọn thành dải mảnh, mở ra cửa sổ riêng, bật tắt bằng Ctrl+K. Mô tả cũ — "chat agent tool-use tích hợp toàn bộ API" — **không đúng ý**: phần gọi API chỉ là thứ chạy bên dưới, còn thứ chủ dự án cần thấy là cái khung |
 | **14** | Vận hành: dashboard quota/chi phí, score versioning, export dữ liệu cá nhân |
 | **15** | **Cổng API trợ lý** (`/api/v1/tro-ly/*`) — chuẩn dùng chung với `tiendo`/`phaply`, chuẩn bị cho app Android. Chi tiết ở mục ngay dưới đây |
 
