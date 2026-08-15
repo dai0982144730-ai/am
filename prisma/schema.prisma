@@ -987,6 +987,30 @@ model QuotaUsageLog {
   @@index([date])
 }
 
+/// Đếm số ký tự đã đưa cho dịch vụ đọc thành tiếng, theo từng tháng.
+///
+/// VÌ SAO PHẢI TỰ ĐẾM thay vì hỏi Google: Google chỉ báo mức dùng trong bảng
+/// điều khiển của họ, và báo trễ vài giờ. Muốn **chặn trước khi vượt** thì phải
+/// biết ngay tại thời điểm chuẩn bị gọi — nên tự cộng dồn ở đây.
+///
+/// Đếm theo tháng vì mức miễn phí của Google cấp lại theo tháng. Sang tháng mới
+/// là một dòng mới, tự động về 0.
+model TtsUsage {
+  id String @id @default(cuid())
+
+  /// Tháng theo dạng "2026-08", trùng cách Google tính chu kỳ miễn phí
+  month String @unique
+
+  /// Tổng ký tự đã gửi đi trong tháng
+  charactersUsed Int @default(0)
+
+  /// Lần gọi gần nhất hỏng vì lý do gì — để màn hình Cài đặt nói được sự thật
+  lastError   String?
+  lastCallAt  DateTime?
+
+  updatedAt DateTime @updatedAt
+}
+
 /// Nhật ký mọi lượt gọi Cổng API trợ lý (/api/v1/tro-ly/*).
 ///
 /// Để sau này biết chi phí Claude API đến từ thiết bị nào, endpoint nào, và

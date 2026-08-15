@@ -3,10 +3,13 @@ import Link from "next/link";
 import { KhungTrang } from "@/components/KhungTrang";
 import { ThanhTrongSo } from "@/components/ThanhTrongSo";
 import { ThanhTyLeNguonMoi } from "@/components/ThanhTyLeNguonMoi";
+import { TinhHinhGiongDoc } from "@/components/TinhHinhGiongDoc";
 import { prisma } from "@/lib/db/prisma";
 import { emailChuDuAn, laChuDuAn } from "@/lib/quyen";
 import { CHUYEN_MUC_CHINH_DUOC, docTyLeNguonMoi } from "@/lib/nguonMoi/tyLe";
 import { DEFAULT_WEIGHTS } from "@/lib/scoring/normalize";
+import { daCauHinh } from "@/lib/tts/doc";
+import { xemTinhHinh as xemTinhHinhTts } from "@/lib/tts/hanMuc";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +22,11 @@ const TEN_LOAI_NGUON: Record<string, string> = {
 };
 
 export default async function TrangCaiDat() {
-  const [email, laChu, tyLeNguonMoi] = await Promise.all([
+  const [email, laChu, tyLeNguonMoi, tinhHinhTts] = await Promise.all([
     emailChuDuAn(),
     laChuDuAn(),
     docTyLeNguonMoi(),
+    xemTinhHinhTts(),
   ]);
 
   // Khách vẫn xem được trang này để biết hệ thống chấm điểm thế nào — chỉ không
@@ -117,6 +121,8 @@ export default async function TrangCaiDat() {
             tyLe: tyLeNguonMoi[m.ma] ?? 30,
           }))}
         />
+
+        <TinhHinhGiongDoc tinhHinh={tinhHinhTts} daCoKhoa={daCauHinh()} />
 
         <section className="mt-10">
           <h2 className="text-base font-semibold">Việc cần đăng nhập</h2>
