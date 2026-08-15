@@ -1970,3 +1970,72 @@ khung xem đó đều sẽ gặp y hệt.
 - Thu gọn → dải 40px; về mặc định → 400×600
 - Ctrl+K đóng mở đúng cả hai chiều
 - Hỏi thật hai câu: trả lời đúng, bằng tiếng Việt, kèm nguồn, mỗi câu ~16 giây
+
+## Database chuyển từ Neon về máy (2026-08-15)
+
+Chủ dự án quyết định làm trên **một máy duy nhất** từ nay, nên lý do ban đầu để
+database trên mạng (hai máy dùng chung kho) không còn.
+
+### Đo trước và sau
+
+| Việc | Neon (Ohio, Mỹ) | Trên máy | Nhanh hơn |
+|---|---|---|---|
+| Truy vấn rỗng `SELECT 1` | 224 ms | **0,3 ms** | ~750× |
+| Trang danh sách 24 thẻ | 525 ms | **47 ms** | 11× |
+| Đếm toàn bảng | 229 ms | **4 ms** | 57× |
+
+224ms cho một truy vấn không làm gì cả — toàn bộ là thời gian gói tin đi vòng
+qua Mỹ và về. Một trang chạy 4–5 truy vấn là hơn một giây chỉ để chờ đường truyền.
+
+Sau khi đổi, 9 trang đo được 72–192 ms mỗi trang.
+
+### Hiểu lầm cần gỡ: chuyện này KHÔNG ảnh hưởng GitHub
+
+Chủ dự án hỏi *"khi đó không thể dùng github đúng không?"*. Không phải vậy:
+GitHub chứa **code**, database chứa **dữ liệu**, hai thứ tách rời. `DATABASE_URL`
+nằm trong `.env` mà `.env` bị gitignore chặn, nên mỗi máy có file riêng.
+
+Cái mất thật sự là chuyện khác: **hai máy không còn dùng chung kho nữa**. Đây
+mới là lý do ban đầu chọn Neon. Chủ dự án chấp nhận vì từ nay chỉ làm một máy.
+
+### Chọn bản rời, không phải bản cài đặt
+
+| | Bản rời (đã chọn) | WSL2 + Ubuntu |
+|---|---|---|
+| Quyền admin | không cần | cần |
+| Khởi động lại máy | không | nhiều khả năng có |
+| pgvector | chưa có | có sẵn |
+| Gỡ bỏ | xoá một thư mục | gỡ WSL |
+
+pgvector là điểm mắc duy nhất — bản Windows chính thức không kèm. Nhưng đo ra
+thì **nó chưa hề được dùng**: `ContentEmbedding` và `NoteEmbedding` đều 0 dòng,
+không dòng code nào trong `src/lib` đụng tới. Nó để dành cho Phase 9. Vậy nên
+chọn đường nhẹ nhất bây giờ, tính chuyện pgvector khi Phase 9 tới.
+
+### Cạm bẫy khi chuyển
+
+**`pg_dump` không lùi được phiên bản.** Bản đầu tôi tải PostgreSQL 17.6, chạy
+`pg_dump` thì nhận `aborting because of server version mismatch` — Neon đang chạy
+**18.4**. Phải tải lại đúng bản 18.4. Kiểm phiên bản máy chủ nguồn TRƯỚC khi tải.
+
+**Bản dump có phần pgvector phải gỡ tay.** Ba chỗ: lệnh `CREATE EXTENSION vector`,
+hai cột `vector public.vector(1024)`, hai chỉ mục `USING hnsw`. Gỡ cột xong còn
+dấu phẩy thừa trước dấu `)` phải sửa nốt, và hai khối `COPY` vẫn kê tên cột
+`vector` nên phải bỏ cả khối (may là cả hai bảng đều rỗng).
+
+### Đối chiếu sau khi chuyển — khớp từng con
+
+| | Neon | Trên máy |
+|---|---|---|
+| Số bảng | 41 | 41 |
+| ContentItem | 1.062 | 1.062 |
+| Transcript | 1.045 | 1.045 |
+| Source | 268 | 268 |
+| ContentScore | 297 | 297 |
+| Migration đã chạy | 14 | 14 |
+| Cỡ | 47 MB | 47 MB |
+
+### Nhớ bật database trước khi mở web
+
+Bản rời không tự chạy khi bật máy. `scripts/chay-database.cmd` để bật, thêm
+`dung` để tắt, `xem` để kiểm. Mọi trang lỗi kết nối thì nghĩ tới chuyện này trước.

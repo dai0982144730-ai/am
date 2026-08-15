@@ -60,13 +60,62 @@ Chủ dự án chốt ngày 2026-08-15, và đây là thứ phủ lên mọi quy
 **Ngoại lệ duy nhất**: bài tiếng Anh mà Am đã đọc, dịch, kể lại bằng tiếng Việt
 **kèm bản âm thanh tiếng Việt**. Khi đó nội dung chữ dài cũng được, vì có audio.
 
+### "Vô tri" nghĩa là CHƯA XỬ LÝ, không phải ĐEM GIẤU
+
+Đã hiểu sai một lần và phải sửa lại toàn bộ (2026-08-15). Tôi đọc câu "vô tri"
+thành "vậy thì ẩn đi", rồi làm bộ lọc giấu sạch nội dung nước ngoài chưa có bản
+đọc tiếng Việt. Hậu quả đo được: **28 bài blog và 8 bài diễn đàn biến mất sạch,
+chuyên mục Music trống trơn, chuyên mục AI từ 28 còn 5**.
+
+Chủ dự án nói lại rõ:
+
+> *"Nhiều clip hay bằng tiếng Anh không có thuyết minh thì hãy làm file mp3 tiếng
+> Việt cho nó. Clip nào có thuyết minh tiếng Anh thì chuyển thành thuyết minh
+> tiếng Việt. Ẩn hết đi là sao?"*
+
+Một clip hay bằng tiếng Anh **không phải thứ cần vứt đi — nó là thứ cần lồng
+tiếng**. Ẩn đi là bỏ mất đúng phần nội dung tốt nhất mà chẳng giải quyết gì.
+
 Hệ quả bắt buộc khi viết code:
 
-- Video YouTube từ nguồn mới: **kiểm có tiếng Việt trước khi đưa vào kho**.
-  Không có tiếng Việt và cũng không dựng được bản thuật lại thì đừng lấy.
-- Nội dung tiếng nước ngoài **chỉ được hiện khi đã có bản thuật lại tiếng Việt**.
-- Tiêu đề tiếng Anh phải dịch trước khi hiện lên thẻ (`ContentClassification.titleVi`).
+- **KHÔNG lọc nội dung theo ngôn ngữ ở tầng hiển thị.** Thay vào đó đưa nó vào
+  hàng đợi lồng tiếng.
+- **Nhạc không bao giờ xét ngôn ngữ.** Nghe nhạc là nghe giai điệu; mà nhạc lại
+  không cho LLM đọc sâu nên kết luận ngôn ngữ chỉ dựa vào tiêu đề, tức đoán mò.
+- Tiêu đề tiếng Anh phải dịch trước khi hiện (`ContentClassification.titleVi`),
+  ở **cả thẻ lẫn trang xem**. `npx tsx scripts/dich-tieu-de.ts`
 - Đừng thêm nút nào dẫn người dùng ra khỏi app để tiêu thụ nội dung.
+- **Số trên chip lọc phải đếm y hệt cách danh sách lọc.** Đã vấp: chip ghi
+  "AI 28" mà bấm vào ra 5 nội dung.
+
+## Database chạy ngay trên máy, không ở trên mạng nữa
+
+Từ 2026-08-15, database là **PostgreSQL 18.4 bản rời chạy trên chính máy này**,
+không còn ở Neon. Đo thật: một truy vấn rỗng từ **224 ms xuống 0,3 ms**, một
+trang danh sách từ 525 ms xuống 47 ms.
+
+**Máy chủ database không tự chạy khi bật máy** — đây là bản giải nén chứ không
+phải bản cài đặt (có chủ đích: không đụng quyền admin, muốn gỡ thì xoá thư mục).
+Mở web mà mọi trang đều lỗi kết nối thì gần như chắc chắn là quên bật nó:
+
+```bash
+scripts/chay-database.cmd
+```
+
+| Thứ | Chỗ |
+|---|---|
+| Bản Postgres | `C:\Users\Admin\pgsql-goc\pgsql\bin` |
+| Dữ liệu | `C:\Users\Admin\am-database` |
+| Nhật ký | `C:\Users\Admin\am-database\nhat-ky.log` |
+
+Địa chỉ Neon vẫn nằm trong `.env` dưới dạng ghi chú — muốn quay lại chỉ việc đổi
+chỗ dấu `#`, **code không phải sửa một dòng nào**.
+
+**pgvector chưa có trên bản này.** Bản Windows không kèm sẵn, mà hiện cũng chưa
+dùng tới: hai bảng embedding đều 0 dòng và không code nào đụng tới. Tới Phase 9
+(cá nhân hoá) mới phải lo — khi đó cần cài pgvector rồi tạo lại hai cột `vector`
+cùng hai chỉ mục HNSW. `scripts/check-db.ts` biết phân biệt "chưa cài pgvector"
+với "cài rồi mà mất chỉ mục", nên đừng hoảng khi thấy nó báo chưa có.
 
 ## Cạm bẫy đã gặp — đọc trước khi chạy migration
 

@@ -51,13 +51,32 @@ async function main() {
   const CAN_CO = ["ContentEmbedding_vector_idx", "NoteEmbedding_vector_idx"];
   const dangCo = idx.rows.map((r) => r.indexname);
   const thieu = CAN_CO.filter((t) => !dangCo.includes(t));
-  console.log(
-    `Chỉ mục tìm kiếm ngữ nghĩa: ${
-      thieu.length === 0
-        ? `đủ cả ${CAN_CO.length}`
-        : `THIẾU ${thieu.join(", ")} — xem mục "Cạm bẫy" trong CLAUDE.md`
-    }`,
-  );
+
+  // Phân biệt hai chuyện rất khác nhau mà nhìn qua thì giống hệt:
+  //
+  //   - pgvector CHƯA CÀI  → chỉ mục thiếu là đương nhiên, không phải lỗi.
+  //     Đúng tình trạng bản Postgres rời đang chạy trên máy chủ dự án: bản
+  //     Windows không kèm pgvector, mà hiện cũng chưa dùng tới (0 dòng).
+  //
+  //   - pgvector ĐÃ CÀI mà chỉ mục vẫn thiếu → hỏng thật, gần như chắc chắn do
+  //     quên xoá dòng `DROP INDEX` mà Prisma tự chèn vào migration.
+  //
+  // Báo chung một câu thì lần nào chạy cũng thấy chữ đỏ, rồi quen mắt bỏ qua —
+  // tới lúc hỏng thật cũng không ai để ý.
+  if (!ext.rowCount) {
+    console.log(
+      "Chỉ mục tìm kiếm ngữ nghĩa: chưa có, đúng như dự kiến vì pgvector chưa cài.\n" +
+        "  Không sao cả — Phase 9 (cá nhân hoá) mới cần tới. Khi đó mới phải lo.",
+    );
+  } else {
+    console.log(
+      `Chỉ mục tìm kiếm ngữ nghĩa: ${
+        thieu.length === 0
+          ? `đủ cả ${CAN_CO.length}`
+          : `THIẾU ${thieu.join(", ")} — xem mục "Cạm bẫy" trong CLAUDE.md`
+      }`,
+    );
+  }
 
   const migrations = await client.query<{ migration_name: string; finished_at: Date | null }>(
     `SELECT migration_name, finished_at FROM "_prisma_migrations" ORDER BY started_at`,
