@@ -84,6 +84,29 @@ Cách xử lý khi tạo migration mới:
 Riêng cột `vector` thì đã an toàn — đã khai báo bằng `Unsupported("vector(1024)")`
 trong schema nên Prisma giữ lại.
 
+### Đổi cấu trúc database thì PHẢI khởi động lại máy chủ chạy thử
+
+Đã vấp hai lần và cả hai lần đều mất thời gian đoán mò. Triệu chứng:
+
+```
+Cannot read properties of undefined (reading 'findUnique')
+Unknown field `titleVi` for select statement on model `ContentClassification`
+```
+
+Nhìn thì tưởng code sai, nhưng cột vẫn có trong database và bản Prisma sinh ra
+vẫn đủ trường. Nguyên nhân: `next dev` **giữ bản Prisma cũ trong bộ nhớ** từ lúc
+khởi động, `prisma generate` ghi đè file trên đĩa cũng không lay chuyển được nó.
+
+Cách sửa: vào terminal đang chạy, `Ctrl+C` rồi `npm run dev`.
+
+Cách nhận ra ngay: nếu lỗi nhắc tới một bảng hoặc một cột **vừa mới thêm**, thì
+gần như chắc chắn là chuyện này chứ không phải code sai. Kiểm hai chỗ trước khi
+đi sửa code:
+
+```bash
+npx tsx scripts/check-db.ts
+```
+
 Kiểm tra nhanh tình trạng database bất cứ lúc nào:
 
 ```bash
