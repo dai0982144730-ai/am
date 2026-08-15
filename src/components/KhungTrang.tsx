@@ -12,7 +12,6 @@
 
 import { signOut } from "@/auth";
 import { KhungDieuHuong } from "@/components/KhungDieuHuong";
-import { KhungTroChuyen } from "@/components/troChuyen/KhungTroChuyen";
 
 export function KhungTrang({
   children,
@@ -37,17 +36,17 @@ export function KhungTrang({
     </form>
   );
 
+  // Khung trò chuyện KHÔNG nằm ở đây, mà ở `app/layout.tsx`.
+  //
+  // Đặt ở đây là sai, và đã hỏng thật: mỗi trang tự dựng một `KhungTrang`, nên
+  // đổi trang là khung trò chuyện bị gỡ ra rồi gắn lại. Hai hậu quả chủ dự án
+  // gặp ngay — panel đè lên nội dung vì chỗ chừa bị trả về 0 lúc gỡ, và **cuộc
+  // trò chuyện mất sạch mỗi lần đổi trang**.
+  //
+  // Bố cục gốc thì giữ nguyên qua mọi lần chuyển trang.
   return (
-    <>
-      <KhungDieuHuong emailNguoiDung={emailNguoiDung} dangXuat={nutDangXuat}>
-        {children}
-      </KhungDieuHuong>
-
-      {/* Khung trò chuyện nằm NGOÀI khung điều hướng, không nằm trong.
-          Nó là lớp nổi phủ lên toàn màn hình — đặt vào bên trong thì phần đệm
-          mà chính nó tạo ra sẽ đẩy luôn cả nó, panel neo trái tự đẩy mình sang
-          phải rồi rời khỏi mép. */}
-      <KhungTroChuyen laChu={Boolean(emailNguoiDung)} />
-    </>
+    <KhungDieuHuong emailNguoiDung={emailNguoiDung} dangXuat={nutDangXuat}>
+      {children}
+    </KhungDieuHuong>
   );
 }

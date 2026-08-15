@@ -72,7 +72,9 @@ export function ThemPodcast({
   }
 
   return (
-    <section className="mt-10">
+    // Khong dat margin o day: trang Cai dat xep cac khoi thanh luoi 2 cot,
+    // khoang cach do `gap` cua luoi lo. Co margin rieng thi hai cot lech nhau.
+    <section>
       <h2 className="text-base font-semibold">Podcast</h2>
       <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
         Podcast tiếng Việt là loại nội dung <strong>rẻ nhất và hợp nhất</strong>{" "}

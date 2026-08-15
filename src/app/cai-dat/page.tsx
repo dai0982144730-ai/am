@@ -78,12 +78,24 @@ export default async function TrangCaiDat() {
           </div>
         ) : null}
 
-        {/* Đặt lên đầu trang Cài đặt có chủ đích: đây là thứ thấy ngay bằng
-            mắt và đổi thường xuyên nhất, khác với trọng số chấm điểm vốn đặt
-            một lần rồi thôi. */}
+      {/* SÁU KHỐI XẾP THÀNH LƯỚI 3 HÀNG 2 CỘT, đúng yêu cầu chủ dự án.
+
+          Xếp dọc một cột thì phải cuộn rất lâu mới hết trang, mà mỗi khối lại
+          ngắn — nửa màn hình bên phải bỏ trống. Hai cột lấp chỗ đó.
+
+          `items-start` là chi tiết dễ quên: không có nó thì mọi ô trong cùng
+          một hàng bị kéo cao bằng ô cao nhất, khối ngắn thừa ra một mảng trống
+          phía dưới. Đúng cái "khoảng trắng thừa" cần tránh.
+
+          Chỉ chia cột từ `xl` trở lên: dưới mức đó, thanh trượt trọng số và ô
+          tìm podcast bị bóp quá hẹp, khó bấm hơn là phải cuộn. */}
+      <div className="mt-8 grid items-start gap-x-10 gap-y-10 xl:grid-cols-2">
+        {/* Đặt ô đầu tiên có chủ đích: đây là thứ thấy ngay bằng mắt và đổi
+            thường xuyên nhất, khác với trọng số chấm điểm vốn đặt một lần
+            rồi thôi. */}
         <ChonTongMau />
 
-        <section className="mt-10">
+        <section>
           <h2 className="text-base font-semibold">
             Tiêu chí chất lượng theo nguồn
           </h2>
@@ -110,9 +122,10 @@ export default async function TrangCaiDat() {
               </p>
             </div>
           ) : (
-            // Hai cột trên màn rộng: sáu loại nguồn xếp dọc một cột thì
-            // phải cuộn mãi mới hết, mà mỗi khối lại ngắn.
-            <div className="mt-6 grid gap-4 xl:grid-cols-2">
+            // MỘT cột ở đây, không phải hai. Cả khối này giờ đã nằm trong một
+            // ô của lưới 2 cột ngoài, chia đôi lần nữa thì mỗi thanh trượt chỉ
+            // còn chừng 200px — kéo không nổi.
+            <div className="mt-6 grid gap-4">
               {cacBoTrongSo.map((bo) => {
                 const macDinh = DEFAULT_WEIGHTS[bo.sourceType];
                 return (
@@ -164,7 +177,7 @@ export default async function TrangCaiDat() {
           laChu={laChu}
         />
 
-        <section className="mt-10">
+        <section>
           <h2 className="text-base font-semibold">Việc cần đăng nhập</h2>
           <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
             Hai nhóm việc dưới đây chỉ chủ dự án làm được. Hiện chúng chạy bằng
@@ -188,6 +201,7 @@ export default async function TrangCaiDat() {
             </div>
           </div>
         </section>
+        </div>
       </div>
     </KhungTrang>
   );

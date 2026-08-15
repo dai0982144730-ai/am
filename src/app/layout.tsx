@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { auth } from "@/auth";
 import { NhacKhoiDongLai } from "@/components/NhacKhoiDongLai";
+import { KhungTroChuyen } from "@/components/troChuyen/KhungTroChuyen";
 import { MA_DAT_TONG_SOM, TONG_MAC_DINH } from "@/lib/giaoDien/tongMau";
 
 const geistSans = Geist({
@@ -20,11 +22,15 @@ export const metadata: Metadata = {
   description: "Trợ lý cá nhân tuyển chọn nội dung đáng xem",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Doc phien ngay o bo cuc goc de khung tro chuyen biet co phai chu nha khong
+  const phien = await auth();
+  const laChu = Boolean(phien?.user?.email);
+
   return (
     // `suppressHydrationWarning` ở ĐÚNG hai thẻ này, không phải ở đâu khác.
     //
@@ -70,6 +76,18 @@ export default function RootLayout({
             lời nhắc mới đến được đúng lúc. */}
         <NhacKhoiDongLai />
         {children}
+
+        {/* Khung trò chuyện nằm ở ĐÂY, không nằm trong `KhungTrang`.
+
+            Bản đầu tôi đặt trong `KhungTrang`, mà mỗi trang lại tự dựng một
+            `KhungTrang` riêng — nên đổi trang là khung bị gỡ ra rồi gắn lại.
+            Chủ dự án gặp ngay hai hậu quả: panel đè lên nội dung (lúc gỡ ra nó
+            trả chỗ chừa về 0), và **cuộc trò chuyện mất sạch mỗi lần đổi
+            trang**.
+
+            Ở bố cục gốc thì nó sống suốt phiên: chừa chỗ đúng trên mọi trang,
+            và câu chuyện đang dở vẫn còn nguyên khi chuyển sang trang khác. */}
+        <KhungTroChuyen laChu={laChu} />
       </body>
     </html>
   );

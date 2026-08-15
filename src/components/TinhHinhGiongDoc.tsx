@@ -47,7 +47,9 @@ export function TinhHinhGiongDoc({
       : "bg-cam-500";
 
   return (
-    <section className="mt-10">
+    // Khong dat margin o day: trang Cai dat xep cac khoi thanh luoi 2 cot,
+    // khoang cach do `gap` cua luoi lo. Co margin rieng thi hai cot lech nhau.
+    <section>
       <h2 className="text-base font-semibold">Giọng đọc</h2>
       <p className="mt-1 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
         Am đưa chữ tiếng Việt cho Google đọc thành tiếng. Google cho{" "}

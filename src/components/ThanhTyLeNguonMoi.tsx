@@ -88,7 +88,9 @@ export function ThanhTyLeNguonMoi({
   laChu: boolean;
 }) {
   return (
-    <section className="mt-10">
+    // Khong dat margin o day: trang Cai dat xep cac khoi thanh luoi 2 cot,
+    // khoang cach do `gap` cua luoi lo. Co margin rieng thi hai cot lech nhau.
+    <section>
       <h2 className="text-base font-semibold">Bao nhiêu phần là nguồn mới</h2>
       <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
         Mặc định trợ lý chỉ lấy nội dung từ những kênh và trang bạn đã theo dõi

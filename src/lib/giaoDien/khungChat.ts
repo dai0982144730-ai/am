@@ -276,12 +276,22 @@ export function dangKyNgheKhung(goiLai: () => void): () => void {
 
   // Lần đầu có người nghe mới đọc bộ nhớ máy. Đọc trong `docKhung` thì hàm đó
   // có tác dụng phụ, mà React gọi nó rất nhiều lần.
-  if (hienTai === null) {
-    hienTai = docTrangThai();
-    apChoChua(hienTai, false);
-    // Báo ngay để React vẽ lại với trạng thái thật
-    goiLai();
-  }
+  const lanDau = hienTai === null;
+  if (lanDau) hienTai = docTrangThai();
+
+  // ĐẶT LẠI CHỖ CHỪA MỖI LẦN CÓ NGƯỜI NGHE, không chỉ lần đầu.
+  //
+  // ĐÃ VẤP THẬT (2026-08-15, chủ dự án gửi ảnh): panel mở ra đè lên nội dung,
+  // chữ bị cắt mất, và đổi trang thì vẫn đè. Nguyên nhân: khi khung bị gỡ khỏi
+  // trang, nó trả chỗ chừa về 0; lúc gắn lại thì `hienTai` đã khác `null` nên
+  // nhánh này bị bỏ qua và chỗ chừa không bao giờ được đặt lại.
+  //
+  // Đặt lại vô điều kiện thì dù khung có bị gỡ ra gắn vào bao nhiêu lần, chỗ
+  // chừa vẫn luôn khớp với trạng thái thật.
+  apChoChua(hienTai!, false);
+
+  // Báo ngay để React vẽ lại với trạng thái thật thay vì `BAN_DAU`
+  if (lanDau) goiLai();
 
   return () => {
     NGUOI_NGHE.delete(goiLai);
