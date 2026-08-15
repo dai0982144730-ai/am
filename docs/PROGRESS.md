@@ -631,6 +631,31 @@ ra file thường — nay nằm ở `trangThai.ts`.
 `quanTam/giaTuKhoa.ts` (tách hằng số cho trình duyệt đọc được mà không kéo theo
 prisma). Thêm hằng số vào file `"use server"` là hỏng ngay.
 
+## Cảnh báo đỏ "hydration" — không phải lỗi của am
+
+Next hiện lỗi đỏ mỗi lần mở trang, chỉ vào `<body>` trong `layout.tsx`. Nhìn
+tên các thuộc tính bị lệch là rõ nguồn gốc:
+
+`data-yd-metadata-content-site` · `data-yd-content-ready` · `bis_register` ·
+`__processed_<uuid>__`
+
+Không cái nào do am sinh ra — `layout.tsx` chỉ đặt `lang` và `className`. Đây
+là **tiện ích mở rộng của trình duyệt** chèn thuộc tính vào trang trước khi
+React kịp dựng. Chuỗi `bis_register` giải mã ra có
+`"extensionId":"eppiocemhmnlbhjplcgkofciie…"`.
+
+Cách xác nhận: mở trang trong cửa sổ ẩn danh (tiện ích bị tắt), cảnh báo biến
+mất.
+
+Đã dập bằng `suppressHydrationWarning` đặt ở **đúng hai thẻ `<html>` và
+`<body>`**. Đây là cách React chính thức khuyên cho tình huống này, và nó chỉ
+bỏ qua khác biệt về thuộc tính của riêng thẻ được đánh dấu — **không lan xuống
+thẻ con**, nên lệch thật bên trong vẫn báo bình thường. Chỉ an toàn vì hai thẻ
+đó không nhận dữ liệu động nào.
+
+Đừng rắc `suppressHydrationWarning` ra chỗ khác để cho hết lỗi — làm vậy là bịt
+miệng đúng thứ dùng để phát hiện lỗi thật.
+
 ## Tự đi tìm nguồn mới (2026-08-15)
 
 File: `src/lib/khamPha/timNguonMoi.ts`, `locSoBo.ts`, `uyTinNguon.ts`,
