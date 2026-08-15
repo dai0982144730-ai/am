@@ -78,23 +78,32 @@ export default async function TrangCaiDat() {
           </div>
         ) : null}
 
-      {/* SÁU KHỐI XẾP THÀNH LƯỚI 3 HÀNG 2 CỘT, đúng yêu cầu chủ dự án.
+      {/* HAI CỘT KIỂU CỘT BÁO, KHÔNG PHẢI LƯỚI.
 
-          Xếp dọc một cột thì phải cuộn rất lâu mới hết trang, mà mỗi khối lại
-          ngắn — nửa màn hình bên phải bỏ trống. Hai cột lấp chỗ đó.
+          Bản trước tôi dùng lưới (`grid grid-cols-2`) và SAI hẳn. Lưới bắt các
+          ô cùng một hàng phải bắt đầu thẳng hàng nhau, nên khối "Tông màu" cao
+          chừng 200px nằm cạnh khối "Tiêu chí chất lượng" cao hơn 1500px thì
+          bên dưới Tông màu hở ra một mảng trống hơn nghìn pixel. Chủ dự án gửi
+          ảnh khoanh đúng chỗ đó.
 
-          `items-start` là chi tiết dễ quên: không có nó thì mọi ô trong cùng
-          một hàng bị kéo cao bằng ô cao nhất, khối ngắn thừa ra một mảng trống
-          phía dưới. Đúng cái "khoảng trắng thừa" cần tránh.
+          `columns-2` thì các khối **chảy tự do**: hết khối này là khối sau lấp
+          lên ngay, không chờ cho thẳng hàng. Trình duyệt tự cân hai cột cho
+          đều. Đây mới là thứ chủ dự án muốn.
+
+          `break-inside-avoid` trên từng khối là bắt buộc — thiếu nó thì một
+          khối có thể bị cắt đôi, nửa nằm cuối cột trái nửa nằm đầu cột phải.
 
           Chỉ chia cột từ `xl` trở lên: dưới mức đó, thanh trượt trọng số và ô
           tìm podcast bị bóp quá hẹp, khó bấm hơn là phải cuộn. */}
-      <div className="mt-8 grid items-start gap-x-10 gap-y-10 xl:grid-cols-2">
+      <div className="mt-8 xl:columns-2 xl:[column-gap:2.5rem]">
         {/* Đặt ô đầu tiên có chủ đích: đây là thứ thấy ngay bằng mắt và đổi
             thường xuyên nhất, khác với trọng số chấm điểm vốn đặt một lần
             rồi thôi. */}
-        <ChonTongMau />
+        <div className="mb-10 break-inside-avoid">
+          <ChonTongMau />
+        </div>
 
+        <div className="mb-10 break-inside-avoid">
         <section>
           <h2 className="text-base font-semibold">
             Tiêu chí chất lượng theo nguồn
@@ -123,8 +132,8 @@ export default async function TrangCaiDat() {
             </div>
           ) : (
             // MỘT cột ở đây, không phải hai. Cả khối này giờ đã nằm trong một
-            // ô của lưới 2 cột ngoài, chia đôi lần nữa thì mỗi thanh trượt chỉ
-            // còn chừng 200px — kéo không nổi.
+            // cột của bố cục hai cột bên ngoài; chia đôi lần nữa thì mỗi thanh
+            // trượt chỉ còn chừng 200px — kéo không nổi.
             <div className="mt-6 grid gap-4">
               {cacBoTrongSo.map((bo) => {
                 const macDinh = DEFAULT_WEIGHTS[bo.sourceType];
@@ -150,7 +159,9 @@ export default async function TrangCaiDat() {
             </div>
           )}
         </section>
+        </div>
 
+        <div className="mb-10 break-inside-avoid">
         <ThanhTyLeNguonMoi
           laChu={laChu}
           cacMuc={CHUYEN_MUC_CHINH_DUOC.map((m) => ({
@@ -158,7 +169,9 @@ export default async function TrangCaiDat() {
             tyLe: tyLeNguonMoi[m.ma] ?? 30,
           }))}
         />
+        </div>
 
+        <div className="mb-10 break-inside-avoid">
         <ThemPodcast
           laChu={laChu}
           daThem={kenhPodcast.map((k) => ({
@@ -168,7 +181,9 @@ export default async function TrangCaiDat() {
             duongDanFeed: k.externalId,
           }))}
         />
+        </div>
 
+        <div className="mb-10 break-inside-avoid">
         <TinhHinhGiongDoc
           tinhHinh={tinhHinhTts}
           daCoKhoa={daCauHinh()}
@@ -176,7 +191,9 @@ export default async function TrangCaiDat() {
           tocDoDangDung={caiDatTroLy?.ttsSpeed ?? 1}
           laChu={laChu}
         />
+        </div>
 
+        <div className="mb-10 break-inside-avoid">
         <section>
           <h2 className="text-base font-semibold">Việc cần đăng nhập</h2>
           <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
@@ -202,6 +219,7 @@ export default async function TrangCaiDat() {
           </div>
         </section>
         </div>
+      </div>
       </div>
     </KhungTrang>
   );
