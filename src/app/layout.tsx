@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { auth } from "@/auth";
+import { DangKySW } from "@/components/DangKySW";
 import { NhacKhoiDongLai } from "@/components/NhacKhoiDongLai";
 import { KhungTroChuyen } from "@/components/troChuyen/KhungTroChuyen";
 import { MA_DAT_TONG_SOM, TONG_MAC_DINH } from "@/lib/giaoDien/tongMau";
@@ -20,6 +21,22 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Am",
   description: "Trợ lý cá nhân tuyển chọn nội dung đáng xem",
+  // Mở từ màn hình chính iPhone thì bỏ luôn thanh địa chỉ. Safari không đọc
+  // `display: standalone` trong manifest, nó chỉ nghe thẻ riêng này
+  appleWebApp: { capable: true, title: "Am", statusBarStyle: "black-translucent" },
+};
+
+/**
+ * Màu thanh trạng thái điện thoại, đổi theo tông người dùng chọn.
+ *
+ * Để một màu cố định thì tông tối trên Android có một dải sáng chói ở đỉnh màn
+ * hình, đúng chỗ mắt nhìn vào đầu tiên lúc mở app.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#dd6b20" },
+    { media: "(prefers-color-scheme: dark)", color: "#171717" },
+  ],
 };
 
 export default async function RootLayout({
@@ -74,6 +91,7 @@ export default async function RootLayout({
 
             Bố cục gốc thì vẫn dựng dù trang bên trong có chết, nên đặt ở đây
             lời nhắc mới đến được đúng lúc. */}
+        <DangKySW />
         <NhacKhoiDongLai />
         {children}
 

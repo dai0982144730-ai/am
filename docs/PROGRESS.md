@@ -2784,3 +2784,56 @@ kể cả đã xem rồi.
 Ba lượt thử đầu đều ra 0 và suýt kết luận là chưa sửa được. Thật ra là **shell
 Windows làm hỏng dấu tiếng Việt** trong `curl -d`. Gửi thân yêu cầu qua file
 `--data-binary` thì ra ngay 39. Từ giờ thử API tiếng Việt thì gửi qua file.
+
+---
+
+## 2026-08-16 (tối, tiếp) — Bản web cài lên màn hình chính
+
+Chủ dự án chốt: làm bản web cho điện thoại trước, app Android thật để sau. Lý do
+là sự thật đo được — máy đang dùng **không có Java, Gradle lẫn Android SDK**,
+cài đủ bộ mất 8–12 GB, trong khi thứ cần hằng ngày chỉ là mở ra nghe được.
+
+Am vốn đã chạy trên trình duyệt điện thoại. Thiếu đúng ba thứ để nó thành app:
+
+1. **Biểu tượng trên màn hình chính** — `src/app/manifest.ts` + hai file PNG
+   sinh bằng script thuần Python (chữ "am" trắng trên nền cam `#dd6b20`, đúng
+   `--color-cam-500`). Không cài thư viện vẽ ảnh chỉ để tạo hai file tĩnh.
+2. **Mở ra không có thanh địa chỉ** — `display: standalone`. Đây là thứ tạo khác
+   biệt lớn nhất; bỏ thanh địa chỉ đi thì nó không còn cảm giác là trang web.
+3. **Mở được lúc mất mạng** — `public/sw.js`.
+
+Thêm hai lối tắt giữ sẵn trong manifest: **Bản tin** (dùng buổi sáng) và **Hàng
+chờ ở chế độ chỉ nghe** (dùng lúc đi đường).
+
+### Service worker chỉ nhận ba việc
+
+Service worker là thứ dễ gây hại nhất trong một web app: nằm giữa trang và mạng,
+sống lâu hơn cả tab, và một lỗi lưu đệm sẽ khiến người dùng nhìn mãi bản cũ mà
+xoá cache trình duyệt cũng không hết. Nên nó chỉ làm ba việc:
+
+- **Trang HTML: hỏi mạng trước.** Nội dung đổi mỗi đêm, lấy bản đệm trước là mở
+  ra thấy bản tin hôm qua. Mạng hỏng mới lôi bản đệm ra, chưa có gì thì hiện
+  trang báo mất mạng bằng tiếng Việt thay cho con khủng long của Chrome.
+- **File mp3: lấy bản đệm trước.** Tên file gắn với id bản ghi nên nội dung
+  không bao giờ đổi. Nghe lại lần hai không tải lại, và nghe được lúc mất sóng.
+  Chỉ lưu bản trả lời `200` — trình phát hay xin từng khúc `206` để tua, lưu một
+  khúc rồi lần sau trả nguyên khúc đó là file hỏng.
+- **Không đụng gì tới `/api`.**
+
+**Không đăng ký ở `next dev`**, và còn chủ động gỡ bản đã đăng ký từ trước: lúc
+phát triển nó trả lại trang cũ và mọi thay đổi vừa sửa đều không hiện ra.
+
+### Kiểm
+
+| Việc | Kết quả |
+|---|---|
+| `/manifest.webmanifest` | 200, đủ tên, icon, lối tắt |
+| `/sw.js` | 200, `node --check` qua |
+| `/icon-192.png`, `/icon-512.png` | 200 `image/png` |
+| Thẻ `theme-color` | hai thẻ, sáng `#dd6b20` / tối `#171717` |
+| Màn hình 375×812 | không tràn ngang, không phần tử nào lọt ra ngoài |
+| `next build` | dựng sạch, `/manifest.webmanifest` là trang tĩnh |
+
+Sửa một lỗi thấy trên ảnh chụp màn hình điện thoại: nút trò chuyện tròn cố định
+ở góc phải dưới **đè lên hàng chọn tốc độ** của trình phát hàng chờ. Thêm
+`pb-24` cho trang.

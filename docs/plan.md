@@ -29,6 +29,13 @@ hỏi được cả ba. **Sau khi hoàn tất toàn bộ các phase của `am` l
 dưới, chính phiên Claude Code này tiếp tục sang việc viết app Android** —
 không phải một dự án tách biệt giao cho ai khác.
 
+**Bước trung gian đã chốt 2026-08-16**: trước khi làm app Android thật, làm
+**bản web cài được lên màn hình chính** (PWA). Máy đang dùng không có Java,
+Gradle lẫn Android SDK — cài đủ bộ mất 8–12 GB, trong khi thứ cần hằng ngày chỉ
+là mở ra nghe được. Am vốn đã chạy trên trình duyệt điện thoại; thêm biểu tượng
+màn hình chính, bỏ thanh địa chỉ, và mở được lúc mất mạng là đủ dùng. App
+Android thật để sau.
+
 Vì vậy `am` phải lộ ra một **"cổng API trợ lý"** (`/api/v1/tro-ly/*`) đúng
 chuẩn dùng chung cho cả ba trang ngay từ khi còn làm web, để app Android sau
 này ghép vào không phải sửa lại. Toàn bộ yêu cầu chi tiết nằm ở

@@ -86,7 +86,10 @@ export default async function TrangHangCho({
 
   return (
     <KhungTrang emailNguoiDung={email}>
-      <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
+      {/* `pb-24`: nút trò chuyện tròn nằm cố định ở góc phải dưới, và trên màn
+          hình điện thoại nó đè lên đúng hàng chọn tốc độ của trình phát. Chừa
+          khoảng trống đáy thì không thứ gì rơi vào vùng bị che */}
+      <div className="w-full px-4 py-6 pb-24 sm:px-6 lg:px-8">
         <h1 className="text-xl font-semibold tracking-tight">Hàng chờ</h1>
         <p className="mt-1.5 max-w-2xl text-sm text-neutral-500 dark:text-neutral-400">
           Danh sách xếp theo điểm trả lời câu &ldquo;cái nào hay nhất&rdquo;.
