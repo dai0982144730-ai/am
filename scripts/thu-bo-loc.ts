@@ -15,7 +15,7 @@
 
 import "dotenv/config";
 import { prisma } from "../src/lib/db/prisma";
-import { demTheoNhom, timNoiDung, type BoLoc } from "../src/lib/nghiepVu/timVaLoc";
+import { danhSachTacGia, demTheoNhom, timNoiDung, type BoLoc } from "../src/lib/nghiepVu/timVaLoc";
 
 async function thu(nhan: string, loc: BoLoc) {
   const kq = await timNoiDung(loc);
@@ -77,6 +77,18 @@ async function main() {
   await thu("Khoa học", { nhom: "khoa_hoc" });
   await thu("Khoa học › y học", { nhom: "khoa_hoc", khLinhVuc: "y_hoc_suc_khoe" });
   await thu("Ngẫu hứng", { nhom: "ngau_hung" });
+
+  // Số cạnh tên tác giả cũng là một lời hứa, y như số trên chip chuyên mục.
+  console.log("\n=== Ô lọc tác giả có nói dối không? ===");
+  for (const nhom of ["triet_hoc", "truyen"] as const) {
+    for (const t of (await danhSachTacGia(nhom)).slice(0, 4)) {
+      const that = (await timNoiDung({ nhom, tacGiaId: t.id })).tongSo;
+      console.log(
+        `  ${t.ten.slice(0, 26).padEnd(26)} ô ghi ${String(t.soBai).padStart(3)}` +
+          ` · lọc ra ${String(that).padStart(3)}  ${t.soBai === that ? "khớp" : "LỆCH — SAI"}`,
+      );
+    }
+  }
 
   console.log("\n=== Kết hợp nhiều tầng ===");
   await thu("Triết học + giảng pháp + trên 30 phút", { nhom: "triet_hoc", thDang: "giang_phap", thoiGian: "tren30" });

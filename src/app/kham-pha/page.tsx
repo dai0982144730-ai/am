@@ -5,7 +5,12 @@ import { ChipLoc } from "@/components/ChipLoc";
 import { KhungTrang } from "@/components/KhungTrang";
 import { OTimKiem } from "@/components/OTimKiem";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
-import { demTheoNhom, timNoiDung, type BoLoc } from "@/lib/nghiepVu/timVaLoc";
+import {
+  danhSachTacGia,
+  demTheoNhom,
+  timNoiDung,
+  type BoLoc,
+} from "@/lib/nghiepVu/timVaLoc";
 import { emailChuDuAn } from "@/lib/quyen";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +52,7 @@ function docBoLoc(tham: Record<string, string | undefined>): BoLoc {
     msDoDai: tham.ms_do_dai,
     msDaiBpm: tham.bpm,
     khLinhVuc: tham.kh_linh_vuc as BoLoc["khLinhVuc"],
+    tacGiaId: tham.tac_gia,
 
     trang: doSo(tham.trang) ?? 1,
   };
@@ -59,10 +65,13 @@ export default async function TrangKhamPha({
 }) {
   const tham = await searchParams;
 
-  const [email, dem, ketQua] = await Promise.all([
+  const boLoc = docBoLoc(tham);
+
+  const [email, dem, cacTacGia, ketQua] = await Promise.all([
     emailChuDuAn(),
     demTheoNhom(),
-    timNoiDung(docBoLoc(tham)),
+    danhSachTacGia(boLoc.nhom),
+    timNoiDung(boLoc),
   ]);
 
   /** Giữ nguyên mọi bộ lọc khi chuyển trang, chỉ đổi số trang. */
@@ -88,7 +97,7 @@ export default async function TrangKhamPha({
 
         <div className="mt-4">
           <Suspense fallback={<div className="h-20" />}>
-            <ChipLoc demTheoNhom={dem} />
+            <ChipLoc demTheoNhom={dem} cacTacGia={cacTacGia} />
           </Suspense>
         </div>
 

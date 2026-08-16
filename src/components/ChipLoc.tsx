@@ -252,8 +252,8 @@ const RIENG: Record<string, NhomLoc[]> = {
   ],
 };
 
-/** Nhóm cần Phase 6 mới chạy được — hiện ra nhưng bấm không được. */
-const CHUA_LAM: Record<string, string> = {
+/** Tên gọi của ô lọc tác giả, khác nhau theo chuyên mục. */
+const TEN_O_TAC_GIA: Record<string, string> = {
   triet_hoc: "Giảng sư",
   truyen: "Tác giả",
 };
@@ -446,8 +446,11 @@ function NhanHang({ chu }: { chu: string }) {
 
 export function ChipLoc({
   demTheoNhom,
+  cacTacGia,
 }: {
   demTheoNhom: Record<string, number>;
+  /** Giảng sư hoặc nhà văn của chuyên mục đang mở; rỗng ở các mục khác */
+  cacTacGia: { id: string; ten: string; soBai: number; choDuyet: boolean }[];
 }) {
   const duongDan = usePathname();
   const thamSo = useSearchParams();
@@ -478,6 +481,7 @@ export function ChipLoc({
       for (const g of nhomCu) moi.delete(g.khoa);
     }
     moi.delete("bpm");
+    moi.delete("tac_gia");
     moi.delete("trang");
     if (ma) moi.set("nhom", ma);
     else moi.delete("nhom");
@@ -503,7 +507,25 @@ export function ChipLoc({
   }
 
   const cacRieng = RIENG[nhomHienTai] ?? [];
-  const chuaLam = CHUA_LAM[nhomHienTai];
+  const tenOTacGia = TEN_O_TAC_GIA[nhomHienTai];
+  /**
+   * Ô lọc tác giả dựng từ dữ liệu thật, không phải danh sách viết cứng.
+   *
+   * Kèm số bài sau tên vì nó nói ngay thứ người dùng cần biết: chọn vị này thì
+   * còn lại bao nhiêu. Không có số thì phải bấm vào mới biết, mà phần lớn tác
+   * giả chỉ có một hai bài.
+   */
+  const nhomTacGia: NhomLoc | null =
+    tenOTacGia && cacTacGia.length > 0
+      ? {
+          khoa: "tac_gia",
+          ten: tenOTacGia,
+          cac: cacTacGia.map((t) => ({
+            ma: t.id,
+            ten: `${t.ten} · ${t.soBai}`,
+          })),
+        }
+      : null;
   const hienBpm = nhomHienTai === "music" && thamSo.get("ms_the_loai") === "workout_bpm";
 
   return (
@@ -577,7 +599,7 @@ export function ChipLoc({
                 : "Riêng"
             }
           />
-          {cacRieng.length === 0 && !chuaLam ? (
+          {cacRieng.length === 0 && !tenOTacGia ? (
             <span className="shrink-0 text-xs italic text-neutral-400 dark:text-neutral-500">
               Chuyên mục này không có bộ lọc riêng
             </span>
@@ -593,15 +615,17 @@ export function ChipLoc({
           {nhomHienTai === "truyen"
             ? nutDon("tr_that", "1", "Dựa trên chuyện có thật")
             : null}
-          {chuaLam ? (
-            <button
-              type="button"
-              disabled
-              title="Chưa làm — dự kiến Phase 6"
-              className={`${KIEU_NUT} cursor-not-allowed bg-neutral-100 text-neutral-400 opacity-60 dark:bg-neutral-800 dark:text-neutral-600`}
-            >
-              {chuaLam} ▾
-            </button>
+          {nhomTacGia ? (
+            <NutXo
+              nhom={nhomTacGia}
+              dangChon={thamSo.get("tac_gia")}
+              doi={(v) => doiThamSo("tac_gia", v)}
+            />
+          ) : tenOTacGia ? (
+            // Có ô nhưng chưa có ai để chọn — nói thẳng thay vì bày một ô rỗng
+            <span className="shrink-0 text-xs italic text-neutral-400 dark:text-neutral-500">
+              Chưa rút được tên {tenOTacGia.toLowerCase()} nào
+            </span>
           ) : null}
         </div>
 

@@ -2280,3 +2280,43 @@ cũng đi cùng một đường.
 Ngẫu hứng là chỗ **duy nhất** lấy cả nội dung `rejected`. Năm mục kia chỉ lấy
 `classified`. Đúng tinh thần: thứ bị loại khỏi luồng chính không bị xoá, nó chỉ
 lui về đây chờ lúc được cần.
+
+---
+
+## Lọc theo tác giả — XONG (2026-08-16)
+
+Mở khoá hai nút vẫn làm mờ từ đầu: **Giảng sư** ở mục Triết học và **Tác giả** ở
+mục Truyện.
+
+### Việc khó không phải lọc, mà là gom tên
+
+Claude rút tên tác giả từ nội dung, nhưng nội dung viết kiểu gì thì nó chép kiểu
+ấy. Đo trên 227 bản ghi:
+
+| Cùng một người | Các cách viết |
+|---|---|
+| Thầy Thích Pháp Hoà | *Thầy Thích Pháp Hòa* (23), *Thích Pháp Hòa* (2) |
+| Thầy Thích Minh Niệm | *Thầy Thích Minh Niệm*, *Thầy Minh Niệm*, *Thích Minh Niệm* |
+| Thầy Minh Tuệ | *Thầy Minh Tuệ*, *Thích Minh Tuệ* |
+| N.D.Liem | *N.D.Liem*, *N.D.Liêm* |
+
+Không gom thì ô lọc bày ba dòng cho cùng một vị, bấm dòng nào cũng chỉ ra một
+phần — mà người dùng **không có cách nào biết mình đang xem thiếu**.
+
+`src/lib/tacGia/gomTen.ts` gom bằng ba phép biến đổi, **không gọi mô hình**:
+bỏ tiền tố xưng hô (Thầy, Sư, Thượng toạ, Thích…), bỏ dấu tiếng Việt và dấu
+chấm, rồi so phần còn lại. Cái được lớn nhất là kết quả **đoán trước được**:
+chạy lại bao nhiêu lần cũng ra một kết quả.
+
+Kết quả: **77 người, 162 nội dung đã nối**. Tất cả ở diện chờ duyệt, đúng bản
+thiết kế — tên do máy rút phải được duyệt tay mới cộng điểm uy tín, nhưng vẫn
+lọc được ngay.
+
+### Lại vấp đúng cái bẫy cũ
+
+Ô lọc ghi *"Thầy Thích Pháp Hoà · 25"* nhưng bấm vào ra **24**. Số đếm lấy thẳng
+từ bảng Author nên bỏ qua luật 5 phút và bộ lọc "đã xem rồi".
+
+Đây là **lần thứ hai** cùng một lỗi: chip chuyên mục đã lệch y hệt và đã phải
+sửa. Cách chữa giống nhau — đếm bằng chính truy vấn mà danh sách dùng.
+`thu-bo-loc.ts` giờ kiểm cả hai chỗ.

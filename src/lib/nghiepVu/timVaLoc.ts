@@ -76,6 +76,8 @@ export interface BoLoc {
   msDoDai?: string;
   msDaiBpm?: string;
   khLinhVuc?: ScienceField;
+  /** Giảng sư (mục Triết học) hoặc nhà văn (mục Truyện) */
+  tacGiaId?: string;
 
   trang?: number;
 }
@@ -280,6 +282,9 @@ function dungDieuKien(loc: BoLoc): Prisma.ContentItemWhereInput {
   // --- Tầng riêng: Khoa học ---
   if (loc.khLinhVuc) phanLoai.scienceField = loc.khLinhVuc;
 
+  // --- Tác giả, dùng chung cho Triết học và Truyện ---
+  if (loc.tacGiaId) phanLoai.authorId = loc.tacGiaId;
+
   // --- Hai bộ lọc chạy ngầm, không có nút, không tắt được ---
   //
   // Truyện nghi do AI sản xuất hàng loạt bị loại hẳn chứ không chỉ xếp cuối;
@@ -411,6 +416,71 @@ export async function timNoiDung(loc: BoLoc): Promise<KetQuaTim> {
  * `rejected` ở bước phân loại, nên nó không lọt vào đây; và cũng không có chip
  * nào để bấm vào.
  */
+export interface TacGiaChon {
+  id: string;
+  ten: string;
+  soBai: number;
+  /** Chưa được duyệt tay — vẫn chọn được, nhưng chưa cộng điểm uy tín */
+  choDuyet: boolean;
+}
+
+/** Bao nhiêu tác giả thì đủ để chọn mà không thành một danh sách dài vô tận. */
+const TOI_DA_TAC_GIA = 25;
+
+/**
+ * Danh sách giảng sư (Triết học) hoặc nhà văn (Truyện) để đổ vào ô lọc.
+ *
+ * XẾP THEO SỐ BÀI, không theo bảng chữ cái. Người có nhiều nội dung trong kho
+ * là người chủ nhà nghe nhiều, nên phải nằm trên đầu — sắp theo tên thì "Thầy
+ * Thích Pháp Hoà" với 25 bài có khi rơi xuống cuối danh sách.
+ */
+export async function danhSachTacGia(
+  nhom: MaChuyenMuc | undefined,
+): Promise<TacGiaChon[]> {
+  const linhVuc =
+    nhom === "triet_hoc"
+      ? "philosophy_teacher"
+      : nhom === "truyen"
+        ? "story_writer"
+        : null;
+  if (!linhVuc) return [];
+
+  // ĐẾM BẰNG CHÍNH TRUY VẤN CỦA DANH SÁCH, không đếm thẳng trên bảng Author.
+  //
+  // Đếm thẳng thì số bị lệch, và đã lệch thật lúc dựng: ô lọc ghi "Thầy Thích
+  // Pháp Hoà · 25" mà bấm vào chỉ ra 24 bài. Bảng Author đếm mọi bản ghi nối
+  // vào nó, còn danh sách thì còn qua luật 5 phút và bộ lọc "đã xem rồi".
+  //
+  // Cùng một lỗi đã xảy ra ở chip chuyên mục và đã phải sửa một lần. Con số nào
+  // hiện cạnh một nút lọc cũng là một lời hứa về thứ sẽ thấy khi bấm vào.
+  const cacBai = await prisma.contentItem.findMany({
+    where: chuaLuotQua(dungDieuKien({ nhom })),
+    select: { classification: { select: { authorId: true } } },
+  });
+
+  const dem = new Map<string, number>();
+  for (const b of cacBai) {
+    const id = b.classification?.authorId;
+    if (id) dem.set(id, (dem.get(id) ?? 0) + 1);
+  }
+  if (dem.size === 0) return [];
+
+  const cac = await prisma.author.findMany({
+    where: { id: { in: [...dem.keys()] } },
+    select: { id: true, canonicalName: true, approvedByUser: true },
+  });
+
+  return cac
+    .map((t) => ({
+      id: t.id,
+      ten: t.canonicalName,
+      soBai: dem.get(t.id) ?? 0,
+      choDuyet: !t.approvedByUser,
+    }))
+    .sort((a, b) => b.soBai - a.soBai)
+    .slice(0, TOI_DA_TAC_GIA);
+}
+
 export async function demTheoNhom(): Promise<Record<string, number>> {
   // Đếm bằng CHÍNH `dungDieuKien` mà danh sách dùng, mỗi chuyên mục một lượt.
   //
