@@ -124,19 +124,49 @@ với "cài rồi mà mất chỉ mục", nên đừng hoảng khi thấy nó b�
 
 ## Cạm bẫy đã gặp — đọc trước khi chạy migration
 
-**Prisma sẽ tự ý xoá thứ nó không hiểu.** Hai chỉ mục HNSW cho tìm kiếm ngữ nghĩa
-(`ContentEmbedding_vector_idx`, `NoteEmbedding_vector_idx`) do pgvector quản lý,
-Prisma không biết chúng tồn tại nên **mỗi lần `prisma migrate dev` nó đều định
-xoá đi**.
+### Trên máy này, `prisma migrate dev` KHÔNG DÙNG ĐƯỢC. Viết migration bằng tay.
 
-Cách xử lý khi tạo migration mới:
+Lệnh đó dựng một **database bóng** rồi diễn lại toàn bộ migration từ đầu để dò
+sai lệch. Bản Postgres rời trên máy này không có pgvector, database bóng cũng
+vậy, nên nó chết ngay ở bản `20260813163633_them_pgvector`:
 
-1. Dùng `prisma migrate dev --create-only` để chỉ tạo file, chưa chạy
-2. Mở file `migration.sql` vừa tạo, **xoá các dòng `DROP INDEX ..._vector_idx`**
-3. Chạy `prisma migrate deploy` để áp dụng
+```
+Error: extension "vector" is not available
+```
 
-Riêng cột `vector` thì đã an toàn — đã khai báo bằng `Unsupported("vector(1024)")`
-trong schema nên Prisma giữ lại.
+Đừng đi sửa lịch sử migration — nó vẫn sạch (14 bản, 14 file, không bản nào lỗi).
+Vấn đề nằm ở database bóng, không phải database thật.
+
+Cách làm migration mới:
+
+1. Sửa `prisma/schema.prisma`
+2. Tự tạo thư mục `prisma/migrations/<YYYYMMDDHHMMSS>_<ten>/migration.sql`
+3. Tự viết SQL vào đó
+4. `npx prisma migrate deploy` rồi `npx prisma generate`
+
+Xem hai bản gần nhất làm mẫu: `..._them_linh_vuc_khoa_hoc`,
+`..._ty_le_thich_va_binh_luan`.
+
+### Hai chỉ mục HNSW: Prisma sẽ tự ý xoá thứ nó không hiểu
+
+`ContentEmbedding_vector_idx` và `NoteEmbedding_vector_idx` do pgvector quản lý,
+Prisma không biết chúng tồn tại nên mỗi lần sinh migration nó đều định xoá đi.
+Viết tay thì không dính, nhưng nếu có lúc nào chạy được `migrate dev` (ví dụ trên
+máy có pgvector) thì **nhớ xoá các dòng `DROP INDEX ..._vector_idx`** trước khi áp.
+
+Riêng cột `vector` thì đã an toàn — khai báo bằng `Unsupported("vector(1024)")`
+nên Prisma giữ lại.
+
+### Hai cột SINH TỰ ĐỘNG: đọc được, sắp xếp được, TUYỆT ĐỐI KHÔNG GHI
+
+`ContentItem.likeRatio` và `ContentItem.commentRatio` là cột
+`GENERATED ALWAYS AS ... STORED` trong PostgreSQL — database tự tính lại mỗi khi
+lượt xem hay lượt thích đổi. Prisma không có cách diễn đạt điều đó nên chúng khai
+trong schema như `Float?` bình thường.
+
+Hệ quả: Prisma chỉ gửi những trường bạn truyền vào, nên đọc và `orderBy` thì an
+toàn; ghi vào thì Postgres báo lỗi ngay. **Đừng bao giờ đặt hai trường này trong
+`create` hay `update`.**
 
 ### Đổi cấu trúc database thì PHẢI khởi động lại máy chủ chạy thử
 
@@ -153,18 +183,19 @@ khởi động, `prisma generate` ghi đè file trên đĩa cũng không lay chu
 
 Cách sửa: vào terminal đang chạy, `Ctrl+C` rồi `npm run dev`.
 
-Cách nhận ra ngay: nếu lỗi nhắc tới một bảng hoặc một cột **vừa mới thêm**, thì
-gần như chắc chắn là chuyện này chứ không phải code sai. Kiểm hai chỗ trước khi
-đi sửa code:
+Cách nhận ra ngay: nếu lỗi nhắc tới một bảng hoặc một cột **vừa mới thêm** thì
+gần như chắc chắn là chuyện này, không phải code sai.
+
+Kiểm tra tình trạng database bất cứ lúc nào:
 
 ```bash
 npx tsx scripts/check-db.ts
 ```
 
-Kiểm tra nhanh tình trạng database bất cứ lúc nào:
+Bấm thử mọi nút lọc của trang Khám phá, xem nút nào ra 0 kết quả:
 
 ```bash
-npx tsx scripts/check-db.ts
+npx tsx scripts/thu-bo-loc.ts
 ```
 
 ## Next.js

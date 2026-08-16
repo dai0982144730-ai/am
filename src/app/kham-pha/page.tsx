@@ -5,12 +5,7 @@ import { ChipLoc } from "@/components/ChipLoc";
 import { KhungTrang } from "@/components/KhungTrang";
 import { OTimKiem } from "@/components/OTimKiem";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
-import type { ContentGroup } from "@/generated/prisma/enums";
-import {
-  demTheoNhom,
-  timNoiDung,
-  type KieuSapXep,
-} from "@/lib/nghiepVu/timVaLoc";
+import { demTheoNhom, timNoiDung, type BoLoc } from "@/lib/nghiepVu/timVaLoc";
 import { emailChuDuAn } from "@/lib/quyen";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +14,42 @@ function doSo(giaTri: string | undefined): number | undefined {
   if (!giaTri) return undefined;
   const so = Number(giaTri);
   return Number.isFinite(so) && so > 0 ? so : undefined;
+}
+
+/**
+ * Đọc bộ lọc từ địa chỉ trang.
+ *
+ * Mỗi nhóm đúng một tham số, nên "chỉ chọn được một" là chuyện tự nhiên chứ
+ * không phải luật phải viết ra. Ép kiểu ở đây là an toàn: giá trị lạ chỉ làm
+ * truy vấn không khớp gì, không làm sập trang — và hàng nút chỉ sinh ra đúng
+ * những giá trị hợp lệ.
+ */
+function docBoLoc(tham: Record<string, string | undefined>): BoLoc {
+  return {
+    tuKhoa: tham.q,
+    nhom: tham.nhom as BoLoc["nhom"],
+
+    thoiGian: tham.tg as BoLoc["thoiGian"],
+    kenh: tham.kenh as BoLoc["kenh"],
+    sapXep: tham.sap as BoLoc["sapXep"],
+    nguon: tham.nguon as BoLoc["nguon"],
+    tiengViet: tham.tv as BoLoc["tiengViet"],
+
+    aiChuDe: tham.ai_chu_de as BoLoc["aiChuDe"],
+    aiHang: tham.ai_hang as BoLoc["aiHang"],
+    thTruongPhai: tham.th_truong_phai as BoLoc["thTruongPhai"],
+    thDang: tham.th_dang as BoLoc["thDang"],
+    trTheLoai: tham.tr_the_loai as BoLoc["trTheLoai"],
+    trXuatXu: tham.tr_xuat_xu as BoLoc["trXuatXu"],
+    trDoCang: tham.tr_do_cang as BoLoc["trDoCang"],
+    trChuyenThat: tham.tr_that === "1",
+    msTheLoai: tham.ms_the_loai as BoLoc["msTheLoai"],
+    msDoDai: tham.ms_do_dai,
+    msDaiBpm: tham.bpm,
+    khLinhVuc: tham.kh_linh_vuc as BoLoc["khLinhVuc"],
+
+    trang: doSo(tham.trang) ?? 1,
+  };
 }
 
 export default async function TrangKhamPha({
@@ -31,16 +62,7 @@ export default async function TrangKhamPha({
   const [email, dem, ketQua] = await Promise.all([
     emailChuDuAn(),
     demTheoNhom(),
-    timNoiDung({
-      tuKhoa: tham.q,
-      nhom: (tham.nhom as ContentGroup) || undefined,
-      daThuatLai: tham.daThuatLai === "1",
-      duoiBaoNhieuPhut: doSo(tham.duoi),
-      tuBaoNhieuPhut: doSo(tham.tu),
-      trongBaoNhieuNgay: doSo(tham.ngay),
-      sapXep: (tham.sap as KieuSapXep) || "phu_hop_nhat",
-      trang: doSo(tham.trang) ?? 1,
-    }),
+    timNoiDung(docBoLoc(tham)),
   ]);
 
   /** Giữ nguyên mọi bộ lọc khi chuyển trang, chỉ đổi số trang. */

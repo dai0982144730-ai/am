@@ -6,6 +6,7 @@
  */
 
 import { prisma } from "@/lib/db/prisma";
+import { CHO_LONG_TIENG } from "@/lib/tiengViet/loc";
 
 import { thuatLaiMotBai } from "./thuatLai";
 
@@ -50,30 +51,75 @@ export async function thuatLaiHangLoat(
   gioiHan = 5,
   bao?: (dong: string) => void,
 ): Promise<KetQuaThuatLaiHangLoat> {
-  const cacBai = await prisma.contentItem.findMany({
-    where: {
-      // Có cả VIDEO, không chỉ bài viết. Một video tiếng Anh với chủ nhà cũng
-      // vô dụng y như một bài blog tiếng Anh — họ không nghe hiểu được. Bản
-      // thuật lại tiếng Việt là đường sống duy nhất của cả hai.
-      type: { in: ["blog_article", "forum_post", "video"] },
-      narrationAsset: null,
-      transcript: { fetchStatus: "success" },
+  const TRUONG = {
+    id: true,
+    title: true,
+    source: { select: { title: true } },
+    transcript: { select: { rawText: true } },
+  } as const;
+
+  /**
+   * CHỈ LẤY THỨ CLAUDE ĐÃ ĐỌC VÀ KẾT LUẬN LÀ TIẾNG NƯỚC NGOÀI.
+   *
+   * ĐÃ ĐO VÀ SỬA (2026-08-15). Bản đầu chỉ lọc "chưa có bản thuật lại" rồi để
+   * code tự nhận ra bài tiếng Việt mà bỏ qua — tức là bắt database trả về mấy
+   * chục bài rồi vứt gần hết. Chạy thật một lượt: **xét 57 bài, thuật lại được
+   * 2, bỏ 55 vì vốn đã là tiếng Việt**. Trong khi hàng chờ có 26 bài blog cần
+   * dịch mà không lượt nào chạm tới.
+   *
+   * Cột `originalLanguage` đã chứa sẵn kết luận của Claude từ bước phân loại.
+   * Không dùng nó ở đây là bỏ phí thứ đã tốn công để biết.
+   *
+   * Hàm `laTiengViet` bên dưới vẫn giữ làm lưới chắn cuối: cột kia có thể còn
+   * trống với nội dung vào kho theo đường khác.
+   */
+  const dieuKienChung = {
+    ...CHO_LONG_TIENG,
+    narrationAsset: null,
+    transcript: { fetchStatus: "success" as const },
+  };
+
+  // Thuật lại thứ đáng thuật trước. Mỗi bản tốn hơn chục giây của Claude nên
+  // thứ tự quan trọng: xếp theo ngày đăng thì có đêm dùng hết lượt cho mấy
+  // bài tầm thường mà bỏ sót bài hay đăng hôm trước.
+  const thuTu = [
+    {
+      score: {
+        compositeScore: { sort: "desc" as const, nulls: "last" as const },
+      },
     },
-    // Thuật lại thứ đáng thuật trước. Mỗi bản tốn hơn chục giây của Claude nên
-    // thứ tự quan trọng: xếp theo ngày đăng thì có đêm dùng hết lượt cho mấy
-    // bài tầm thường mà bỏ sót bài hay đăng hôm trước.
-    orderBy: [
-      { score: { compositeScore: { sort: "desc", nulls: "last" } } },
-      { publishedAt: "desc" },
-    ],
-    take: gioiHan * 2, // lấy dư vì sẽ bỏ bớt bài tiếng Việt
-    select: {
-      id: true,
-      title: true,
-      source: { select: { title: true } },
-      transcript: { select: { rawText: true } },
-    },
+    { publishedAt: "desc" as const },
+  ];
+
+  /**
+   * BÀI VIẾT ĐI TRƯỚC VIDEO — lý do mới có từ 2026-08-15.
+   *
+   * Chủ dự án xác nhận tiện ích lồng tiếng của họ chạy được trong khung phát
+   * của am. Nghĩa là **video YouTube tiếng Anh đã có đường nghe rồi**. Còn bài
+   * blog và bài diễn đàn thì tiện ích đó không giúp được gì — chúng là trang
+   * web thường, không phải video.
+   *
+   * Nên khi phải chọn, dành lượt cho thứ chỉ am làm được.
+   */
+  const baiViet = await prisma.contentItem.findMany({
+    where: { ...dieuKienChung, type: { in: ["blog_article", "forum_post"] } },
+    orderBy: thuTu,
+    take: gioiHan,
+    select: TRUONG,
   });
+
+  const conThieu = gioiHan - baiViet.length;
+  const video =
+    conThieu > 0
+      ? await prisma.contentItem.findMany({
+          where: { ...dieuKienChung, type: "video" },
+          orderBy: thuTu,
+          take: conThieu,
+          select: TRUONG,
+        })
+      : [];
+
+  const cacBai = [...baiViet, ...video];
 
   let thanhCong = 0;
   let boQuaVietSan = 0;

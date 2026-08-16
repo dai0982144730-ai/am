@@ -63,7 +63,15 @@ const TOI_DA_CHU_LOI_THOAI = 4_000;
 
 /** Phiên bản hướng dẫn — đổi hướng dẫn thì tăng số này để biết bản ghi cũ mới. */
 // v2 (2026-08-15): thêm chuyên mục khoa_hoc
-export const PHIEN_BAN_HUONG_DAN = "v2";
+// v3 (2026-08-16): hai việc cùng lúc.
+//   1. Siết lại 'other'. Bản v2 mô tả 'other' như một chuyên mục bình thường
+//      nên Claude xếp 304/417 nội dung vào đó — 73% những gì bày ra là thứ
+//      chẳng ai đi tìm. Bản này nói rõ 'other' là dấu vứt bỏ, kèm ba ví dụ
+//      xếp nhầm có thật.
+//   2. Thêm trường `linhVucKhoaHoc`, để mục Khoa học có bộ lọc riêng như bốn
+//      mục kia. Làm chung một bản để 304 bài kia chỉ phải đọc lại MỘT lần —
+//      tách ra hai bản thì 21 bài khoa học phải đọc lại lần nữa.
+export const PHIEN_BAN_HUONG_DAN = "v3";
 
 export type CachGoi = "cli" | "api";
 
@@ -110,20 +118,60 @@ Câu hỏi để tự kiểm: **xem xong có biết thêm thứ gì dùng đư�
 biết thêm một sự thật thú vị thì đó là 'other', không phải 'khoa_hoc'.
 
 Riêng nội dung về AI thì vẫn vào nhóm 'ai', không vào 'khoa_hoc' — dù AI cũng là
-công nghệ. Người dùng theo dõi AI riêng và kỹ hơn.
+công nghệ. Người dùng theo dõi AI riêng và kỹ hơn. Vì thế danh sách lĩnh vực
+khoa học **không có lựa chọn nào cho AI**: đó là chủ ý, để một bài không nằm ở
+hai chỗ cùng lúc.
 
-**other** — mọi thứ còn lại. Đây là lựa chọn ĐÚNG cho phần lớn nội dung: tin thời
-sự, chính trị, giải trí, hài, thể thao, ẩm thực, du lịch, công nghệ tiêu dùng,
-sức khoẻ thường thức, dạy nấu ăn, review sản phẩm, vlog đời thường.
+Xếp vào 'khoa_hoc' rồi thì phải chọn thêm một lĩnh vực:
+
+  - **y_hoc_suc_khoe** — bệnh tật, dinh dưỡng, tuổi thọ, thể chất, tâm thần
+  - **vat_ly_vu_tru** — vật lý, thiên văn, không gian
+  - **sinh_hoc** — sinh vật, gen, tiến hoá, sinh thái
+  - **vat_lieu_nang_luong** — pin, chất bán dẫn, vật liệu mới, điện, nhiên liệu
+  - **ky_thuat** — chế tạo, xây dựng, giao thông, máy móc, và cả chuyện cách
+    làm khoa học nói chung (phương pháp, sai lầm trong nghiên cứu)
+
+Chọn lĩnh vực chiếm phần lớn nội dung, không phải lĩnh vực được nhắc thoáng qua.
+
+**other** — KHÔNG PHẢI MỘT CHUYÊN MỤC. Đây là dấu "nội dung này lọt vào, người
+dùng không hề đi tìm nó". Chọn 'other' nghĩa là **nội dung bị loại bỏ và không
+bao giờ hiện ra nữa**.
+
+Chọn 'other' cho: tin thời sự, chính trị, giải trí, hài, thể thao, ẩm thực, du
+lịch, công nghệ tiêu dùng thuần tuý, dạy nấu ăn, review sản phẩm, vlog đời
+thường, drama mạng xã hội.
 
 ## Nguyên tắc quan trọng nhất
 
-**Đừng cố nhét vào năm nhóm đầu.** Người dùng cần năm nhóm đó thật tinh, thà bỏ
-sót còn hơn lẫn tạp. Một video tin tức nhắc thoáng qua chữ "AI" thì vẫn là
-'other', không phải 'ai'. Một video kể chuyện ma có thật thì là 'other', không
-phải 'truyen'. Một video khoa học chỉ kể sự thật thú vị mà không chỉ ra dùng
-được vào đâu thì vẫn là 'other', không phải 'khoa_hoc'. Chỉ xếp vào năm nhóm đầu
-khi nội dung CHÍNH thuộc về nhóm đó.
+**Chọn 'other' là VỨT ĐI, nên phải chắc mới chọn.**
+
+Người dùng chỉ đi tìm năm mảng trên. Nếu nội dung CHÍNH của một video thật sự
+thuộc một trong năm mảng đó thì xếp vào mảng đó — kể cả khi cách trình bày lạ,
+tiêu đề giật gân, hay người nói không phải chuyên gia có tiếng. Đừng đòi nội
+dung phải "đủ hay" mới cho vào: đánh giá hay dở là việc của bước chấm điểm ở
+sau, không phải việc của bước xếp nhóm này.
+
+Ngược lại, đừng nhét thứ chỉ NHẮC TỚI một mảng vào mảng đó. Một bản tin thời sự
+nhắc thoáng chữ "AI" vẫn là 'other'. Một vlog du lịch có đoạn ngồi thiền vẫn là
+'other'.
+
+Ranh giới: **nội dung chính, chiếm phần lớn thời lượng, có thuộc mảng đó
+không?** Có thì xếp vào. Không thì 'other'.
+
+### Ba trường hợp đã xếp nhầm trong thực tế
+
+Cả ba đều bị xếp thành 'other' và suýt bị vứt:
+
+  - *"Sư Hoằng Hiền đến hỏi về thần thông — Thầy Minh Tuệ trả lời"* → phải là
+    **triet_hoc**. Một vị sư vấn đáp về giáo lý chính là giảng pháp, đúng trọng
+    tâm của mảng này. Bàn VỀ thần thông theo kinh điển khác hẳn với cổ vũ thần
+    thông; cái sau mới gắn cờ mê tín, mà gắn cờ thì vẫn nằm trong 'triet_hoc'.
+  - *"Vì sao tuổi thọ tăng 10 năm mà số năm sống khoẻ thì không?"* → phải là
+    **khoa_hoc**. Khoa học sức khoẻ, ứng dụng quá rõ: sống thế nào để những năm
+    cuối đời còn khoẻ.
+  - *"Khi thiên tài thất bại: sự kiêu ngạo trí tuệ của các phòng thí nghiệm"* →
+    **khoa_hoc**. Phân tích cách làm khoa học hỏng ở đâu, rút ra bài học dùng
+    được.
 
 ## Cạm bẫy
 

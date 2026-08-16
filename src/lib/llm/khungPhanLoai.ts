@@ -36,8 +36,11 @@ export const KhungPhanLoai = z.object({
   nhom: z
     .enum(NHOM_NOI_DUNG)
     .describe(
-      "Chuyên mục của nội dung. Chọn 'other' nếu không thuộc năm nhóm kia — " +
-        "đây là lựa chọn đúng cho tin tức thời sự, giải trí, thể thao, ẩm thực.",
+      "Chuyên mục của nội dung. Năm chuyên mục thật là ai, triet_hoc, " +
+        "khoa_hoc, truyen, music. 'other' KHÔNG phải chuyên mục thứ sáu mà là " +
+        "dấu VỨT BỎ: nội dung mang dấu này bị loại và không bao giờ hiện ra " +
+        "nữa. Chỉ chọn 'other' khi đã chắc nội dung chính không thuộc mảng " +
+        "nào trong năm mảng trên.",
     ),
 
   chuDe: z
@@ -106,6 +109,27 @@ export const KhungPhanLoai = z.object({
     ])
     .nullable()
     .describe("Chỉ điền khi nhom = 'ai'."),
+
+  // ----- Riêng nhóm Khoa học -----
+  linhVucKhoaHoc: z
+    .enum([
+      "y_hoc_suc_khoe",
+      "vat_ly_vu_tru",
+      "sinh_hoc",
+      "vat_lieu_nang_luong",
+      "ky_thuat",
+    ])
+    .nullable()
+    .describe(
+      "Chỉ điền khi nhom = 'khoa_hoc'. Chọn lĩnh vực chiếm phần lớn nội dung. " +
+        "y_hoc_suc_khoe: bệnh tật, dinh dưỡng, tuổi thọ, thể chất, tâm thần. " +
+        "vat_ly_vu_tru: vật lý, thiên văn, không gian. " +
+        "sinh_hoc: sinh vật, gen, tiến hoá, sinh thái. " +
+        "vat_lieu_nang_luong: pin, chất bán dẫn, vật liệu mới, điện, nhiên liệu. " +
+        "ky_thuat: chế tạo, xây dựng, giao thông, máy móc, và cả cách làm khoa " +
+        "học nói chung. Không có lựa chọn nào cho AI: nội dung về AI thuộc " +
+        "nhóm 'ai', không bao giờ vào 'khoa_hoc'.",
+    ),
 
   // ----- Riêng nhóm Triết học -----
   truongPhai: z

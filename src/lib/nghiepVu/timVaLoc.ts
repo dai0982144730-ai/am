@@ -1,54 +1,111 @@
 /**
- * Tìm kiếm và lọc nội dung — Phase 4b.
+ * Tìm kiếm và lọc nội dung cho trang Khám phá.
  *
- * NGUYÊN TẮC: **không gọi Claude trên đường đi của người dùng**. Người ta gõ ô
- * tìm kiếm là muốn thấy kết quả ngay, không phải chờ vài giây cho mô hình nghĩ.
- * Mọi thứ ở đây đều là truy vấn database thuần.
+ * NGUYÊN TẮC: **không gọi Claude trên đường đi của người dùng**. Người ta bấm
+ * một nút lọc là muốn thấy kết quả ngay, không phải chờ mô hình nghĩ. Mọi thứ ở
+ * đây đều là truy vấn database thuần.
  *
- * BA KIỂU SẮP XẾP, đúng bản thiết kế:
+ * ## Bộ lọc chia hai tầng
  *
- * | Kiểu | Sắp theo | Dùng khi |
- * |---|---|---|
- * | Phù hợp nhất *(mặc định)* | điểm chất lượng | duyệt hằng ngày, để trợ lý quyết |
- * | Chất lượng cao nhất | cũng điểm chất lượng, nhưng bỏ qua gu | muốn thấy cái tốt nhất khách quan |
- * | Mới nhất trước | ngày đăng | theo tin nóng, nhất là mục AI |
+ * **Tầng chung** áp cho mọi chuyên mục: thời gian, kênh theo dõi hay kênh mới,
+ * cách sắp xếp, nguồn, và nghe được bằng tiếng Việt kiểu nào.
  *
- * Hai kiểu đầu hiện cho kết quả giống nhau vì hệ số cá nhân hoá là việc của
- * Phase 9. Vẫn tách sẵn để khi có `UserTasteProfile` thì chỉ phải sửa một chỗ.
+ * **Tầng riêng** chỉ có nghĩa bên trong một chuyên mục — không thể hỏi trường
+ * phái triết học của một bản nhạc, cũng không hỏi được số nhịp của bài blog.
+ *
+ * ## Mỗi nhóm chỉ chọn được MỘT giá trị
+ *
+ * Chủ dự án chốt 2026-08-16: "ấn một cái là lọc cái đó thôi". Quyết định này
+ * cũng vá luôn một lỗi có thật trong bản trước — hai nút "Dưới 10 phút" và
+ * "Trên 20 phút" bật/tắt độc lập nên bấm được cả hai, thành điều kiện
+ * `thời lượng ≥ 20 phút VÀ ≤ 10 phút`, **luôn ra 0 kết quả mà không báo gì**.
  */
 
 import type {
-  ContentGroup,
-  ContentItemType,
-  NarrationType,
+  AiSubtopic,
+  MusicGenre,
+  PhilosophyContentForm,
+  PhilosophySchool,
+  ScienceField,
+  SourceReputationTier,
+  StoryGenre,
+  StoryIntensity,
+  StoryOrigin,
 } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { chuaLuotQua } from "@/lib/lichSu/loc";
 
-export type KieuSapXep = "phu_hop_nhat" | "chat_luong_cao_nhat" | "moi_nhat";
+/** Chuyên mục hiện trên hàng chip. KHÔNG có "Khác" — xem ghi chú ở `demTheoNhom`. */
+export type MaChuyenMuc =
+  | "ai"
+  | "triet_hoc"
+  | "truyen"
+  | "music"
+  | "khoa_hoc"
+  | "ngau_hung";
+
+export type MaThoiGian = "duoi15" | "tren30" | "tren45";
+export type MaKenh = "theo_doi" | "moi";
+export type MaSapXep = "moi_nhat" | "diem_cao" | "thich_cao" | "binh_luan_cao";
+export type MaNguon = "youtube" | "podcast" | "blog";
+export type MaTiengViet = "goc" | "thuyet_minh";
 
 export interface BoLoc {
   /** Từ khoá tìm trong tiêu đề, mô tả, chủ đề và nhận xét của Claude */
   tuKhoa?: string;
-  nhom?: ContentGroup;
-  /** Lọc theo loại nội dung: video, bài viết, bài diễn đàn… */
-  loai?: ContentItemType;
-  /** Chỉ lấy nội dung có bản thuật lại tiếng Việt */
-  daThuatLai?: boolean;
-  /** Thời lượng tối đa, tính bằng phút */
-  duoiBaoNhieuPhut?: number;
-  /** Thời lượng tối thiểu, tính bằng phút */
-  tuBaoNhieuPhut?: number;
-  /** Loại giọng đọc */
-  loaiGiong?: NarrationType;
-  /** Chỉ lấy nội dung đăng trong ngần này ngày */
-  trongBaoNhieuNgay?: number;
-  sapXep?: KieuSapXep;
+  nhom?: MaChuyenMuc;
+
+  // --- Tầng chung ---
+  thoiGian?: MaThoiGian;
+  kenh?: MaKenh;
+  sapXep?: MaSapXep;
+  nguon?: MaNguon;
+  tiengViet?: MaTiengViet;
+
+  // --- Tầng riêng ---
+  aiChuDe?: AiSubtopic;
+  aiHang?: SourceReputationTier;
+  thTruongPhai?: PhilosophySchool;
+  thDang?: PhilosophyContentForm;
+  trTheLoai?: StoryGenre;
+  trXuatXu?: StoryOrigin;
+  trDoCang?: StoryIntensity;
+  trChuyenThat?: boolean;
+  msTheLoai?: MusicGenre;
+  msDoDai?: string;
+  msDaiBpm?: string;
+  khLinhVuc?: ScienceField;
+
   trang?: number;
 }
 
 export const SO_MOI_TRANG = 24;
+
+/**
+ * Clip ngắn hơn ngần này bị loại thẳng, không hiện ra.
+ *
+ * Chủ dự án chốt 2026-08-16. Hai ngoại lệ, cả hai đều **tự đúng** mà không cần
+ * viết thêm điều kiện nào:
+ *
+ *   1. **Bài blog và bài diễn đàn** không có thời lượng, nên `durationSeconds`
+ *      để trống và chúng lọt qua nhánh `null` bên dưới.
+ *   2. **Bản thuyết minh từ clip gốc dài hơn 5 phút mà file mp3 rút xuống dưới
+ *      5 phút do cô đặc nội dung.** Cột này giữ thời lượng của clip GỐC, còn độ
+ *      dài file mp3 nằm ở `NarrationAsset` — nên bản rút gọn vẫn được giữ.
+ *      Đúng ý: mp3 ngắn đi vì cô đặc là dấu hiệu chất lượng, không phải clip vụn.
+ */
+const TOI_THIEU_GIAY = 300;
+
+/**
+ * Sắp theo tỷ lệ thì phải có đủ lượt xem, nếu không con số vô nghĩa.
+ *
+ * ĐÃ ĐO (2026-08-16): không đặt ngưỡng thì đứng đầu bảng "tỷ lệ thích cao" là
+ * một clip **3 thích trên 8 lượt xem** — 37,5%, cao nhất kho, và chẳng nói lên
+ * điều gì. Ngưỡng 1.000 giữ lại 717 trong 952 mục có đủ số liệu (75%) và đưa
+ * lên đầu những thứ đọc được: 814/3.959, 932/5.099.
+ */
+const TOI_THIEU_LUOT_XEM_CHO_TY_LE = 1_000;
 
 /** Các trường cần cho một thẻ nội dung. */
 const TRUONG_THE = {
@@ -80,6 +137,7 @@ const TRUONG_THE = {
       extractedTopics: true,
       extractedAuthorNameRaw: true,
       aiSubtopic: true,
+      scienceField: true,
       philosophySchool: true,
       philosophyContentForm: true,
       listenerLevel: true,
@@ -94,89 +152,177 @@ const TRUONG_THE = {
   },
 } as const;
 
+/** Mỗi nút "Nguồn" gom vài loại nguồn xử sự giống nhau. */
+const LOAI_THEO_NGUON = {
+  youtube: ["youtube_channel"],
+  podcast: ["podcast_rss", "soundcloud_channel"],
+  blog: ["blog_feed", "forum_community"],
+} as const;
+
+/** Khoảng thời lượng, tính bằng giây. */
+const KHOANG_THOI_GIAN: Record<MaThoiGian, { tu?: number; den?: number }> = {
+  duoi15: { den: 900 },
+  tren30: { tu: 1_800 },
+  tren45: { tu: 2_700 },
+};
+
 /** Dựng điều kiện lọc từ những gì người dùng chọn. */
 function dungDieuKien(loc: BoLoc): Prisma.ContentItemWhereInput {
-  const dieuKien: Prisma.ContentItemWhereInput = {
-    status: "classified",
+  const dieuKien: Prisma.ContentItemWhereInput = { status: "classified" };
+  const va: Prisma.ContentItemWhereInput[] = [];
+  const phanLoai: Prisma.ContentClassificationWhereInput = {};
+
+  // --- Chuyên mục ---
+  //
+  // "Ngẫu hứng" không phải một chuyên mục chủ đề mà là NGUỒN GỐC: thứ có mặt
+  // trong kho vì chính chủ nhà gõ từ khoá gọi ra. Một bài về máy tính lượng tử
+  // tìm được kiểu đó vẫn mang nhãn `khoa_hoc` — đúng chủ đề thật của nó.
+  if (loc.nhom === "ngau_hung") dieuKien.adHocInterestId = { not: null };
+  else if (loc.nhom) dieuKien.contentGroup = loc.nhom;
+
+  // --- Luật 5 phút, luôn bật ---
+  //
+  // Đặt trước bộ lọc thời gian để nút "Dưới 15 phút" thật ra là "5–15 phút".
+  const khoang = loc.thoiGian ? KHOANG_THOI_GIAN[loc.thoiGian] : null;
+  if (khoang) {
+    // Chọn lọc theo độ dài thì bài viết không có độ dài sẽ không khớp — đúng ý
+    // "cho tôi xem thứ dài chừng này", chứ không phải "kèm luôn thứ không đo được".
+    dieuKien.durationSeconds = {
+      gte: Math.max(TOI_THIEU_GIAY, khoang.tu ?? 0),
+      ...(khoang.den ? { lte: khoang.den } : {}),
+    };
+  } else {
+    va.push({
+      OR: [
+        { durationSeconds: null },
+        { durationSeconds: { gte: TOI_THIEU_GIAY } },
+      ],
+    });
+  }
+
+  // --- Kênh theo dõi / kênh mới ---
+  if (loc.kenh === "theo_doi") {
+    dieuKien.source = { subscriptionStatus: "subscribed" };
+  } else if (loc.kenh === "moi") {
+    dieuKien.source = { subscriptionStatus: { not: "subscribed" } };
+  }
+
+  // --- Nguồn ---
+  if (loc.nguon) {
+    dieuKien.source = {
+      ...(dieuKien.source as Prisma.SourceWhereInput | undefined),
+      type: { in: [...LOAI_THEO_NGUON[loc.nguon]] },
+    };
+  }
+
+  // --- Nghe được bằng tiếng Việt kiểu nào ---
+  if (loc.tiengViet === "goc") {
+    dieuKien.originalLanguage = "vi";
+  } else if (loc.tiengViet === "thuyet_minh") {
+    // Gốc tiếng nước ngoài VÀ am đã làm xong bản tiếng Việt có tiếng.
+    // Phải hỏi `ttsAudioUrl`, không phải chỉ hỏi có bản thuật lại hay chưa:
+    // bản mới dịch xong phần chữ mà chưa đọc thành tiếng thì vẫn chưa nghe được.
+    dieuKien.originalLanguage = { not: "vi" };
+    dieuKien.narrationAsset = { ttsAudioUrl: { not: null } };
+  }
+
+  // --- Tầng riêng: AI ---
+  if (loc.aiChuDe) phanLoai.aiSubtopic = loc.aiChuDe;
+  if (loc.aiHang) dieuKien.source = {
+    ...(dieuKien.source as Prisma.SourceWhereInput | undefined),
+    reputationTier: loc.aiHang,
   };
 
-  // Chip "New" nghĩa là "tìm được nhờ từ khoá tôi gõ", không phải một chuyên
-  // mục chủ đề — vì phân loại sẽ ghi đè `contentGroup` bằng chủ đề thật. Xem
-  // lời giải thích dài hơn ở `app/quan-tam/page.tsx`.
-  if (loc.nhom === "new_search") dieuKien.adHocInterestId = { not: null };
-  else if (loc.nhom) dieuKien.contentGroup = loc.nhom;
-  if (loc.loai) dieuKien.type = loc.loai;
-  if (loc.loaiGiong) dieuKien.narrationType = loc.loaiGiong;
-  if (loc.daThuatLai) dieuKien.narrationAsset = { isNot: null };
+  // --- Tầng riêng: Triết học ---
+  if (loc.thTruongPhai) phanLoai.philosophySchool = loc.thTruongPhai;
+  if (loc.thDang) phanLoai.philosophyContentForm = loc.thDang;
 
-  if (loc.duoiBaoNhieuPhut || loc.tuBaoNhieuPhut) {
-    dieuKien.durationSeconds = {
-      ...(loc.tuBaoNhieuPhut ? { gte: loc.tuBaoNhieuPhut * 60 } : {}),
-      ...(loc.duoiBaoNhieuPhut ? { lte: loc.duoiBaoNhieuPhut * 60 } : {}),
-    };
-  }
+  // --- Tầng riêng: Truyện ---
+  if (loc.trTheLoai) phanLoai.storyGenre = loc.trTheLoai;
+  if (loc.trXuatXu) phanLoai.storyOrigin = loc.trXuatXu;
+  if (loc.trDoCang) phanLoai.storyIntensity = loc.trDoCang;
+  if (loc.trChuyenThat) phanLoai.basedOnTrueStory = true;
 
-  if (loc.trongBaoNhieuNgay) {
-    dieuKien.publishedAt = {
-      gte: new Date(Date.now() - loc.trongBaoNhieuNgay * 86_400_000),
-    };
-  }
+  // --- Tầng riêng: Music ---
+  if (loc.msTheLoai) phanLoai.musicGenre = loc.msTheLoai;
+  if (loc.msDoDai) phanLoai.mixLengthBucket = loc.msDoDai;
+  if (loc.msDaiBpm) phanLoai.bpmBucket = loc.msDaiBpm;
 
-  // Truyện nghi do AI viết bị loại hẳn — bộ lọc cứng duy nhất trong hệ thống
+  // --- Tầng riêng: Khoa học ---
+  if (loc.khLinhVuc) phanLoai.scienceField = loc.khLinhVuc;
+
+  // --- Hai bộ lọc chạy ngầm, không có nút, không tắt được ---
+  //
+  // Truyện nghi do AI sản xuất hàng loạt bị loại hẳn chứ không chỉ xếp cuối;
+  // nội dung mê tín bị đẩy khỏi mục triết học. Cả hai đều theo bản thiết kế.
   if (loc.nhom === "truyen") {
-    dieuKien.classification = {
-      OR: [
-        { aiGeneratedSuspicionScore: null },
-        { aiGeneratedSuspicionScore: { lt: 0.6 } },
-      ],
-    };
+    va.push({
+      classification: {
+        OR: [
+          { aiGeneratedSuspicionScore: null },
+          { aiGeneratedSuspicionScore: { lt: 0.6 } },
+        ],
+      },
+    });
+  }
+  if (loc.nhom === "triet_hoc") phanLoai.misleadingContentFlag = false;
+
+  // --- Sắp theo tỷ lệ thì bắt buộc đủ lượt xem ---
+  if (loc.sapXep === "thich_cao" || loc.sapXep === "binh_luan_cao") {
+    dieuKien.viewOrPlayCount = { gte: TOI_THIEU_LUOT_XEM_CHO_TY_LE };
   }
 
-  // Nội dung mê tín bị đẩy khỏi mục triết học
-  if (loc.nhom === "triet_hoc") {
-    dieuKien.classification = { misleadingContentFlag: false };
-  }
+  if (Object.keys(phanLoai).length > 0) va.push({ classification: phanLoai });
 
   const tuKhoa = loc.tuKhoa?.trim();
   if (tuKhoa) {
     // Tìm trong nhiều chỗ, kể cả nhận xét và chủ đề Claude rút ra — nhờ vậy gõ
     // "khắc kỷ" vẫn tìm được video mà tiêu đề không hề có chữ đó
-    dieuKien.OR = [
-      { title: { contains: tuKhoa, mode: "insensitive" } },
-      { description: { contains: tuKhoa, mode: "insensitive" } },
-      { source: { title: { contains: tuKhoa, mode: "insensitive" } } },
-      {
-        classification: {
-          contentQualityNotes: { contains: tuKhoa, mode: "insensitive" },
+    va.push({
+      OR: [
+        { title: { contains: tuKhoa, mode: "insensitive" } },
+        { description: { contains: tuKhoa, mode: "insensitive" } },
+        { source: { title: { contains: tuKhoa, mode: "insensitive" } } },
+        {
+          classification: {
+            contentQualityNotes: { contains: tuKhoa, mode: "insensitive" },
+          },
         },
-      },
-      { classification: { extractedTopics: { has: tuKhoa } } },
-      {
-        classification: {
-          extractedAuthorNameRaw: { contains: tuKhoa, mode: "insensitive" },
+        { classification: { extractedTopics: { has: tuKhoa } } },
+        {
+          classification: {
+            extractedAuthorNameRaw: { contains: tuKhoa, mode: "insensitive" },
+          },
         },
-      },
-    ];
+      ],
+    });
   }
 
+  if (va.length > 0) dieuKien.AND = va;
   return dieuKien;
 }
 
 /** Dựng thứ tự sắp xếp. */
 function dungThuTu(
-  kieu: KieuSapXep,
+  kieu: MaSapXep | undefined,
 ): Prisma.ContentItemOrderByWithRelationInput[] {
-  if (kieu === "moi_nhat") {
-    return [{ publishedAt: { sort: "desc", nulls: "last" } }];
-  }
+  const moiNhat = { publishedAt: { sort: "desc", nulls: "last" } } as const;
 
-  // "Phù hợp nhất" và "chất lượng cao nhất" hiện giống nhau. Khi có
-  // UserTasteProfile (Phase 9) thì "phù hợp nhất" sẽ nhân thêm hệ số cá nhân
-  // hoá, còn "chất lượng cao nhất" vẫn giữ nguyên điểm thuần.
-  return [
-    { score: { compositeScore: { sort: "desc", nulls: "last" } } },
-    { publishedAt: { sort: "desc", nulls: "last" } },
-  ];
+  switch (kieu) {
+    case "moi_nhat":
+      return [moiNhat];
+    case "thich_cao":
+      return [{ likeRatio: { sort: "desc", nulls: "last" } }, moiNhat];
+    case "binh_luan_cao":
+      return [{ commentRatio: { sort: "desc", nulls: "last" } }, moiNhat];
+    case "diem_cao":
+    default:
+      // Mặc định cũng là điểm cao trước — thứ tự hợp lý nhất khi chưa chọn gì.
+      return [
+        { score: { compositeScore: { sort: "desc", nulls: "last" } } },
+        moiNhat,
+      ];
+  }
 }
 
 export interface KetQuaTim {
@@ -193,13 +339,10 @@ export interface KetQuaTim {
 /** Tìm và lọc nội dung. */
 export async function timNoiDung(loc: BoLoc): Promise<KetQuaTim> {
   const trang = Math.max(1, loc.trang ?? 1);
-  // Đang tìm một thứ cụ thể thì KHÔNG giấu nội dung đã xem — người ta gõ vào
-  // ô tìm kiếm thường là để lần lại đúng cái vừa xem hôm qua. Chỉ lúc lướt
-  // không mục đích mới cần giấu.
+  // Đang tìm một thứ cụ thể thì KHÔNG giấu nội dung đã xem — người ta gõ vào ô
+  // tìm kiếm thường là để lần lại đúng cái vừa xem hôm qua. Chỉ lúc lướt không
+  // mục đích mới cần giấu.
   const dangTimCuThe = Boolean(loc.tuKhoa?.trim());
-  // KHÔNG giấu nội dung tiếng nước ngoài. Đã thử và sai: chủ dự án nói rõ nội
-  // dung hay bằng tiếng Anh thì phải **lồng tiếng Việt cho nó**, chứ ẩn đi là
-  // mất luôn phần nội dung tốt nhất. Xem lib/tiengViet/loc.ts.
   const dieuKien = dangTimCuThe
     ? dungDieuKien(loc)
     : chuaLuotQua(dungDieuKien(loc));
@@ -208,7 +351,7 @@ export async function timNoiDung(loc: BoLoc): Promise<KetQuaTim> {
     prisma.contentItem.findMany({
       where: dieuKien,
       select: TRUONG_THE,
-      orderBy: dungThuTu(loc.sapXep ?? "phu_hop_nhat"),
+      orderBy: dungThuTu(loc.sapXep),
       skip: (trang - 1) * SO_MOI_TRANG,
       take: SO_MOI_TRANG,
     }),
@@ -226,20 +369,44 @@ export async function timNoiDung(loc: BoLoc): Promise<KetQuaTim> {
 /**
  * Đếm số nội dung mỗi chuyên mục, để hiện cạnh chip lọc.
  *
- * PHẢI LỌC Y HỆT DANH SÁCH BÊN DƯỚI. Bản đầu chỉ đếm `status: "classified"`,
- * bỏ qua cả bộ lọc tiếng Việt lẫn bộ lọc "đã xem rồi" — nên chip ghi **AI 28**
- * mà bấm vào chỉ ra **5 nội dung**. Chủ dự án phát hiện đúng chỗ này và hỏi
- * thẳng "28 mà hiện lên chỉ có 05 là sao?".
+ * PHẢI ĐẾM Y HỆT DANH SÁCH BÊN DƯỚI, kể cả luật 5 phút. Bản đầu chỉ đếm
+ * `status: "classified"` nên chip ghi **AI 28** mà bấm vào chỉ ra **5 nội
+ * dung**. Chủ dự án phát hiện đúng chỗ này và hỏi thẳng "28 mà hiện lên chỉ có
+ * 05 là sao?".
  *
  * Con số trên chip là một lời hứa: bấm vào sẽ thấy chừng đó. Đếm theo một công
  * thức rồi hiển thị theo công thức khác thì con số ấy thành nói dối, mà lại là
  * kiểu nói dối không ai báo lỗi.
+ *
+ * KHÔNG ĐẾM NHÓM "other". Nội dung không thuộc chuyên mục nào đã bị đánh dấu
+ * `rejected` ở bước phân loại, nên nó không lọt vào đây; và cũng không có chip
+ * nào để bấm vào.
  */
 export async function demTheoNhom(): Promise<Record<string, number>> {
-  const nhom = await prisma.contentItem.groupBy({
-    by: ["contentGroup"],
-    where: chuaLuotQua({ status: "classified" }),
-    _count: { _all: true },
+  const chung = chuaLuotQua({
+    status: "classified" as const,
+    OR: [
+      { durationSeconds: null },
+      { durationSeconds: { gte: TOI_THIEU_GIAY } },
+    ],
   });
-  return Object.fromEntries(nhom.map((n) => [n.contentGroup, n._count._all]));
+
+  const [nhom, ngauHung] = await Promise.all([
+    prisma.contentItem.groupBy({
+      by: ["contentGroup"],
+      where: chung,
+      _count: { _all: true },
+    }),
+    prisma.contentItem.count({
+      where: { ...chung, adHocInterestId: { not: null } },
+    }),
+  ]);
+
+  const dem = Object.fromEntries(
+    nhom
+      .filter((n) => n.contentGroup !== "other")
+      .map((n) => [n.contentGroup, n._count._all]),
+  );
+  dem.ngau_hung = ngauHung;
+  return dem;
 }

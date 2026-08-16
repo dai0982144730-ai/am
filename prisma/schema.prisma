@@ -127,6 +127,20 @@ enum AiSubtopic {
   claude_usage_guide
 }
 
+/// Lĩnh vực của một nội dung khoa học.
+///
+/// KHÔNG CÓ "AI" TRONG DANH SÁCH, và đó là chủ ý. AI đã là một chuyên mục
+/// riêng; để nó làm thêm lĩnh vực con của khoa học thì một bài về AI nằm ở
+/// hai chỗ cùng lúc, phá vỡ tính loại trừ của năm mảng. Chủ dự án đưa "ai"
+/// vào danh sách rồi tự bỏ ra (2026-08-16).
+enum ScienceField {
+  y_hoc_suc_khoe
+  vat_ly_vu_tru
+  sinh_hoc
+  vat_lieu_nang_luong
+  ky_thuat
+}
+
 enum PhilosophySchool {
   stoic
   hien_sinh
@@ -322,6 +336,18 @@ model ContentItem {
   viewOrPlayCount Int?
   likeCount       Int?
   commentCount    Int?
+
+  /// TUYỆT ĐỐI KHÔNG GHI VÀO HAI CỘT NÀY — chúng là cột SINH TỰ ĐỘNG trong
+  /// PostgreSQL (`GENERATED ALWAYS AS ... STORED`), database tự tính lại mỗi
+  /// khi lượt xem hay lượt thích đổi. Prisma không có cách diễn đạt điều đó
+  /// nên phải khai như trường thường; đọc và sắp xếp thì an toàn, ghi vào thì
+  /// Postgres báo lỗi ngay.
+  ///
+  /// Dùng cho hai kiểu sắp xếp "tỷ lệ thích cao" và "tỷ lệ bình luận cao" —
+  /// Prisma không sắp xếp được theo một phép chia tính tại chỗ.
+  likeRatio    Float?
+  commentRatio Float?
+
   originalLanguage String?
 
   contentGroup  ContentGroup
@@ -464,6 +490,11 @@ model ContentClassification {
 
   // --- AI ---
   aiSubtopic AiSubtopic?
+
+  // --- Khoa học ---
+  /// Lĩnh vực khoa học. Trường DUY NHẤT phải thêm mới cho bộ lọc theo chuyên
+  /// mục — mọi trường riêng khác đều đã có sẵn từ đầu và đã điền đủ.
+  scienceField ScienceField?
 
   // --- Triết học ---
   philosophySchool      PhilosophySchool?

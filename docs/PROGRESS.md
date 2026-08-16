@@ -27,6 +27,7 @@
 | **11** — Podcast | ✅ xong: gõ tên là tìm ra kênh, nghe thẳng trong app |
 | **Tự chạy** | ✅ một lệnh làm đủ 9 bước, hẹn giờ 21:00 |
 | **15** — Cổng API trợ lý | ✅ xong, đã chạy thật |
+| **Bộ lọc theo chuyên mục** | ✅ hai hàng lọc ngang, mỗi chuyên mục có nút riêng |
 | Giao diện | Trang chủ, trang xem video, trang cài đặt — chạy với dữ liệu thật |
 | Phân quyền | Khách xem được; cấu hình và việc gọi Claude cần đăng nhập |
 
@@ -2039,3 +2040,103 @@ dấu phẩy thừa trước dấu `)` phải sửa nốt, và hai khối `COPY`
 
 Bản rời không tự chạy khi bật máy. `scripts/chay-database.cmd` để bật, thêm
 `dung` để tắt, `xem` để kiểm. Mọi trang lỗi kết nối thì nghĩ tới chuyện này trước.
+
+---
+
+## Bộ lọc theo từng chuyên mục — XONG (2026-08-16)
+
+Trước phiên này, trang Khám phá có đúng **4 nút lọc**: *Đã thuật lại · Dưới 10
+phút · Trên 20 phút · 3 ngày gần đây*. Không nút nào thuộc về một chuyên mục cụ
+thể — đứng ở Triết học hay ở Music đều lọc được đúng bốn thứ vô nghĩa như nhau.
+
+Chủ dự án chỉ thẳng vào ảnh chụp bốn nút đó: *"hiện tại tất cả đều bị phân loại
+bố láo hết"*.
+
+### Điều đo được khi rà lại
+
+| | |
+|---|---|
+| Trường riêng từng chuyên mục **đã điền đủ** | aiSubtopic 32/32 · philosophySchool 28/28 · storyGenre 17/17 · musicGenre 15/15 |
+| Nhưng giao diện cho lọc theo chúng | **0 nút** |
+| Nội dung rơi vào nhóm "Khác" | 304/417 — **73% những gì bày ra** |
+| Nội dung chưa phân loại, không hiện ra | 645 |
+
+Dữ liệu vẫn nằm nguyên trong database, chỉ là không có đường nào chạm tới. Công
+đọc của Claude đã tốn rồi mà không dùng được.
+
+### Bố cục mới: hai hàng ngang, không còn cột trái
+
+```
+[Tất cả] [AI] [Triết học] [Truyện] [Music] [Khoa học] [Ngẫu hứng]
+┌────────────────────────────────────────────────────────────────┐
+│ CHUNG   Dưới 15 · Trên 30 · Trên 45 │ Kênh theo dõi │ Kênh mới  │
+│         │ Mới nhất trước │ Chất lượng ▾ │ Nguồn ▾ │ Tiếng Việt ▾│
+├────────────────────────────────────────────────────────────────┤
+│ RIÊNG   (đổi theo chuyên mục đang mở)                          │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Không còn chuyên mục "Khác".** Am đi tìm năm mảng cụ thể cộng thứ chủ nhà tự
+gọi ra. Thứ không thuộc mảng nào bị đánh dấu loại ngay ở bước phân loại.
+
+### Mỗi nhóm chỉ chọn được một giá trị
+
+Chủ dự án chốt: *"ấn một cái là lọc cái đó thôi"*. Cách làm là **mỗi nhóm dùng
+đúng một tham số trên địa chỉ trang**, nên tính loại trừ không phải viết bằng tay
+chỗ nào: "Mới nhất trước" và ba kiểu chất lượng cùng ghi vào `sap`; "Kênh theo
+dõi" và "Kênh mới" cùng ghi vào `kenh`.
+
+Cách này vá luôn **một lỗi có thật của bản cũ**: hai nút "Dưới 10 phút" và "Trên
+20 phút" là hai tham số rời nên bấm được cả hai, thành điều kiện
+`≥ 20 phút VÀ ≤ 10 phút` — luôn ra 0 kết quả mà không báo gì.
+
+### Luật 5 phút
+
+Clip ngắn hơn 5 phút bị loại thẳng. Hai ngoại lệ **tự đúng** mà không cần viết
+thêm điều kiện nào: bài blog/diễn đàn không có thời lượng nên lọt qua nhánh
+`null`; còn bản thuyết minh từ clip gốc dài hơn 5 phút vẫn được giữ vì cột
+`durationSeconds` lưu thời lượng clip GỐC, còn độ dài mp3 nằm ở `NarrationAsset`.
+
+### Hai thứ phải thêm vào database
+
+| Thêm gì | Vì sao |
+|---|---|
+| `ContentClassification.scienceField` | 5 lĩnh vực khoa học. Trường **duy nhất** phải thêm mới — mọi trường riêng khác đã có sẵn |
+| `ContentItem.likeRatio` / `.commentRatio` | Cột **sinh tự động**. Prisma không sắp xếp được theo một phép chia |
+
+Ngưỡng cho hai kiểu sắp theo tỷ lệ: **tối thiểu 1.000 lượt xem**. Không đặt
+ngưỡng thì đứng đầu bảng "tỷ lệ thích cao" là một clip **3 thích trên 8 lượt
+xem** — 37,5%, cao nhất kho, và chẳng nói lên điều gì.
+
+### Chuyện phát hiện được khi thử: mục Music ra 0 kết quả
+
+Không phải lỗi lọc. **Cả 15 "bản nhạc" trong kho đều là Shorts 13–33 giây**,
+phần lớn từ một kênh dance challenge. Luật 5 phút loại đúng hết.
+
+Nghĩa là nhánh nhạc chưa từng quét được một bản nhạc thật nào. Việc cần làm:
+thêm nguồn nhạc dài (mix workout, playlist piano, nhạc vàng), không phải sửa lọc.
+
+### Phân loại lại toàn kho bằng lời dặn v3
+
+Hai lỗi trong chính lời dặn cũ đã chôn nội dung tốt:
+
+- **191 bài xếp bằng v1** — bản đó chưa có chuyên mục `khoa_hoc`, nên mọi bài
+  khoa học buộc phải rơi vào "Khác"
+- **226 bài xếp bằng v2** — bản này mô tả "Khác" như một chuyên mục bình thường
+
+Bản v3 vá cả hai và thêm luôn trường lĩnh vực khoa học. Gộp chung một bản là có
+chủ đích: tách ra thì 21 bài khoa học phải đọc lại lần thứ hai.
+
+```bash
+npx tsx scripts/phan-loai-lai.ts          # xem còn bao nhiêu
+npx tsx scripts/phan-loai-lai.ts tat-ca   # chạy tới khi xong
+```
+
+### Còn lại
+
+- **Mục Ngẫu hứng** mới có chip chuyên mục, chưa có phần tìm-khi-bấm. Chủ dự án
+  đã chốt cách chạy: tìm ngay lúc bấm, không quét đêm, không vào bản tin sáng,
+  hết ngày là quên. Tìm trong kênh đã theo dõi trước (1 đơn vị hạn mức), chỉ mở
+  rộng ra ngoài khi không đủ (100 đơn vị).
+- **Lọc theo giảng sư / tác giả** cần Phase 6. Nút đã hiện nhưng làm mờ.
+- **Nhánh nhạc** cần nguồn nhạc dài thật.

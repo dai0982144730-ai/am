@@ -16,6 +16,7 @@ import type {
   NarrationType,
   PhilosophyContentForm,
   PhilosophySchool,
+  ScienceField,
   StoryGenre,
   StoryIntensity,
   StoryOrigin,
@@ -83,6 +84,8 @@ function dichSangDatabase(kq: KetQuaPhanLoai, thoiLuongGiay: number | null) {
 
     aiSubtopic: (kq.aiChuDeCon as AiSubtopic | null) ?? null,
 
+    scienceField: (kq.linhVucKhoaHoc as ScienceField | null) ?? null,
+
     philosophySchool: (kq.truongPhai as PhilosophySchool | null) ?? null,
     philosophyContentForm:
       (kq.dangTrinhBay as PhilosophyContentForm | null) ?? null,
@@ -106,6 +109,34 @@ function dichSangDatabase(kq: KetQuaPhanLoai, thoiLuongGiay: number | null) {
 
     promptVersion: PHIEN_BAN_HUONG_DAN,
   };
+}
+
+/**
+ * Quyết định nội dung này được bày ra hay bị loại.
+ *
+ * KHÔNG THUỘC CHUYÊN MỤC NÀO THÌ LOẠI, KHÔNG BÀY RA.
+ *
+ * Chủ dự án chỉ ra lỗi này 2026-08-15, và câu hỏi của họ là câu không cãi được:
+ * *"cấu trúc tìm là tìm ai, triết học, khoa học, music, Tùy chọn — thì lấy đâu
+ * ra cái gì là khác???"*
+ *
+ * Đúng vậy. Am đi tìm năm mảng cụ thể cộng với từ khoá chủ nhà tự gõ. Một nội
+ * dung không thuộc thứ nào trong đó nghĩa là nó **lọt vào**, chứ không phải một
+ * loại nội dung hợp lệ tên là "khác". Bày nó ra là bắt chủ nhà tự lọc lại bằng
+ * mắt — đúng cái việc mà app này sinh ra để làm thay.
+ *
+ * Đo lúc phát hiện: 304/417 nội dung đã phân loại rơi vào "other", tức là
+ * **73% những gì bày ra là thứ chẳng ai đi tìm**.
+ *
+ * NGOẠI LỆ: nội dung tìm được từ từ khoá chủ nhà tự gõ luôn được giữ. Nó thuộc
+ * "Tùy chọn" — chính chủ nhà đòi thì không thể gọi là lọt vào, dù Claude không
+ * xếp được vào năm mảng cố định.
+ */
+function quyetDinhTrangThai(
+  nhom: string,
+  adHocInterestId: string | null,
+): "classified" | "rejected" {
+  return nhom === "other" && !adHocInterestId ? "rejected" : "classified";
 }
 
 export interface KetQuaPhanLoaiHangLoat {
@@ -264,7 +295,7 @@ export async function phanLoaiHangLoat(
               // Claude đọc nội dung nên biết chắc hơn siêu dữ liệu của
               // YouTube, vốn để trống ở phần lớn video
               originalLanguage: kq.ngonNguNoiDung === "vi" ? "vi" : "khac",
-              status: "classified",
+              status: quyetDinhTrangThai(kq.nhom, muc.adHocInterestId),
             },
           }),
         ],
@@ -292,6 +323,144 @@ export async function phanLoaiHangLoat(
     daXet: cacMuc.length,
     thanhCong,
     loi,
+    tongTokenVao,
+    tongTokenRa,
+    tongTokenNhoLai,
+    theoNhom,
+    cachGoi,
+  };
+}
+
+export interface KetQuaPhanLoaiLai extends KetQuaPhanLoaiHangLoat {
+  /** Từng bị vứt, nay được nhận về một chuyên mục thật */
+  cuuVe: number;
+  /** Đổi từ chuyên mục này sang chuyên mục khác */
+  doiNhom: number;
+  /** Vẫn bị vứt như cũ */
+  giuNguyenVut: number;
+}
+
+/**
+ * Phân loại lại những nội dung đã xếp bằng lời dặn cũ.
+ *
+ * VÌ SAO CẦN. Lời dặn đổi thì kết quả cũ thành lỗi thời, mà lỗi thời ở đây
+ * không phải chuyện nhỏ:
+ *
+ *   - **191 mục còn xếp bằng bản v1**, tức là trước khi có chuyên mục
+ *     `khoa_hoc`. Mọi nội dung khoa học trong số đó đã bị đẩy vào "other" vì
+ *     lúc ấy không có chỗ nào khác để đặt.
+ *   - **226 mục xếp bằng bản v2**, bản mô tả "other" như một chuyên mục bình
+ *     thường. Đó là lý do 73% kho rơi vào đấy.
+ *
+ * Nên đây không phải chạy lại cho vui — là sửa hậu quả của hai lỗi trong chính
+ * lời dặn tôi viết.
+ *
+ * THỨ TỰ: ưu tiên thứ đang bị vứt (`other`), vì đó là chỗ có nội dung tốt bị
+ * chôn. Nội dung đã nằm đúng chuyên mục thì xếp sau — làm lại chúng ít lời hơn.
+ */
+export async function phanLoaiLaiHangLoat(
+  gioiHan = 20,
+  bao?: (dong: string) => void,
+): Promise<KetQuaPhanLoaiLai> {
+  const cacMuc = await prisma.contentItem.findMany({
+    where: {
+      classification: { promptVersion: { not: PHIEN_BAN_HUONG_DAN } },
+    },
+    // Thứ đang bị vứt lên trước: `other` đứng cuối bảng chữ cái ngược so với
+    // ai/khoa_hoc/music/triet_hoc/truyen nên `desc` chưa đủ — sắp theo trạng
+    // thái, `rejected` trước `classified`.
+    orderBy: [{ status: "desc" }, { publishedAt: "desc" }],
+    take: gioiHan,
+    include: {
+      source: { select: { title: true } },
+      transcript: { select: { rawText: true, fetchStatus: true } },
+      classification: { select: { id: true } },
+    },
+  });
+
+  const theoNhom: Record<string, number> = {};
+  let thanhCong = 0;
+  let loi = 0;
+  let cuuVe = 0;
+  let doiNhom = 0;
+  let giuNguyenVut = 0;
+  let tongTokenVao = 0;
+  let tongTokenRa = 0;
+  let tongTokenNhoLai = 0;
+  let cachGoi: CachGoi | null = null;
+
+  for (const [thuTu, muc] of cacMuc.entries()) {
+    if (thuTu > 0) await nghi(NGHI_GIUA_HAI_LAN_MS);
+
+    const nhomCu = muc.contentGroup;
+
+    try {
+      const goi = await phanLoaiMotNoiDung({
+        tieuDe: muc.title,
+        moTa: muc.description,
+        tenKenh: muc.source.title,
+        thoiLuongGiay: muc.durationSeconds,
+        loiThoai:
+          muc.transcript?.fetchStatus === "success"
+            ? muc.transcript.rawText
+            : null,
+      });
+      const kq = goi.ketQua;
+      const truong = dichSangDatabase(kq, muc.durationSeconds);
+
+      await ghiCoThuLai(() =>
+        prisma.$transaction(
+          [
+            prisma.contentClassification.update({
+              where: { contentItemId: muc.id },
+              data: { modelUsed: goi.modelDaDung, ...truong },
+            }),
+            prisma.contentItem.update({
+              where: { id: muc.id },
+              data: {
+                contentGroup: kq.nhom as ContentGroup,
+                narrationType: kq.loaiGiongDoc as NarrationType,
+                originalLanguage: kq.ngonNguNoiDung === "vi" ? "vi" : "khac",
+                status: quyetDinhTrangThai(kq.nhom, muc.adHocInterestId),
+              },
+            }),
+          ],
+          { timeout: HAN_GHI_MS, maxWait: HAN_CHO_MS },
+        ),
+      );
+
+      thanhCong += 1;
+      cachGoi = goi.cachGoi;
+      theoNhom[kq.nhom] = (theoNhom[kq.nhom] ?? 0) + 1;
+      tongTokenVao += goi.tokenVao;
+      tongTokenRa += goi.tokenRa;
+      tongTokenNhoLai += goi.tokenNhoLai;
+
+      const tieuDe = muc.title.slice(0, 52);
+      if (nhomCu === "other" && kq.nhom !== "other") {
+        cuuVe += 1;
+        bao?.(`  ↑ CỨU VỀ  ${kq.nhom.padEnd(10)} ${tieuDe}`);
+      } else if (nhomCu === "other") {
+        giuNguyenVut += 1;
+      } else if (nhomCu !== kq.nhom) {
+        doiNhom += 1;
+        bao?.(`  ⇄ ${nhomCu} → ${kq.nhom.padEnd(10)} ${tieuDe}`);
+      }
+    } catch (e) {
+      loi += 1;
+      bao?.(
+        `  ✗ ${muc.title.slice(0, 40)} — ${e instanceof Error ? e.message : e}`,
+      );
+    }
+  }
+
+  return {
+    daXet: cacMuc.length,
+    thanhCong,
+    loi,
+    cuuVe,
+    doiNhom,
+    giuNguyenVut,
     tongTokenVao,
     tongTokenRa,
     tongTokenNhoLai,

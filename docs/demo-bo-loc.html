@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="vi" data-tong="toi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Am — demo bộ lọc đầy đủ theo từng chuyên mục</title>
+<style>
+  /* Bảng màu lấy nguyên từ src/app/globals.css của app thật */
+  [data-tong="toi"]{
+    --background:#0e0e0e; --foreground:#f2f2f2; --nen-menu:#070707;
+    --khoi:#1a1a1a; --khoi-2:#141414;
+    --vien:#2a2a2a; --vien-ro:#3a3a3a;
+    --chu-phu:#a8a8a8; --chu-mo:#6a6a6a;
+    --chip-nen:#2a2a2a; --chip-hover:#333;
+    --cam-50:#1c1310; --cam-100:#2a1d16; --cam-300:#e0a184;
+    --cam-500:#d4845f; --cam-600:#c2724f; --cam-700:#a85f3f;
+    --cam-chinh:#d4845f; --cam-chu-tren:#141414;
+    color-scheme:dark;
+  }
+  [data-tong="sang"]{
+    --background:#fdfbf7; --foreground:#2c2720; --nen-menu:#f2ebdf;
+    --khoi:#ffffff; --khoi-2:#fbf8f3;
+    --vien:#e7ddcd; --vien-ro:#d6c8b2;
+    --chu-phu:#7a6f5d; --chu-mo:#a4967f;
+    --chip-nen:#f4eee4; --chip-hover:#e7ddcd;
+    --cam-50:#fdf3ec; --cam-100:#fae2d1; --cam-300:#f0a878;
+    --cam-500:#dd6b20; --cam-600:#c2551a; --cam-700:#9c4415;
+    --cam-chinh:#c2551a; --cam-chu-tren:#ffffff;
+    color-scheme:light;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--background); color:var(--foreground);
+       font-family:Arial,Helvetica,sans-serif; font-size:14px;}
+  button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit;}
+  a{color:inherit; text-decoration:none;}
+  ::-webkit-scrollbar{width:10px; height:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--vien); border-radius:5px;}
+
+  /* ---------- thanh trên ---------- */
+  header{position:sticky; top:0; z-index:20; height:56px; display:flex; align-items:center;
+         gap:12px; padding:0 16px; background:var(--nen-menu); border-bottom:1px solid var(--vien);}
+  .logo{font-size:18px; font-weight:700; letter-spacing:-.02em; color:var(--cam-chinh);}
+  .o-tim{flex:1; max-width:576px; margin:0 auto;}
+  .o-tim input{width:100%; border-radius:999px; border:1px solid var(--vien);
+    background:var(--background); color:var(--foreground); padding:7px 16px; font-size:13px;}
+  .o-tim input::placeholder{color:var(--chu-mo);}
+  .icon-btn{border-radius:999px; padding:8px; color:var(--chu-phu); display:flex;}
+  .icon-btn:hover{background:var(--cam-100);}
+  .tong-switch{display:flex; gap:3px; background:var(--khoi); border:1px solid var(--vien);
+    border-radius:999px; padding:3px;}
+  .tong-switch button{border-radius:999px; padding:5px 12px; font-size:11.5px; font-weight:600; color:var(--chu-phu);}
+  .tong-switch button.on{background:var(--cam-chinh); color:var(--cam-chu-tren);}
+
+  /* ---------- khung + menu trái ---------- */
+  .khung{display:flex;}
+  nav{position:sticky; top:56px; height:calc(100vh - 56px); width:224px; flex:none;
+      overflow-y:auto; padding:8px; background:var(--nen-menu); border-right:1px solid var(--vien);}
+  .nav-nhan{padding:8px 12px 4px; font-size:11px; font-weight:600; text-transform:uppercase;
+    letter-spacing:.04em; color:var(--chu-mo);}
+  .nav-muc{display:flex; align-items:center; gap:16px; border-radius:8px; padding:8px 12px;
+    font-size:13.5px; color:var(--chu-phu); width:100%; text-align:left;}
+  .nav-muc:hover{background:var(--cam-50);}
+  .nav-muc.on{background:var(--cam-100); color:var(--cam-300); font-weight:500;}
+  [data-tong="sang"] .nav-muc.on{color:var(--cam-700);}
+  .nav-muc.tat{color:var(--chu-mo); cursor:default;}
+  .nav-muc.tat:hover{background:none;}
+  .nav-muc svg{width:20px; height:20px; flex:none;}
+  .nav-chia{margin:4px 0; border-top:1px solid var(--vien);}
+  main{flex:1; min-width:0; padding:24px 28px 80px;}
+  @media (max-width:900px){ nav{display:none;} main{padding:18px 14px 60px;} }
+
+  h1{font-size:20px; font-weight:600; letter-spacing:-.01em; margin:0 0 16px;}
+
+  /* ---------- chip chuyên mục ---------- */
+  .chip-nhom{display:flex; gap:8px; margin-bottom:18px;}
+  .chip-nhom button{flex:1; min-width:0; border-radius:12px; padding:10px 12px;
+    font-size:13.5px; font-weight:600; background:var(--chip-nen); transition:.18s;}
+  .chip-nhom button:hover{transform:translateY(-2px);}
+  .chip-nhom button.on{background:var(--cam-chinh); color:var(--cam-chu-tren);
+    box-shadow:0 8px 20px -6px var(--cam-chinh);}
+  .chip-nhom .so{margin-left:6px; opacity:.6; font-variant-numeric:tabular-nums;}
+  @media (max-width:900px){ .chip-nhom{flex-wrap:wrap;} .chip-nhom button{flex:0 0 auto;} }
+
+  /* ---------- bố cục lọc + kết quả ---------- */
+  .bo-cuc{display:grid; grid-template-columns:252px 1fr; gap:24px; align-items:start;}
+  @media (max-width:1100px){ .bo-cuc{grid-template-columns:1fr;} }
+
+  .cot-loc{background:var(--khoi); border:1px solid var(--vien); border-radius:12px;
+    padding:16px; position:sticky; top:72px; max-height:calc(100vh - 96px); overflow-y:auto;}
+  .loc-dau{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;
+    padding-bottom:12px; border-bottom:1px solid var(--vien);}
+  .loc-dau b{font-size:13px;}
+  .loc-dau button{font-size:11.5px; color:var(--cam-chinh); font-weight:600;}
+  .nhom-loc{margin-bottom:16px;}
+  .nhom-loc:last-child{margin-bottom:0;}
+  .nl-ten{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--chu-mo); font-weight:700; margin-bottom:8px;}
+  .nl-ghi{font-size:11px; color:var(--chu-mo); margin-top:7px; line-height:1.5;}
+  .hang-pill{display:flex; gap:6px; flex-wrap:wrap;}
+  .pill{border-radius:999px; padding:5px 11px; font-size:11.5px; font-weight:600;
+    background:var(--chip-nen); color:var(--foreground);}
+  .pill:hover{background:var(--chip-hover);}
+  .pill.on{background:var(--cam-chinh); color:var(--cam-chu-tren);}
+  .pill.tat{opacity:.35; cursor:not-allowed;}
+  .dong-check{display:flex; align-items:flex-start; gap:8px; font-size:12.5px;
+    padding:4px 0; color:var(--chu-phu); cursor:pointer;}
+  .dong-check input{margin-top:2px; accent-color:var(--cam-chinh); cursor:pointer;}
+  .hop-cho{border:1.5px dashed var(--vien-ro); border-radius:8px; padding:12px;
+    font-size:11.5px; color:var(--chu-mo); line-height:1.55; background:var(--khoi-2);}
+  .o-nhap{width:100%; border-radius:8px; border:1px solid var(--vien); background:var(--background);
+    color:var(--foreground); padding:6px 10px; font-size:12px;}
+  .chia-lon{margin:18px 0 16px; border-top:1px solid var(--vien); padding-top:16px;}
+  .chia-lon .nhan{font-size:10.5px; font-weight:800; text-transform:uppercase;
+    letter-spacing:.05em; color:var(--cam-chinh); margin-bottom:14px;}
+
+  /* ---------- thanh kết quả ---------- */
+  .thanh-kq{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px;}
+  .thanh-kq .so-kq{font-size:13px; color:var(--chu-phu);}
+  select{border:1px solid var(--vien-ro); background:var(--khoi); color:var(--foreground);
+    border-radius:8px; padding:6px 10px; font-size:12.5px;}
+
+  /* ---------- thẻ nội dung ---------- */
+  .luoi{display:grid; grid-template-columns:repeat(3,1fr); gap:22px 16px;}
+  @media (max-width:1400px){ .luoi{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:640px){ .luoi{grid-template-columns:1fr;} }
+  .the .anh{position:relative; aspect-ratio:16/9; border-radius:12px; background:var(--khoi);
+    border:1px solid var(--vien); display:flex; align-items:center; justify-content:center;
+    color:var(--chu-mo); overflow:hidden;}
+  .the .anh .thoi-luong{position:absolute; right:6px; bottom:6px; background:rgba(0,0,0,.8);
+    color:#fff; font-size:11px; padding:1px 5px; border-radius:4px; font-variant-numeric:tabular-nums;}
+  .nhan-goc{position:absolute; left:8px; top:8px; font-size:9.5px; font-weight:800;
+    letter-spacing:.03em; padding:3px 7px; border-radius:5px; background:rgba(0,0,0,.72); color:#fff;}
+  .nhan-nguon{position:absolute; right:8px; top:8px; font-size:9.5px; font-weight:800;
+    letter-spacing:.03em; padding:3px 7px; border-radius:5px; color:#fff;}
+  .n-youtube{background:rgba(220,38,38,.9);} .n-blog{background:rgba(2,132,199,.9);}
+  .n-dienddan{background:rgba(124,58,237,.9);} .n-podcast{background:rgba(5,150,105,.9);}
+  .n-soundcloud{background:rgba(217,119,6,.9);}
+  .the .tieu-de{font-size:13.5px; font-weight:600; line-height:1.35; margin:9px 0 5px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .the .phu{font-size:11.5px; color:var(--chu-mo); line-height:1.5;}
+  .the .the-chips{display:flex; gap:5px; flex-wrap:wrap; margin-top:7px;}
+  .tc{font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:999px;
+    background:var(--chip-nen); color:var(--chu-phu);}
+  .tc.diem{background:var(--cam-100); color:var(--cam-300);}
+  [data-tong="sang"] .tc.diem{color:var(--cam-700);}
+
+  /* ---------- ghi chú dưới ---------- */
+  .ghi-chu-cuoi{margin-top:32px; background:var(--khoi); border:1px solid var(--vien);
+    border-radius:12px; padding:20px 22px;}
+  .ghi-chu-cuoi h2{font-size:14px; margin:0 0 10px;}
+  .ghi-chu-cuoi p{font-size:12.5px; color:var(--chu-phu); line-height:1.7; margin:0 0 10px;}
+  .ghi-chu-cuoi code{background:var(--chip-nen); padding:1px 5px; border-radius:4px; font-size:11.5px;}
+  .bang-td{width:100%; border-collapse:collapse; font-size:12px; margin-top:10px;}
+  .bang-td th{text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--chu-mo); padding:0 8px 8px; border-bottom:1px solid var(--vien-ro);}
+  .bang-td td{padding:8px; border-bottom:1px solid var(--vien); vertical-align:top; color:var(--chu-phu);}
+  .tt{font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:999px; white-space:nowrap;}
+  .tt-ok{background:rgba(34,197,94,.15); color:#4ade80;}
+  .tt-thieu{background:rgba(234,179,8,.15); color:#facc15;}
+  .tt-chua{background:rgba(239,68,68,.15); color:#f87171;}
+</style>
+</head>
+<body>
+
+<header>
+  <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <span class="logo">Am</span>
+  <div class="o-tim"><input type="search" placeholder="Tìm trong nội dung đã quét…"></div>
+  <div class="tong-switch">
+    <button onclick="datTong('sang',this)">Sáng</button>
+    <button class="on" onclick="datTong('toi',this)">Tối</button>
+  </div>
+</header>
+
+<div class="khung">
+  <nav>
+    <button class="nav-muc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 10l9-7 9 7v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Trang chủ</button>
+    <button class="nav-muc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>Am nói với bạn</button>
+    <button class="nav-muc on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>Khám phá</button>
+    <button class="nav-muc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>New</button>
+    <div class="nav-chia"></div>
+    <div class="nav-nhan">Của bạn</div>
+    <button class="nav-muc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Lịch sử xem</button>
+    <button class="nav-muc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 5v14M8 5v14M12 5h8v14h-8z"/></svg>Thư viện</button>
+    <button class="nav-muc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 6h11M3 12h11M3 18h7M17 16V7l4 2"/></svg>Playlist</button>
+    <button class="nav-muc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>Ghi chú</button>
+    <button class="nav-muc tat" title="Chưa làm — dự kiến Phase 6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Tủ sách</button>
+    <div class="nav-chia"></div>
+    <div class="nav-nhan">Trợ lý</div>
+    <button class="nav-muc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 11.5a8.4 8.4 0 01-9 8.4L3 21l1.1-4.5A8.4 8.4 0 1121 11.5z"/></svg>Trò chuyện</button>
+    <button class="nav-muc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 006 19.4a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 003 13.6H3a2 2 0 110-4h.1A1.6 1.6 0 004.6 6a2 2 0 112.8-2.8l.1.1A1.6 1.6 0 0010 3.1V3a2 2 0 114 0v.1a1.6 1.6 0 002.7 1.1l.1-.1A2 2 0 1119.6 6l-.1.1a1.6 1.6 0 001.1 2.7H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/></svg>Cài đặt</button>
+  </nav>
+
+  <main>
+    <h1>Khám phá</h1>
+    <div class="chip-nhom" id="chipNhom"></div>
+    <div class="bo-cuc">
+      <aside class="cot-loc">
+        <div class="loc-dau">
+          <b>Bộ lọc · <span id="soLoc">0</span></b>
+          <button onclick="xoaHet()">Xoá hết</button>
+        </div>
+        <div id="cotLoc"></div>
+      </aside>
+      <div>
+        <div class="thanh-kq">
+          <span class="so-kq" id="soKq"></span>
+          <select>
+            <option>Sắp xếp: Phù hợp nhất</option>
+            <option>Sắp xếp: Chất lượng cao nhất</option>
+            <option>Sắp xếp: Mới nhất trước</option>
+          </select>
+        </div>
+        <div class="luoi" id="luoi"></div>
+
+        <div class="ghi-chu-cuoi" id="ghiChu"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* =========================================================================
+   Bộ lọc CHUNG — dùng lại y hệt ở mọi chuyên mục.
+   Định nghĩa một lần, không chép lại sáu lần, để không bao giờ có chuyện
+   tab này có "Loại giọng" mà tab kia lại quên.
+   ========================================================================= */
+const LOC_CHUNG = [
+  { ten:'Nguồn', kieu:'check', muc:['YouTube','Blog','Diễn đàn','Podcast','SoundCloud'], chon:[0,1,2,3,4] },
+  { ten:'Quan hệ với nguồn', kieu:'pill', muc:['Tất cả','Đã theo dõi','Chưa theo dõi'], chon:[0] },
+  { ten:'Thời lượng', kieu:'pill', muc:['Dưới 10 phút','10–20 phút','20–40 phút','Trên 40 phút'],
+    ghi:'Bốn dải liền nhau, không hở. Bản đang chạy chỉ có hai nút rời "Dưới 10 phút" và "Trên 20 phút" nên khoảng 10–20 phút không cách nào chọn được.' },
+  { ten:'Nghe được bằng tiếng Việt', kieu:'pill', muc:['Tiếng Việt gốc','Đã lồng tiếng','Có phụ đề Việt','Đã thuật lại'],
+    ghi:'Không lọc bỏ tiếng nước ngoài — nội dung hay tiếng Anh thì đưa vào hàng lồng tiếng, không giấu đi.' },
+  { ten:'Loại giọng', kieu:'pill', muc:['Người thật','Máy đọc (TTS)','Không lời','Chỉ có chữ'] },
+  { ten:'Ngày đăng', kieu:'pill', muc:['3 ngày','1 tuần','1 tháng','Tất cả'], chon:[3] },
+  { ten:'Quy mô nguồn', kieu:'pill', muc:['Dưới 10N','10N – 100N','100N – 1Tr','Trên 1Tr'],
+    ghi:'Lọc theo lượng người theo dõi nguồn, không phải lượt xem của bài.' },
+  { ten:'Chỉ số tương tác', kieu:'check', muc:['Tỷ lệ thích cao','Tỷ lệ bình luận cao','Lượt xem đang tăng nhanh'] },
+  { ten:'Trạng thái của bạn', kieu:'pill', muc:['Chưa xem','Đang dở','Đã xong','Từng đánh giá cao'], chon:[0] },
+  { ten:'Cảm xúc đã gắn', kieu:'pill', muc:['Rất hay','Hay','Bình thường','Không hợp'] },
+  { ten:'Loại bỏ', kieu:'check', muc:['Ẩn nguồn đã chặn','Ẩn tác giả đã chặn','Ẩn giọng đọc đã chặn','Gộp nội dung trùng lặp'], chon:[0,3] },
+  { ten:'Gợi ý theo giờ', kieu:'check', muc:['Ưu tiên nội dung hợp giờ hiện tại'],
+    ghi:'Sáng sớm ưu tiên bài ngắn và nhạc tập; tối muộn ưu tiên giảng pháp và truyện.' },
+];
+
+/* =========================================================================
+   Bộ lọc RIÊNG từng chuyên mục + dữ liệu mẫu
+   ========================================================================= */
+const NHOM = {
+  tat_ca: {
+    ten:'Tất cả', so:113, rieng:[],
+    moTa:'<h2>Tab "Tất cả" chỉ có bộ lọc chung</h2><p>Không có trường riêng nào, vì trường riêng chỉ có nghĩa bên trong một chuyên mục — không thể hỏi "trường phái triết học" của một bản nhạc.</p><p><b>Chú ý: không có tab "Khác".</b> Am đi tìm năm mảng cụ thể cộng từ khoá bạn tự gõ. Thứ không thuộc mảng nào là thứ <i>lọt vào</i>, bị loại ở bước phân loại chứ không được bày ra thành một mục riêng.</p>',
+    the:[
+      {t:'Sư Hoằng Hiền hỏi về thần thông — Thầy Minh Tuệ trả lời',n:'youtube',ng:'Chân Tâm',tl:'42:18',g:'GIẢNG PHÁP',c:['triết học','vấn đáp'],d:'8,7'},
+      {t:'Anthropic ra mắt bộ công cụ agent mới cho doanh nghiệp',n:'blog',ng:'Anthropic Blog',tl:'8 phút đọc',g:'ĐÃ THUẬT LẠI',c:['AI','tin Claude'],d:'9,1'},
+      {t:'Vì sao tuổi thọ tăng 10 năm mà số năm sống khoẻ thì không?',n:'podcast',ng:'Have A Sip',tl:'1:04:22',g:null,c:['khoa học','y học'],d:'8,4'},
+    ]
+  },
+  ai: {
+    ten:'AI', so:32,
+    rieng:[
+      { ten:'Chủ đề con', kieu:'pill', muc:['Tin về Claude','Tin AI nói chung','AI cho doanh nghiệp','Kinh nghiệm viết code','Hướng dẫn dùng Claude'], chon:[0] },
+      { ten:'Hạng nguồn', kieu:'pill', muc:['Hãng chính thức','Chuyên gia cá nhân','Diễn đàn cộng đồng','Trang tổng hợp'], chon:[0,1],
+        ghi:'Hãng chính thức = Anthropic, OpenAI, Google tự công bố. Trang tổng hợp = báo công nghệ viết lại tin người khác, hạng thấp nhất.' },
+      { ten:'Bản tiếng Việt', kieu:'check', muc:['Chỉ hiện bài đã có bản thuật lại'],
+        ghi:'Bài blog và diễn đàn tiếng Anh luôn được sinh bản thuật lại tiếng Việt đầy đủ — tiện ích lồng tiếng chỉ chạy được với video, không giúp gì cho trang web thường.' },
+    ],
+    moTa:'<h2>Trường đứng sau bộ lọc AI</h2><table class="bang-td"><tr><th>Trường</th><th>Giá trị</th><th>Tình trạng</th></tr><tr><td><code>aiSubtopic</code></td><td>claude_news · ai_news_general · ai_agent_enterprise · coding_experience_howto · claude_usage_guide</td><td><span class="tt tt-ok">32/32 đã điền</span></td></tr><tr><td><code>sourceReputationTier</code></td><td>4 hạng, gắn ở mức Nguồn chứ không phải từng bài</td><td><span class="tt tt-thieu">chưa đo</span></td></tr></table><p style="margin-top:12px">Dữ liệu chủ đề con đã đủ 100%. Chỉ thiếu đúng cái nút để bấm.</p>',
+    the:[
+      {t:'Anthropic ra mắt bộ công cụ agent mới cho doanh nghiệp',n:'blog',ng:'Anthropic Blog',tl:'8 phút đọc',g:'ĐÃ THUẬT LẠI',c:['tin Claude','hãng chính thức'],d:'9,1'},
+      {t:'Sáu tháng viết code cùng Claude — thứ tôi làm sai lúc đầu',n:'dienddan',ng:'Hacker News',tl:'12 phút đọc',g:'ĐÃ THUẬT LẠI',c:['kinh nghiệm code','diễn đàn'],d:'8,8'},
+      {t:'Dựng agent đọc tài liệu nội bộ — bài học sau 3 lần làm hỏng',n:'youtube',ng:'Kỹ sư kể chuyện',tl:'28:40',g:null,c:['AI doanh nghiệp'],d:'8,2'},
+    ]
+  },
+  triet_hoc: {
+    ten:'Triết học', so:28,
+    rieng:[
+      { ten:'Trường phái', kieu:'pill', muc:['Khắc kỷ','Hiện sinh','Tâm lý học hiện đại','Phật giáo Nguyên thuỷ','Khác'], chon:[3] },
+      { ten:'Dạng trình bày', kieu:'pill', muc:['Giảng pháp','Vấn đáp','Ứng dụng thực hành','Phân tích học thuật'], chon:[0,1] },
+      { ten:'Trình độ người nghe', kieu:'pill', muc:['Mới bắt đầu','Chuyên sâu'] },
+      { ten:'Giảng sư / tác giả', kieu:'cho', noiDung:'Ô tìm theo tên giảng sư — cần <b>Phase 6</b> (xác thực tác giả) mới có danh sách để chọn. Hiện Claude đã rút được tên tác giả thô từ nội dung nhưng chưa nối vào bảng Author.' },
+      { ten:'Chất lượng', kieu:'check', muc:['Ẩn nội dung có dấu hiệu mê tín'], chon:[0],
+        ghi:'Bật sẵn nhưng TẮT ĐƯỢC. Mê tín vẫn nằm trong mục Triết học, chỉ bị ẩn mặc định — khác hẳn truyện nghi AI viết bên tab Truyện, loại thẳng không bật lại được.' },
+    ],
+    moTa:'<h2>Trường đứng sau bộ lọc Triết học</h2><table class="bang-td"><tr><th>Trường</th><th>Giá trị</th><th>Tình trạng</th></tr><tr><td><code>philosophySchool</code></td><td>stoic · hien_sinh · tam_ly_hoc_hien_dai · phat_giao_nguyen_thuy · khac</td><td><span class="tt tt-ok">28/28</span></td></tr><tr><td><code>philosophyContentForm</code></td><td>giang_phap · van_dap · ung_dung_thuc_hanh · phan_tich_hoc_thuat</td><td><span class="tt tt-ok">28/28</span></td></tr><tr><td><code>listenerLevel</code></td><td>moi_bat_dau · chuyen_sau</td><td><span class="tt tt-ok">28/28</span></td></tr><tr><td><code>misleadingContentFlag</code></td><td>cờ đúng/sai, lọc loại trừ mặc định</td><td><span class="tt tt-ok">có</span></td></tr><tr><td><code>authorId</code></td><td>khoá ngoại tới bảng Author</td><td><span class="tt tt-chua">Phase 6</span></td></tr></table>',
+    the:[
+      {t:'Sư Hoằng Hiền hỏi về thần thông — Thầy Minh Tuệ trả lời',n:'youtube',ng:'Chân Tâm',tl:'42:18',g:'GIẢNG PHÁP',c:['Phật giáo Nguyên thuỷ','vấn đáp'],d:'8,7'},
+      {t:'Chấp thủ là gì — giảng giải cho người mới nghe pháp',n:'podcast',ng:'Thư viện Pháp',tl:'56:03',g:null,c:['mới bắt đầu','giảng pháp'],d:'8,3'},
+      {t:'Khắc kỷ không phải là nén cảm xúc — đọc lại Epictetus',n:'blog',ng:'Chữ và Nghĩ',tl:'14 phút đọc',g:null,c:['khắc kỷ','học thuật'],d:'8,9'},
+    ]
+  },
+  truyen: {
+    ten:'Truyện', so:17,
+    rieng:[
+      { ten:'Thể loại', kieu:'pill', muc:['Kinh dị','Viễn tưởng','Phiêu lưu mạo hiểm'], chon:[0] },
+      { ten:'Xuất xứ', kieu:'pill', muc:['VN sáng tác','Dịch Trung Quốc','Dịch Âu Mỹ','Khác'] },
+      { ten:'Độ căng', kieu:'pill', muc:['Nhẹ nhàng','Căng thẳng','Kinh khủng'], chon:[1] },
+      { ten:'Nguồn gốc truyện', kieu:'check', muc:['Chỉ truyện dựa trên chuyện có thật'] },
+      { ten:'Tác giả', kieu:'cho', noiDung:'Ô tìm theo tên nhà văn — cần <b>Phase 6</b>. Chưa nối được vào bảng Author.' },
+      { ten:'Bộ lọc cứng đang chạy', kieu:'cho',
+        noiDung:'Truyện nghi do AI sản xuất hàng loạt (<code>aiGeneratedSuspicionScore</code> ≥ 0,6) bị <b>loại thẳng khỏi kết quả</b>. Không có nút bật lại — theo thiết kế, đây là bộ lọc cứng duy nhất trong toàn hệ thống.' },
+    ],
+    moTa:'<h2>Trường đứng sau bộ lọc Truyện</h2><table class="bang-td"><tr><th>Trường</th><th>Giá trị</th><th>Tình trạng</th></tr><tr><td><code>storyGenre</code></td><td>kinh_di · vien_tuong · phieu_luu_mao_hiem</td><td><span class="tt tt-ok">17/17</span></td></tr><tr><td><code>storyOrigin</code></td><td>viet_nam_sang_tac · dich_trung_quoc · dich_au_my · khac</td><td><span class="tt tt-ok">17/17</span></td></tr><tr><td><code>storyIntensity</code></td><td>nhe_nhang · cang_thang · kinh_khung</td><td><span class="tt tt-ok">17/17</span></td></tr><tr><td><code>basedOnTrueStory</code></td><td>đúng/sai</td><td><span class="tt tt-ok">có</span></td></tr><tr><td><code>aiGeneratedSuspicionScore</code></td><td>0–1, lọc cứng ở ngưỡng 0,6</td><td><span class="tt tt-ok">đang chạy</span></td></tr></table>',
+    the:[
+      {t:'Căn nhà số 7 phố Hàng Bún — tập 3',n:'youtube',ng:'Đêm Kể Chuyện',tl:'51:12',g:'KINH DỊ',c:['VN sáng tác','căng thẳng'],d:'8,5'},
+      {t:'Mộ Thanh Minh — truyện dịch, tập cuối',n:'youtube',ng:'Truyện Ma Kể Đêm',tl:'1:12:45',g:'KINH DỊ',c:['dịch Trung Quốc'],d:'7,9'},
+      {t:'Chuyến tàu cuối cùng rời sao Hoả',n:'podcast',ng:'Viễn Tưởng Việt',tl:'38:20',g:'VIỄN TƯỞNG',c:['nhẹ nhàng'],d:'8,1'},
+    ]
+  },
+  music: {
+    ten:'Music', so:15,
+    rieng:[
+      { ten:'Thể loại nhạc', kieu:'pill', muc:['Tập thể thao (BPM)','Dance','Piano','Guitar rock','Nhạc vàng'], chon:[0] },
+      { ten:'Dải BPM', kieu:'pill', muc:['140–145','145–150','150–155','155–160','160–165','165–170','170–175','175–180'], chon:[3,4],
+        ghi:'Chỉ hiện khi thể loại là "Tập thể thao" — dải nhịp vô nghĩa với piano hay nhạc vàng. Hiện 0/15 bài có số nhịp: chưa kênh nào ghi rõ trong tiêu đề, và quy tắc "không đoán bừa" đang làm đúng việc.' },
+      { ten:'Thời lượng mix', kieu:'pill', muc:['Trên 20 phút','Trên 40 phút','Trên 1 giờ'], chon:[2],
+        ghi:'Chỉ áp dụng cho nhạc có BPM. Các thể loại khác không khống chế thời lượng.' },
+      { ten:'Chất lượng', kieu:'check', muc:['Chỉ mix liền mạch (không ghép bài)','BPM ghi rõ trong tiêu đề'], chon:[0,1] },
+    ],
+    moTa:'<h2>Trường đứng sau bộ lọc Music</h2><table class="bang-td"><tr><th>Trường</th><th>Giá trị</th><th>Tình trạng</th></tr><tr><td><code>musicGenre</code></td><td>workout_bpm · dance · piano · guitar_rock · nhac_vang</td><td><span class="tt tt-ok">15/15</span></td></tr><tr><td><code>bpm</code> / <code>bpmBucket</code></td><td>dải 5 nhịp từ 140 tới 180</td><td><span class="tt tt-chua">0/15</span></td></tr><tr><td><code>bpmConfidence</code></td><td>stated_in_title · stated_in_description · inferred</td><td><span class="tt tt-thieu">theo bpm</span></td></tr><tr><td><code>mixLengthBucket</code></td><td>&gt;20ph · &gt;40ph · &gt;1h, chỉ với workout</td><td><span class="tt tt-ok">có</span></td></tr><tr><td><code>isContinuousMix</code></td><td>mix liền mạch hay playlist ghép bài</td><td><span class="tt tt-thieu">2/15</span></td></tr></table><p style="margin-top:12px">Nhạc <b>không lấy lời thoại, không cho mô hình đọc sâu</b> — đánh giá nhạc bằng chữ là vô nghĩa và tốn tiền vô ích. Nhánh này gần như không tốn chi phí mô hình dù số lượng lớn.</p>',
+    the:[
+      {t:'Running Mix 160 BPM — Nonstop 1 Hour',n:'youtube',ng:'RunBeat Studio',tl:'1:04:22',g:'160 BPM',c:['mix liền mạch','ghi trong tiêu đề'],d:'9,4'},
+      {t:'Nhạc vàng chọn lọc — Chế Linh, Tuấn Vũ',n:'youtube',ng:'Nhạc Xưa',tl:'2:10:05',g:'NHẠC VÀNG',c:['playlist ghép'],d:'7,6'},
+      {t:'Deep House Session — bản mix cuối tuần',n:'soundcloud',ng:'Hà Nội Deep',tl:'58:14',g:'DANCE',c:['mix liền mạch'],d:'8,0'},
+    ]
+  },
+  khoa_hoc: {
+    ten:'Khoa học', so:21,
+    rieng:[
+      { ten:'Chưa có trường riêng', kieu:'cho',
+        noiDung:'<b style="color:var(--foreground)">Đây là lỗ hổng thật trong bản thiết kế.</b><br><br>Bốn mục kia đều có bảng trường riêng trong <code>docs/plan.md</code>. Mục Khoa học chỉ có phần mô tả ranh giới xếp nhóm — "phải ứng dụng được vào đời sống thật" — mà không có trường lọc nào.<br><br>Kết quả: 21 bài đã nằm trong mục này nhưng không lọc được gì ngoài bộ lọc chung bên dưới.' },
+      { ten:'Gợi ý — chờ bạn duyệt', kieu:'pill', muc:['Y học & sức khoẻ','Vật lý & vũ trụ','Sinh học','Vật liệu & năng lượng','Kỹ thuật','Môi trường & nông nghiệp'], tat:true,
+        ghi:'Làm mờ vì chưa được duyệt. Chia theo lĩnh vực, giống cách mục AI chia chủ đề con.' },
+      { ten:'Gợi ý — mức ứng dụng', kieu:'pill', muc:['Dùng được ngay','Đang thử nghiệm','Còn trong phòng thí nghiệm'], tat:true,
+        ghi:'Vì tiêu chí vào nhóm đã là "phải ứng dụng được", lọc thêm theo mức độ chín của ứng dụng là bước tự nhiên tiếp theo.' },
+    ],
+    moTa:'<h2>Mục này cần bạn quyết</h2><p>Hai hàng nút mờ bên trái là <b>đề xuất của tôi</b>, chưa viết vào <code>plan.md</code>, chưa đụng schema, chưa chạy gì. Bạn chọn, sửa, hoặc bác bỏ.</p><p>Nếu bác bỏ cả hai thì mục Khoa học sẽ chỉ có bộ lọc chung — vẫn dùng được, chỉ là không lọc sâu được như bốn mục kia.</p>',
+    the:[
+      {t:'Vì sao tuổi thọ tăng 10 năm mà số năm sống khoẻ thì không?',n:'podcast',ng:'Have A Sip',tl:'1:04:22',g:null,c:['y học'],d:'8,4'},
+      {t:'Khi thiên tài thất bại: sự kiêu ngạo trí tuệ của các phòng thí nghiệm',n:'blog',ng:'Tia Sáng',tl:'16 phút đọc',g:'ĐÃ THUẬT LẠI',c:['phương pháp khoa học'],d:'8,6'},
+      {t:'Pin thể rắn đã tới đâu — và còn vướng chỗ nào',n:'youtube',ng:'Khoa học & Đời sống',tl:'22:41',g:null,c:['năng lượng'],d:'8,2'},
+    ]
+  },
+  tuy_chon: {
+    ten:'Tùy chọn', so:6,
+    rieng:[
+      { ten:'Từ khoá của bạn', kieu:'nhap', giaTri:'', chogo:'Gõ thứ muốn tìm hôm nay…' },
+      { ten:'Đang theo dõi', kieu:'pill', muc:['máy tính lượng tử ⟳','lịch sử La Mã'], chon:[0],
+        ghi:'⟳ = đang bật tự quét lúc 21:00 mỗi tối và xuất hiện trong bản tin sáng, cho tới khi bạn gỡ.' },
+      { ten:'Thời lượng', kieu:'pill', muc:['5–20 phút','Trên 20 phút','Trên 40 phút'], chon:[1] },
+      { ten:'Chất lượng', kieu:'pill', muc:['Nhiều lượt xem nhất','Tỷ lệ bình luận trên lượt xem cao'], chon:[1] },
+    ],
+    moTa:'<h2>Vì sao mục này khác hẳn năm mục kia</h2><p>Đây <b>không phải chuyên mục theo chủ đề</b>. Một bài về máy tính lượng tử tìm được từ từ khoá bạn gõ thì <code>contentGroup</code> của nó vẫn ghi <code>khoa_hoc</code> — đúng chủ đề thật của nó.</p><p>Mục này lọc theo <b>nguồn gốc</b>: thứ có mặt trong kho vì chính bạn đòi (<code>adHocInterestId</code>), bất kể chủ đề là gì.</p><p>Đây cũng là chỗ duy nhất "khác" từng có lý do tồn tại: nội dung bạn tự tìm mà không xếp được vào năm mảng cố định. Nhưng nó thuộc <b>Tùy chọn</b>, không phải một chuyên mục thứ sáu tên là "Khác".</p>',
+    the:[
+      {t:'Máy tính lượng tử giải được bài toán nào mà máy thường không?',n:'youtube',ng:'Vật lý dễ hiểu',tl:'34:08',g:null,c:['từ khoá của bạn'],d:'8,5'},
+      {t:'Google công bố chip lượng tử mới — thực hư ra sao',n:'blog',ng:'Ars Technica',tl:'11 phút đọc',g:'CHỜ LỒNG TIẾNG',c:['từ khoá của bạn'],d:'8,0'},
+    ]
+  },
+};
+
+const TEN_NGUON = { youtube:['YOUTUBE','n-youtube'], blog:['BLOG','n-blog'],
+  dienddan:['DIỄN ĐÀN','n-dienddan'], podcast:['PODCAST','n-podcast'], soundcloud:['SOUNDCLOUD','n-soundcloud'] };
+
+let nhomHienTai = 'tat_ca';
+const trangThai = {};   // khoá "chuyên mục | riêng hay chung | tên nhóm | chỉ số"
+
+/**
+ * Khoá trạng thái phải kèm "riêng hay chung".
+ *
+ * Không có phần đó thì tab Tùy chọn hỏng: nó có nhóm "Thời lượng" riêng
+ * (5–20ph / >20ph / >40ph) mà bộ lọc chung cũng có nhóm tên y hệt "Thời lượng"
+ * (4 dải). Hai nhóm khác nhau nhưng trùng tên nên dùng chung một khoá — bấm
+ * nút bên trên thì nút bên dưới cũng sáng theo.
+ */
+function khoa(pv, ten, i){ return nhomHienTai + '|' + pv + '|' + ten + '|' + i; }
+
+function veChipNhom(){
+  document.getElementById('chipNhom').innerHTML = Object.entries(NHOM).map(([ma,n]) =>
+    `<button class="${ma===nhomHienTai?'on':''}" onclick="chonNhom('${ma}')">${n.ten}<span class="so">${n.so}</span></button>`
+  ).join('');
+}
+
+function veNhomLoc(g, pv){
+  if (g.kieu === 'cho')
+    return `<div class="nhom-loc"><div class="nl-ten">${g.ten}</div><div class="hop-cho">${g.noiDung}</div></div>`;
+
+  if (g.kieu === 'nhap')
+    return `<div class="nhom-loc"><div class="nl-ten">${g.ten}</div><input class="o-nhap" placeholder="${g.chogo}"></div>`;
+
+  const than = g.kieu === 'check'
+    ? g.muc.map((m,i) => {
+        const bat = trangThai[khoa(pv,g.ten,i)];
+        return `<label class="dong-check"><input type="checkbox" ${bat?'checked':''} onchange="bat('${pv}','${g.ten}',${i})"> ${m}</label>`;
+      }).join('')
+    : `<div class="hang-pill">` + g.muc.map((m,i) => {
+        const bat = trangThai[khoa(pv,g.ten,i)];
+        return `<button class="pill ${bat?'on':''} ${g.tat?'tat':''}" ${g.tat?'':`onclick="bat('${pv}','${g.ten}',${i})"`}>${m}</button>`;
+      }).join('') + `</div>`;
+
+  return `<div class="nhom-loc"><div class="nl-ten">${g.ten}</div>${than}` +
+         (g.ghi ? `<p class="nl-ghi">${g.ghi}</p>` : '') + `</div>`;
+}
+
+function veCotLoc(){
+  const n = NHOM[nhomHienTai];
+  let html = '';
+  const kieuNhan = 'font-size:10.5px;font-weight:800;text-transform:uppercase;' +
+                   'letter-spacing:.05em;color:var(--cam-chinh);margin-bottom:14px;';
+  if (n.rieng.length){
+    html += `<div style="${kieuNhan}">Riêng mục ${n.ten}</div>`;
+    html += n.rieng.map((g) => veNhomLoc(g, 'r')).join('');
+    html += `<div class="chia-lon"><div class="nhan">Chung mọi chuyên mục</div>`;
+  } else {
+    html += `<div style="${kieuNhan}">Chung mọi chuyên mục</div><div>`;
+  }
+  html += LOC_CHUNG.map((g) => veNhomLoc(g, 'c')).join('') + `</div>`;
+  document.getElementById('cotLoc').innerHTML = html;
+
+  const dem = Object.entries(trangThai).filter(([k,v]) => v && k.startsWith(nhomHienTai+'|')).length;
+  document.getElementById('soLoc').textContent = dem;
+}
+
+function veKetQua(){
+  const n = NHOM[nhomHienTai];
+  document.getElementById('soKq').textContent = `${n.so} nội dung · đang xem ${n.the.length} mẫu`;
+  document.getElementById('luoi').innerHTML = n.the.map(t => {
+    const [tenN, lopN] = TEN_NGUON[t.n];
+    return `<article class="the">
+      <div class="anh">
+        ${t.g ? `<span class="nhan-goc">${t.g}</span>` : ''}
+        <span class="nhan-nguon ${lopN}">${tenN}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="26" height="26"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>
+        <span class="thoi-luong">${t.tl}</span>
+      </div>
+      <div class="tieu-de">${t.t}</div>
+      <div class="phu">${t.ng}</div>
+      <div class="the-chips">
+        <span class="tc diem">điểm ${t.d}</span>
+        ${t.c.map(c => `<span class="tc">${c}</span>`).join('')}
+      </div>
+    </article>`;
+  }).join('');
+  document.getElementById('ghiChu').innerHTML = n.moTa;
+}
+
+function bat(pv, ten, i){
+  const k = khoa(pv, ten, i);
+  trangThai[k] = !trangThai[k];
+  veCotLoc();
+}
+
+function xoaHet(){
+  for (const k of Object.keys(trangThai)) if (k.startsWith(nhomHienTai+'|')) delete trangThai[k];
+  veCotLoc();
+}
+
+function chonNhom(ma){
+  nhomHienTai = ma;
+  const n = NHOM[ma];
+  // Đặt sẵn các lựa chọn mặc định, chỉ lần đầu bước vào tab
+  const datMac = (g, pv) => (g.chon || []).forEach(i => {
+    const k = khoa(pv, g.ten, i);
+    if (!(k in trangThai)) trangThai[k] = true;
+  });
+  n.rieng.forEach(g => datMac(g, 'r'));
+  LOC_CHUNG.forEach(g => datMac(g, 'c'));
+  veChipNhom(); veCotLoc(); veKetQua();
+}
+
+function datTong(t, el){
+  document.documentElement.setAttribute('data-tong', t);
+  document.querySelectorAll('.tong-switch button').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+}
+
+chonNhom('tat_ca');
+</script>
+</body>
+</html>
