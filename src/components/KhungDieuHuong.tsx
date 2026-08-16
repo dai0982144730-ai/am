@@ -74,7 +74,7 @@ const NHOM_CUA_BAN: MucDieuHuong[] = [
   { ten: "Thư viện", bieuTuong: Library, duongDan: "/thu-vien" },
   { ten: "Playlist", bieuTuong: ListMusic, duongDan: "/playlist" },
   { ten: "Ghi chú", bieuTuong: PenLine, duongDan: "/ghi-chu" },
-  { ten: "Tủ sách", bieuTuong: BookMarked, seLamO: "Phase 6" },
+  { ten: "Tủ sách", bieuTuong: BookMarked, duongDan: "/tu-sach" },
 ];
 
 const NHOM_TRO_LY: MucDieuHuong[] = [

@@ -311,7 +311,17 @@ function dungDieuKien(loc: BoLoc): Prisma.ContentItemWhereInput {
   const tuKhoa = loc.tuKhoa?.trim();
   if (tuKhoa) {
     // Tìm trong nhiều chỗ, kể cả nhận xét và chủ đề Claude rút ra — nhờ vậy gõ
-    // "khắc kỷ" vẫn tìm được video mà tiêu đề không hề có chữ đó
+    // "khắc kỷ" vẫn tìm được video mà tiêu đề không hề có chữ đó.
+    //
+    // TÌM CẢ TRONG LỜI THOẠI VÀ BẢN DỊCH. Đây là thứ tiêu đề không thay được:
+    // một câu giảng hay nằm ở phút 40 của video hai tiếng thì tiêu đề không
+    // bao giờ nhắc tới, mà đó lại đúng là thứ người ta muốn lần lại.
+    //
+    // ĐÃ ĐO trước khi làm (2026-08-16): 1.051 bản lời thoại, tổng 23 MB chữ.
+    // Quét thẳng không cần chỉ mục mất 150–330 ms mỗi lượt tìm. Đủ nhanh cho
+    // một trang tìm kiếm, nên **không dựng chỉ mục trigram** — chỉ mục trên cột
+    // chữ dài như vậy tốn dung lượng đáng kể mà chưa đổi lại được gì. Khi nào
+    // kho lớn hơn nhiều lần thì hẵng tính, và lúc đó đo lại trước.
     va.push({
       OR: [
         { title: { contains: tuKhoa, mode: "insensitive" } },
@@ -326,6 +336,12 @@ function dungDieuKien(loc: BoLoc): Prisma.ContentItemWhereInput {
         {
           classification: {
             extractedAuthorNameRaw: { contains: tuKhoa, mode: "insensitive" },
+          },
+        },
+        { transcript: { rawText: { contains: tuKhoa, mode: "insensitive" } } },
+        {
+          narrationAsset: {
+            scriptText: { contains: tuKhoa, mode: "insensitive" },
           },
         },
       ],

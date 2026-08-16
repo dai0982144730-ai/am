@@ -438,6 +438,12 @@ model Author {
   approvedByUser Boolean @default(false)
   pendingReview  Boolean @default(false)
 
+  /// Có trong Tủ sách hay không — TÁCH HẲN khỏi `approvedByUser`.
+  /// Công nhận một tác giả là có thật khác với muốn theo dõi họ; gộp làm một
+  /// thì không diễn đạt được trường hợp thường gặp nhất là công nhận mà không
+  /// theo dõi.
+  theoDoi Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

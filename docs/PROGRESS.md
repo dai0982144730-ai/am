@@ -2320,3 +2320,50 @@ từ bảng Author nên bỏ qua luật 5 phút và bộ lọc "đã xem rồi".
 Đây là **lần thứ hai** cùng một lỗi: chip chuyên mục đã lệch y hệt và đã phải
 sửa. Cách chữa giống nhau — đếm bằng chính truy vấn mà danh sách dùng.
 `thu-bo-loc.ts` giờ kiểm cả hai chỗ.
+
+---
+
+## Tủ sách + tìm toàn văn — XONG (2026-08-16), khép lại Phase 6
+
+### Tủ sách: theo dõi NGƯỜI, không phải kênh
+
+Một giảng sư xuất hiện trên nhiều kênh: kênh chính thức của chùa, kênh của Phật
+tử ghi hình lại, kênh tổng hợp, kênh cắt đoạn ngắn. Theo dõi kênh thì phải theo
+hết từng kênh và vẫn sót; theo dõi *người* thì bắt được cả, vì tên tác giả do
+Claude rút từ chính nội dung chứ không phải từ tên kênh.
+
+Trang `/tu-sach` bày 75 tác giả có nội dung, nút "Thêm vào tủ" cho từng người.
+Mỗi thẻ hiện lĩnh vực, số nội dung, số nguồn, các cách viết tên khác, và bốn
+bài mới nhất.
+
+**Bấm "theo dõi" cũng là hành động duyệt** mà bản thiết kế đòi hỏi — bắt bấm
+thêm một nút "công nhận" nữa là hỏi lại câu vừa trả lời. Chiều ngược lại không
+đối xứng: bỏ theo dõi *không* rút lại sự công nhận, vì "tôi không muốn nghe
+người này nữa" khác hẳn "người này không có thật".
+
+Thêm cột `Author.theoDoi`, tách hẳn khỏi `approvedByUser`.
+
+### Tìm toàn văn trong lời thoại
+
+Ô tìm kiếm giờ đọc cả `Transcript.rawText` và `NarrationAsset.scriptText`.
+
+Đây là thứ tiêu đề không thay được. Đo thật:
+
+| Từ khoá | Kết quả | Trang đầu KHÔNG có từ đó trong tiêu đề |
+|---|---|---|
+| chánh niệm | 38 | **24/24** |
+| vô thường | 39 | **24/24** |
+| chấp thủ | 4 | **4/4** |
+
+Nghĩa là gần như toàn bộ kết quả chỉ tìm được nhờ đọc lời thoại — đúng cảnh một
+câu giảng hay nằm ở phút 40 của video hai tiếng.
+
+**Không dựng chỉ mục, và đó là quyết định có đo.** 1.051 bản lời thoại, tổng 23
+MB. Quét thẳng mất 107–321 ms mỗi lượt. Chỉ mục trigram trên cột chữ dài tốn
+dung lượng đáng kể mà chưa đổi lại được gì.
+
+### Lại vấp cạm bẫy đã ghi trong CLAUDE.md
+
+Thêm cột xong, trang Tủ sách trả 500 với `Unknown field theoDoi`. `next dev` giữ
+bản Prisma cũ trong bộ nhớ, `prisma generate` không lay chuyển được. Phải khởi
+động lại máy chủ. Đúng y như mục đã ghi — đọc rồi vẫn vấp.
