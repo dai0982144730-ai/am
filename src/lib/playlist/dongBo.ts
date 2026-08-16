@@ -1,5 +1,6 @@
 /**
- * Đọc danh sách playlist thật trên tài khoản YouTube về kho.
+ * Đọc danh sách playlist thật trên tài khoản YouTube về kho, cùng với đúng
+ * danh sách video bên trong từng playlist.
  *
  * CHỈ ĐỌC. Không tạo, không sửa, không xoá gì cả — phần đó nằm ở `apDung.ts`
  * và chỉ chạy sau khi người dùng bấm duyệt từng việc một.
@@ -8,18 +9,31 @@
  * phải biết chủ nhà đang có những playlist nào và chúng tên gì. Không có bước
  * này thì mọi đề xuất đều là "tạo playlist mới", vừa vô duyên vừa làm rối tài
  * khoản.
+ *
+ * ĐỌC CẢ THÀNH VIÊN (từ 2026-08-17): trước đây chỉ đọc tên và số lượng, không
+ * biết đích xác video nào đang ở playlist nào. Không có việc này thì không so
+ * sánh được với ý Am muốn (`PlaylistItem`) để biết chỗ nào lệch — xem
+ * `thanhVien.ts`.
  */
 
 import { prisma } from "@/lib/db/prisma";
+import { soSanhVaSinhDeXuat } from "@/lib/playlist/thanhVien";
 import { goiHetTrang } from "@/lib/youtube/goiApi";
 
 /** Lấy tối đa ngần này playlist. Ai cũng khó mà có hơn. */
 const TOI_DA_PLAYLIST = 200;
 
+/** Mỗi playlist đọc tối đa ngần này video — đủ cho hầu hết mọi playlist cá nhân. */
+const TOI_DA_VIDEO_MOI_PLAYLIST = 500;
+
 interface PlaylistTuYouTube {
   id?: string;
   snippet?: { title?: string; description?: string };
   contentDetails?: { itemCount?: number };
+}
+
+interface PlaylistItemTuYouTube {
+  snippet?: { resourceId?: { videoId?: string } };
 }
 
 export interface KetQuaDongBo {
@@ -29,11 +43,14 @@ export interface KetQuaDongBo {
 }
 
 /**
- * Đồng bộ playlist.
+ * Đồng bộ playlist — tên, mô tả, số lượng, VÀ danh sách video thật bên trong.
  *
  * Playlist đã có thì chỉ cập nhật tên, mô tả và số lượng — **không đụng vào
  * `managedByAI`**. Cờ đó là lựa chọn của chủ nhà về việc cho trợ lý động vào
  * playlist nào; một lần đồng bộ không được phép xoá lựa chọn đó.
+ *
+ * Playlist đang chờ xoá (`deletionRequestedAt` đã đặt) thì bỏ qua — không đọc
+ * lại thành viên của thứ sắp biến mất làm gì.
  */
 export async function dongBoPlaylist(): Promise<KetQuaDongBo> {
   const tuYouTube = await goiHetTrang<PlaylistTuYouTube>(
@@ -59,17 +76,38 @@ export async function dongBoPlaylist(): Promise<KetQuaDongBo> {
 
     const daCo = await prisma.youTubePlaylist.findUnique({
       where: { youtubePlaylistId: pl.id },
-      select: { id: true },
+      select: { id: true, deletionRequestedAt: true },
     });
 
-    await prisma.youTubePlaylist.upsert({
+    const luu = await prisma.youTubePlaylist.upsert({
       where: { youtubePlaylistId: pl.id },
       create: { youtubePlaylistId: pl.id, ...duLieu },
       update: duLieu,
+      select: { id: true },
     });
 
     if (daCo) capNhat += 1;
     else themMoi += 1;
+
+    if (daCo?.deletionRequestedAt) continue;
+
+    const cacVideo = await goiHetTrang<PlaylistItemTuYouTube>(
+      "playlistItems.list",
+      "playlistItems",
+      { part: "snippet", playlistId: pl.id },
+      TOI_DA_VIDEO_MOI_PLAYLIST,
+      { canDangNhap: true },
+    );
+    const idVideo = cacVideo
+      .map((v) => v.snippet?.resourceId?.videoId)
+      .filter((id): id is string => Boolean(id));
+
+    await prisma.youTubePlaylist.update({
+      where: { id: luu.id },
+      data: { lastSyncedVideoIds: idVideo },
+    });
+
+    await soSanhVaSinhDeXuat(luu.id);
   }
 
   return { soDoc: tuYouTube.length, themMoi, capNhat };

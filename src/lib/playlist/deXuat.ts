@@ -163,7 +163,9 @@ export async function sinhDeXuat(soToiDa = 10): Promise<KetQuaDeXuat> {
   const daCoDeXuat = await prisma.playlistOrganizationSuggestion.findMany({
     select: { contentItemId: true },
   });
-  const boQuaId = daCoDeXuat.map((d) => d.contentItemId);
+  const boQuaId = daCoDeXuat
+    .map((d) => d.contentItemId)
+    .filter((id): id is string => id !== null);
 
   const ungVien = await prisma.contentItem.findMany({
     where: {

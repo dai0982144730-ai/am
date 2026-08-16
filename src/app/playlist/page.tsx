@@ -33,15 +33,25 @@ export default async function TrangPlaylist() {
     );
   }
 
-  const [cacPlaylist, cacDeXuat, taiKhoan] = await Promise.all([
+  const [cacPlaylist, cacThuMucChoXoa, cacDeXuatTho, taiKhoan] = await Promise.all([
     prisma.youTubePlaylist.findMany({
+      where: { deletionRequestedAt: null },
       orderBy: [{ managedByAI: "desc" }, { title: "asc" }],
       select: {
         id: true,
         title: true,
         itemCount: true,
         managedByAI: true,
+        youtubePlaylistId: true,
+        items: {
+          select: { id: true },
+        },
       },
+    }),
+    prisma.youTubePlaylist.findMany({
+      where: { deletionRequestedAt: { not: null } },
+      orderBy: { deletionRequestedAt: "desc" },
+      select: { id: true, title: true },
     }),
     prisma.playlistOrganizationSuggestion.findMany({
       where: { status: { in: ["pending", "approved", "applied"] } },
@@ -50,7 +60,9 @@ export default async function TrangPlaylist() {
         id: true,
         reason: true,
         status: true,
+        type: true,
         newPlaylistTitle: true,
+        currentPlaylistTitle: true,
         contentItem: { select: { id: true, title: true } },
         suggestedPlaylist: { select: { title: true } },
       },
@@ -63,13 +75,43 @@ export default async function TrangPlaylist() {
 
   const coQuyenGhi = coQuyenSuaPlaylist(taiKhoan?.scope ?? null);
 
+  /** Câu mô tả việc, soạn sẵn ở máy chủ — giao diện không cần biết năm loại
+   * đề xuất khác nhau ra sao, chỉ hiện đúng chuỗi đưa xuống. */
+  function moTaViec(d: (typeof cacDeXuatTho)[number]): string {
+    const ten = d.suggestedPlaylist?.title ?? d.newPlaylistTitle ?? "(không rõ)";
+    switch (d.type) {
+      case "new_save":
+      case "misplaced_fix":
+        return `Thêm vào "${ten}"${!d.suggestedPlaylist ? " (playlist mới)" : ""}`;
+      case "remove_item":
+        return `Bỏ khỏi "${ten}"`;
+      case "delete_playlist":
+        return `Xoá hẳn thư mục "${d.currentPlaylistTitle ?? ten}"`;
+      case "rename_playlist":
+        return `Đổi tên "${d.currentPlaylistTitle ?? ""}" thành "${d.newPlaylistTitle ?? ""}"`;
+    }
+  }
+
+  const cacDeXuat = cacDeXuatTho.map((d) => ({
+    id: d.id,
+    loai: d.type,
+    moTaViec: moTaViec(d),
+    idNoiDung: d.contentItem?.id ?? null,
+    tieuDeVideo: d.contentItem?.title ?? null,
+    lyDo: d.reason,
+    trangThai: d.status,
+    nguyHiem: d.type === "delete_playlist",
+  }));
+
   return (
     <KhungTrang emailNguoiDung={phien?.user?.email}>
       <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="text-xl font-semibold tracking-tight">Playlist</h1>
         <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-          Trợ lý <strong>chỉ đề xuất</strong>. Không có gì được ghi lên YouTube
-          nếu bạn không bấm duyệt rồi bấm ghi — hai bước tách rời.
+          Mỗi thư mục trên Am ánh xạ đúng một playlist thật trên YouTube. Sửa gì
+          trên Am (thêm, bớt, đổi tên, xoá) đều làm ngay — nhưng phần <strong>ghi
+          thật lên YouTube</strong> luôn dừng lại chờ bạn duyệt rồi mới ghi, kể
+          cả xoá.
         </p>
 
         <div className="mt-6">
@@ -79,28 +121,18 @@ export default async function TrangPlaylist() {
             cacPlaylist={cacPlaylist.map((p) => ({
               id: p.id,
               ten: p.title,
-              soMuc: p.itemCount,
+              soMuc: p.items.length,
               choSapXep: p.managedByAI,
+              daCoThat: p.youtubePlaylistId !== null,
             }))}
-            cacDeXuat={cacDeXuat.map((d) => ({
-              id: d.id,
-              tieuDeVideo: d.contentItem.title,
-              idNoiDung: d.contentItem.id,
-              tenPlaylist:
-                d.suggestedPlaylist?.title ??
-                d.newPlaylistTitle ??
-                "(không rõ)",
-              laPlaylistMoi: !d.suggestedPlaylist,
-              lyDo: d.reason,
-              trangThai: d.status,
-            }))}
+            cacThuMucChoXoa={cacThuMucChoXoa}
+            cacDeXuat={cacDeXuat}
           />
         </div>
 
         <p className="mt-10 text-xs text-neutral-400 dark:text-neutral-500">
-          Hệ thống không bao giờ xoá playlist. Chỉ tạo mới và thêm video — hai
-          việc gỡ ra được. Mọi lần ghi đều lưu lại trong bảng{" "}
-          <code>PlaylistActionLog</code>.
+          Mọi lần ghi thật đều lưu lại trong bảng <code>PlaylistActionLog</code>{" "}
+          để tra lại và sửa tay.
         </p>
       </div>
     </KhungTrang>

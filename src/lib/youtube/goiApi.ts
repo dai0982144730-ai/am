@@ -167,7 +167,9 @@ export async function ghiYouTube<T>(
   duongDan: string,
   thamSo: Record<string, string | number | undefined>,
   than: unknown,
-  phuongThuc: "POST" | "DELETE" = "POST",
+  // PUT dành riêng cho các lệnh "update" — YouTube đòi đúng phương thức này,
+  // POST/DELETE bị Google trả lỗi 405 ngay.
+  phuongThuc: "POST" | "PUT" | "DELETE" = "POST",
 ): Promise<T> {
   const kiemTra = await conGoiDuoc(lenh);
   if (!kiemTra.duoc) throw new HetHanMuc(lenh, kiemTra.tinhHinh);

@@ -44,6 +44,8 @@ const TEN_LENH: Record<TenLenh, string> = {
   "playlists.insert": "Tạo playlist",
   "playlistItems.insert": "Thêm vào playlist",
   "playlistItems.delete": "Xoá khỏi playlist",
+  "playlists.delete": "Xoá playlist",
+  "playlists.update": "Đổi tên playlist",
 };
 
 /**

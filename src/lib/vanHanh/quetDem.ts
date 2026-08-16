@@ -35,6 +35,7 @@ import {
   tomTatChiaSuat,
 } from "@/lib/vanHanh/suatPhanLoai";
 import { phanLoaiHangLoat } from "@/lib/llm/luuPhanLoai";
+import { capNhatTienDoTheoDoi, xuLyTapMoiPhanLoai } from "@/lib/boTap/quanLyBoTap";
 import { thuatLaiHangLoat } from "@/lib/llm/luuThuatLai";
 import { quetBlog } from "@/lib/nguon/quetBlog";
 import { quetPodcast } from "@/lib/nguon/quetPodcast";
@@ -145,6 +146,8 @@ export async function quetDem(
   });
 
   const cacBuoc: KetQuaMotBuoc[] = [];
+  // Nạp từ bước phân loại, dùng ở bước theo dõi bộ tập ngay sau bước chấm điểm
+  let idsVuaXetPhanLoai: string[] = [];
 
   // ----- Bước 1: video mới từ YouTube -----
   cacBuoc.push(
@@ -303,6 +306,7 @@ export async function quetDem(
           }
         }
 
+        idsVuaXetPhanLoai = chia.cacId;
         const kq = await phanLoaiHangLoat(
           chia.cacId.length,
           undefined,
@@ -339,6 +343,27 @@ export async function quetDem(
       async () => {
         const kq = await chamDiemHangLoat();
         return `chấm ${kq.daCham} nội dung, điểm ${kq.diemThapNhat}–${kq.diemCaoNhat}`;
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước 6b: theo dõi bộ nhiều tập -----
+  //
+  // Đặt NGAY SAU chấm điểm vòng 1: cần điểm mới quyết định được tập 1 có đủ
+  // hay để theo tiếp hay không. Chốt 2026-08-17: nội dung có cấu trúc tập đi
+  // luồng riêng, không lấy đại tập đang hot mà dò từ tập 1, nhả dần theo tốc
+  // độ chủ nhà xem kịp, bỏ hẳn nếu ba ngày không xem.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Theo dõi bộ nhiều tập",
+      async () => {
+        const moi = await xuLyTapMoiPhanLoai(idsVuaXetPhanLoai);
+        const tienDo = await capNhatTienDoTheoDoi();
+        return (
+          `${moi.daXet} tập mới xét, ${moi.boMoi} bộ mới (${moi.dangDo} theo tiếp, ${moi.daLoai} loại ngay)` +
+          ` · đang theo: thả thêm ${tienDo.thaThem}, hết tập mới ${tienDo.hetTapMoi}, loại vì 3 ngày ${tienDo.loaiVi3Ngay}`
+        );
       },
       bao,
     ),

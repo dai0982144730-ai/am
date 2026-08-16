@@ -15,6 +15,14 @@ import { doiHoiChuDuAn } from "@/lib/quyen";
 
 import { apDungDeXuat } from "./apDung";
 import { dongBoPlaylist } from "./dongBo";
+import {
+  doiTenThuMuc as doiTenThuMucLoi,
+  huyXoaThuMuc as huyXoaThuMucLoi,
+  taoThuMucMoi as taoThuMucMoiLoi,
+  themVaoThuMuc as themVaoThuMucLoi,
+  xoaKhoiThuMuc as xoaKhoiThuMucLoi,
+  xoaThuMuc as xoaThuMucLoi,
+} from "./thanhVien";
 
 export interface KetQua {
   ok: boolean;
@@ -99,6 +107,105 @@ export async function batTatChoSapXep(
       ? "Trợ lý sẽ đề xuất video cho playlist này."
       : "Đã tắt — trợ lý không đụng tới playlist này nữa.",
   };
+}
+
+/**
+ * Dữ liệu cho menu ba chấm — nạp một lần lúc mở menu, không nạp sẵn cho mọi
+ * thẻ nội dung trên trang (một trang Khám phá có tới hai bốn thẻ, nạp sẵn cho
+ * hết là hai bốn lượt hỏi database không ai cần).
+ */
+export async function layDuLieuMenuBaCham(contentItemId: string): Promise<{
+  cacPlaylist: { id: string; ten: string }[];
+  dangTrongThuVien: boolean;
+}> {
+  const [cacPlaylist, muc] = await Promise.all([
+    prisma.youTubePlaylist.findMany({
+      where: { deletionRequestedAt: null },
+      orderBy: { title: "asc" },
+      select: { id: true, title: true },
+    }),
+    prisma.libraryItem.findUnique({
+      where: { contentItemId },
+      select: { id: true },
+    }),
+  ]);
+
+  return {
+    cacPlaylist: cacPlaylist.map((p) => ({ id: p.id, ten: p.title })),
+    dangTrongThuVien: Boolean(muc),
+  };
+}
+
+/** Tạo một thư mục mới trên Am — chưa có gì thật trên YouTube. */
+export async function taoThuMuc(ten: string): Promise<KetQua & { id?: string }> {
+  const chan = await chanCua("tạo thư mục playlist");
+  if (chan) return chan;
+
+  const sach = ten.trim();
+  if (!sach) return { ok: false, thongDiep: "Chưa đặt tên." };
+
+  const { id } = await taoThuMucMoiLoi(sach);
+  revalidatePath("/playlist");
+  return { ok: true, thongDiep: `Đã tạo "${sach}" trên Am.`, id };
+}
+
+/** Thêm một nội dung vào thư mục — làm ngay trên Am, không cần duyệt. */
+export async function themVaoThuMuc(
+  contentItemId: string,
+  playlistId: string,
+): Promise<KetQua> {
+  const chan = await chanCua("thêm vào playlist");
+  if (chan) return chan;
+
+  const kq = await themVaoThuMucLoi(contentItemId, playlistId, "user");
+  revalidatePath("/playlist");
+  return kq;
+}
+
+/** Bỏ một nội dung khỏi thư mục — làm ngay trên Am, không cần duyệt. */
+export async function xoaKhoiThuMuc(
+  contentItemId: string,
+  playlistId: string,
+): Promise<KetQua> {
+  const chan = await chanCua("bỏ khỏi playlist");
+  if (chan) return chan;
+
+  const kq = await xoaKhoiThuMucLoi(contentItemId, playlistId);
+  revalidatePath("/playlist");
+  return kq;
+}
+
+/** Đổi tên thư mục trên Am — thật thì sinh đề xuất chờ duyệt. */
+export async function doiTenThuMuc(
+  playlistId: string,
+  tenMoi: string,
+): Promise<KetQua> {
+  const chan = await chanCua("đổi tên playlist");
+  if (chan) return chan;
+
+  const kq = await doiTenThuMucLoi(playlistId, tenMoi);
+  revalidatePath("/playlist");
+  return kq;
+}
+
+/** Yêu cầu xoá thư mục — CHƯA xoá gì thật, chỉ ẩn đi và chờ duyệt. */
+export async function xoaThuMuc(playlistId: string): Promise<KetQua> {
+  const chan = await chanCua("xoá thư mục playlist");
+  if (chan) return chan;
+
+  const kq = await xoaThuMucLoi(playlistId);
+  revalidatePath("/playlist");
+  return kq;
+}
+
+/** Huỷ yêu cầu xoá — thư mục hiện lại bình thường. */
+export async function huyXoaThuMuc(playlistId: string): Promise<KetQua> {
+  const chan = await chanCua("huỷ xoá thư mục playlist");
+  if (chan) return chan;
+
+  const kq = await huyXoaThuMucLoi(playlistId);
+  revalidatePath("/playlist");
+  return kq;
 }
 
 /** Đọc lại danh sách playlist từ YouTube. Chỉ đọc, không sửa gì. */

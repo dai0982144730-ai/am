@@ -229,6 +229,9 @@ enum ActionItemStatus {
 enum SuggestionType {
   new_save /// Lưu nội dung mới vào playlist
   misplaced_fix /// Sửa video đang nằm sai playlist
+  remove_item /// Am không còn muốn video này trong playlist nữa
+  delete_playlist /// Xoá hẳn cả thư mục — việc duy nhất không cứu lại được
+  rename_playlist /// Đổi tên playlist thật cho khớp tên trên Am
 }
 
 enum SuggestionStatus {
@@ -243,6 +246,8 @@ enum PlaylistActionType {
   move_item
   add_item
   remove_item
+  delete_playlist
+  rename_playlist
 }
 
 /// Ba thứ lấy được từ tài khoản YouTube. Lịch sử xem và "Xem sau" KHÔNG
@@ -305,6 +310,7 @@ model Source {
 
   contentItems ContentItem[]
   authors      AuthorOnSource[]
+  boTap        TheoDoiBoTap[]
 
   @@unique([type, externalId])
   @@index([type, lastCrawledAt])
@@ -381,6 +387,8 @@ model ContentItem {
   libraryItem         LibraryItem?
   watchHistory        WatchHistory?
   playlistSuggestions PlaylistOrganizationSuggestion[]
+  playlistItems       PlaylistItem[]
+  tapCuaBo            TapCuaBo?
   representativeOf    DedupGroup?                     @relation("GroupRepresentative")
 
   @@unique([sourceId, externalId])
@@ -674,6 +682,76 @@ model AdHocInterest {
   @@index([active, autoScan])
 }
 
+/// Trạng thái của một bộ nhiều tập trong luồng theo dõi riêng.
+///
+/// Chủ dự án chốt 2026-08-16: nội dung có cấu trúc tập phải đi một luồng khác
+/// hẳn nội dung rời — không lấy đại tập đang hot, mà dò từ tập 1, thả từ từ,
+/// và bỏ hẳn nếu chủ nhà không xem.
+enum TrangThaiBoTap {
+  /// Tìm thấy một tập (thường không phải tập 1) có vẻ hay — đang tìm tập 1
+  /// thật của bộ đó để kiểm tra trước khi lấy.
+  dang_do
+  /// Tập 1 đạt, đã thả tập 1+2 (hoặc thêm sau đó) — đang chờ xem hoặc đang
+  /// nhả dần tập mới.
+  dang_theo
+  /// Tập 1 không đạt điểm, hoặc chủ nhà không xem trong 3 ngày — loại hẳn.
+  da_loai
+  /// Đã thả hết tập tìm được, chưa có tập mới ra thêm.
+  het_tap_moi
+}
+
+/// Một bộ nhiều tập, theo dõi độc lập với đường ống suất phân loại thường.
+///
+/// KHOÁ NHẬN DIỆN là nguồn + tên loạt đã chuẩn hoá (bỏ chữ "Tập X"/"#X"…) —
+/// nhờ vậy quét lại thấy "Tập 7" của cùng kênh, cùng tên loạt thì biết ngay nó
+/// thuộc bộ nào, không tạo nhầm thành bộ mới.
+model TheoDoiBoTap {
+  id       String @id @default(cuid())
+  sourceId String
+  source   Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  khoaChuoi  String /// tên loạt đã chuẩn hoá, dùng để so khớp
+  tenHienThi String /// tên gốc của tập đầu tiên tìm thấy, để hiện cho chủ nhà
+
+  trangThai TrangThaiBoTap @default(dang_do)
+
+  /// Tập cao nhất đã thả cho xem. 0 = chưa thả tập nào (còn đang dò tập 1).
+  tapCaoNhatDaTha Int @default(0)
+
+  /// Mốc thả tập gần nhất — cửa sổ 3 ngày "không xem thì loại" tính từ đây,
+  /// và tính LẠI mỗi lần thả thêm, không chỉ tính một lần lúc đầu.
+  thaLanCuoiLuc DateTime?
+
+  /// Đã thả bao nhiêu tập MỚI trong đúng ngày của `thaLanCuoiLuc` — trần 2
+  /// tập/ngày tính riêng cho bộ này. Ngày mới thì coi như về lại 0.
+  soTapThaHomNay Int @default(0)
+
+  lyDoLoai String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tapPhim TapCuaBo[]
+
+  @@unique([sourceId, khoaChuoi])
+  @@index([trangThai])
+}
+
+/// Một tập cụ thể thuộc về một bộ đang theo dõi.
+model TapCuaBo {
+  id            String       @id @default(cuid())
+  boId          String
+  bo            TheoDoiBoTap @relation(fields: [boId], references: [id], onDelete: Cascade)
+  contentItemId String       @unique
+  contentItem   ContentItem  @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  soTap Int
+
+  createdAt DateTime @default(now())
+
+  @@index([boId, soTap])
+}
+
 // ==========================================================================
 // CÁ NHÂN HOÁ & HÀNH VI
 // ==========================================================================
@@ -904,31 +982,73 @@ model YouTubeAccountSignal {
   @@index([signalType])
 }
 
+/// Một "thư mục" trên Am = một playlist. `youtubePlaylistId` rỗng nghĩa là
+/// playlist này mới có trên Am, chưa từng ghi thật lên YouTube (đang chờ đề
+/// xuất "create_playlist" được duyệt).
 model YouTubePlaylist {
   id                String  @id @default(cuid())
-  youtubePlaylistId String  @unique
+  youtubePlaylistId String? @unique
   title             String
   description       String?
   itemCount         Int     @default(0)
   /// Có cho phép trợ lý đề xuất sắp xếp playlist này không
   managedByAI       Boolean @default(false)
 
+  /// Đặt khi chủ nhà bấm xoá thư mục trên Am — CHƯA xoá thật. Ẩn khỏi danh
+  /// sách bình thường, chờ một đề xuất "delete_playlist" được duyệt rồi ghi.
+  deletionRequestedAt DateTime?
+
+  /// Id video YouTube, đúng thứ tự — ảnh chụp lần đọc thật gần nhất. Dùng để
+  /// so với `PlaylistItem` (thứ Am MUỐN có) và biết chỗ nào lệch.
+  lastSyncedVideoIds String[] @default([])
+
   lastSyncedAt DateTime?
   createdAt    DateTime  @default(now())
 
   suggestions PlaylistOrganizationSuggestion[]
+  items       PlaylistItem[]
 }
 
-/// Trợ lý CHỈ đề xuất. Mọi thay đổi thật trên kênh YouTube đều phải được
-/// người dùng duyệt trước khi áp dụng.
-model PlaylistOrganizationSuggestion {
+/// Thành viên MÀ AM MUỐN CÓ trong một thư mục — sửa tự do, không cần duyệt gì
+/// (kể cả do AI sửa). An toàn vì đây chỉ là ý định trên database của Am; chỉ
+/// khi so với `lastSyncedVideoIds` mà lệch thì mới sinh đề xuất ghi thật, và
+/// đề xuất đó mới cần duyệt. Có thể trỏ tới BẤT KỲ ContentItem nào — video
+/// YouTube thật hay nội dung nguồn khác của Am (podcast, blog…), đây là điểm
+/// khác của Am so với playlist gốc trên YouTube chỉ chứa được video.
+model PlaylistItem {
   id            String      @id @default(cuid())
+  playlistId    String
+  playlist      YouTubePlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   contentItemId String
   contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
 
+  position  Int
+  addedBy   PlaylistItemAddedBy @default(user)
+  createdAt DateTime @default(now())
+
+  @@unique([playlistId, contentItemId])
+  @@index([playlistId, position])
+}
+
+enum PlaylistItemAddedBy {
+  user
+  ai
+}
+
+/// Trợ lý CHỈ đề xuất. Mọi thay đổi thật trên kênh YouTube đều phải được
+/// người dùng duyệt trước khi áp dụng — kể cả xoá. Đây là ĐIỂM DUY NHẤT trong
+/// hệ thống được phép sinh ra một đề xuất xoá playlist; không có đường nào
+/// khác trong code được tự ý xoá.
+model PlaylistOrganizationSuggestion {
+  id            String       @id @default(cuid())
+  /// Rỗng ở loại đề xuất không gắn với một nội dung cụ thể (xoá/đổi tên cả
+  /// thư mục — `delete_playlist`, `rename_playlist`).
+  contentItemId String?
+  contentItem   ContentItem? @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
   suggestedPlaylistId String?
   suggestedPlaylist   YouTubePlaylist? @relation(fields: [suggestedPlaylistId], references: [id], onDelete: SetNull)
-  /// Khi cần tạo playlist mới chưa tồn tại
+  /// Khi cần tạo playlist mới chưa tồn tại, hoặc tên mới khi đổi tên
   newPlaylistTitle    String?
   /// Playlist hiện tại, khi phát hiện video đặt sai chỗ
   currentPlaylistTitle String?
@@ -944,7 +1064,6 @@ model PlaylistOrganizationSuggestion {
 }
 
 /// Nhật ký thao tác đã ghi thật lên YouTube — để tra cứu và khôi phục tay.
-/// Hệ thống KHÔNG BAO GIỜ xoá playlist, chỉ tạo mới / thêm / di chuyển.
 model PlaylistActionLog {
   id          String             @id @default(cuid())
   actionType  PlaylistActionType

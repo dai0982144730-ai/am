@@ -59,7 +59,7 @@ async function main() {
     console.log(`\nĐang chờ bạn quyết (${cho.length}):`);
     for (const d of cho) {
       const ten = d.suggestedPlaylist?.title ?? `${d.newPlaylistTitle} (mới)`;
-      console.log(`\n  "${d.contentItem.title}"`);
+      console.log(`\n  "${d.contentItem?.title ?? "(không gắn với nội dung nào)"}"`);
       console.log(`    → ${ten}`);
       console.log(`    ${d.reason}`);
     }

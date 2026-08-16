@@ -9,6 +9,7 @@
 
 import Link from "next/link";
 
+import { MenuBaCham } from "@/components/MenuBaCham";
 import type { TheNoiDung } from "@/lib/nghiepVu/layNoiDungTrangChu";
 import { ngheDuocBangTiengViet } from "@/lib/tiengViet/loc";
 
@@ -198,6 +199,8 @@ export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
             {thoiLuong}
           </span>
         ) : null}
+
+        <MenuBaCham contentItemId={muc.id} />
 
         {/* Điểm chất lượng — bốn trụ tín hiệu đã chuẩn hoá trong cùng loại nguồn */}
         {muc.score?.compositeScore != null ? (
