@@ -242,7 +242,13 @@ export async function quetVideoMoi(
       type: "youtube_channel",
       uploadsPlaylistId: { not: null },
     },
-    select: { id: true, externalId: true, title: true, uploadsPlaylistId: true },
+    select: {
+      id: true,
+      externalId: true,
+      title: true,
+      uploadsPlaylistId: true,
+      contentGroupHint: true,
+    },
     orderBy: { lastCrawledAt: { sort: "asc", nulls: "first" } },
     ...(tuyChon.gioiHanKenh ? { take: tuyChon.gioiHanKenh } : {}),
   });
@@ -250,6 +256,10 @@ export async function quetVideoMoi(
   const kenhLoi: { ten: string; lyDo: string }[] = [];
   /** id video → id nguồn, để biết video thuộc kênh nào khi lưu */
   const videoCanLay = new Map<string, string>();
+  /** id nguồn → chuyên mục gợi ý của kênh, để biết kênh nào là kênh nhạc */
+  const nhomGoiY = new Map(
+    cacNguon.map((n) => [n.id, n.contentGroupHint] as const),
+  );
   let soVideoXet = 0;
 
   for (const nguon of cacNguon) {
@@ -286,7 +296,7 @@ export async function quetVideoMoi(
     }
   }
 
-  const soVideoThemMoi = await layChiTietVaLuu(videoCanLay);
+  const soVideoThemMoi = await layChiTietVaLuu(videoCanLay, nhomGoiY);
 
   return {
     soKenhQuet: cacNguon.length,
@@ -304,6 +314,8 @@ export async function quetVideoMoi(
  */
 async function layChiTietVaLuu(
   videoCanLay: Map<string, string>,
+  /** id nguồn → chuyên mục gợi ý, để nhận ra video đến từ kênh nhạc */
+  nhomGoiY: Map<string, ContentGroup | null>,
 ): Promise<number> {
   if (videoCanLay.size === 0) return 0;
 
@@ -362,16 +374,25 @@ async function layChiTietVaLuu(
           // Chưa biết video thuộc chuyên mục nào — để Claude xếp ở bước sau
           contentGroup: "other" as ContentGroup,
           ingestSource: "subscribed" as const,
-          // Video có dấu hiệu là nhạc thì đánh dấu luôn để bước sau bỏ qua việc
-          // lấy lời thoại. Nhạc không có lời thoại hữu ích, mà lấy thì vừa tốn
-          // lượt gọi vừa tăng rủi ro bị chặn — xem lib/music/nhanDienNhac.ts
-          status: coTheLaNhac(
-            video.snippet?.title ?? "",
-            video.snippet?.channelTitle,
-            docThoiLuong(video.contentDetails?.duration),
-          ).coTheLaNhac
-            ? ("pending_classification" as const)
-            : ("pending_transcript" as const),
+          // Nhạc thì bỏ hẳn bước lấy lời thoại. Nhạc không có lời thoại hữu
+          // ích, mà lấy thì vừa tốn lượt gọi vừa tăng rủi ro bị chặn.
+          //
+          // HỎI KÊNH TRƯỚC, ĐOÁN TỪ TIÊU ĐỀ SAU. Bản cũ chỉ đoán từ tiêu đề nên
+          // bỏ sót: đo ngày 2026-08-16, trong 72 video vừa lấy từ 15 kênh nhạc
+          // thì **35 bài bị xếp nhầm vào hàng chờ lấy lời thoại** — tức là chờ
+          // một thứ vĩnh viễn không tới, rồi nằm im ngoài kho.
+          //
+          // Kênh đã được đánh dấu là kênh nhạc thì khỏi đoán: một bản mix chạy
+          // bộ tên "Running Cadence 168" chẳng có từ khoá nhạc nào cả.
+          status:
+            nhomGoiY.get(idNguon) === "music" ||
+            coTheLaNhac(
+              video.snippet?.title ?? "",
+              video.snippet?.channelTitle,
+              docThoiLuong(video.contentDetails?.duration),
+            ).coTheLaNhac
+              ? ("pending_classification" as const)
+              : ("pending_transcript" as const),
         };
       })
       .filter((d) => d !== null);

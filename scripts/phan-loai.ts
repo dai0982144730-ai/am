@@ -3,9 +3,14 @@
  *
  *   npx tsx scripts/phan-loai.ts --so 5     # chạy thử 5 video trước
  *   npx tsx scripts/phan-loai.ts --so 200   # rồi chạy nhiều
+ *   npx tsx scripts/phan-loai.ts --tat-ca   # chạy tới khi hết, theo từng mẻ
  *   npx tsx scripts/phan-loai.ts --podcast  # chỉ xếp các tập podcast
  *
  * Chạy lại an toàn: nội dung đã phân loại rồi thì bỏ qua.
+ *
+ * VÌ SAO `--tat-ca` CHIA MẺ chứ không lấy một phát 645 bài: mỗi bài kéo theo cả
+ * lời thoại, có bài mấy trăm nghìn chữ. Gom hết vào bộ nhớ cùng lúc là tự chuốc
+ * lấy rủi ro không cần thiết. Mẻ 30 bài chạy êm và vẫn thấy tiến độ đều đặn.
  *
  * Đây là bước TỐN TIỀN, nên script luôn in ra chi phí ước tính ở cuối. Lần đầu
  * hãy chạy với `--so 5` xem kết quả có hợp lý không rồi mới chạy cả kho.
@@ -35,8 +40,12 @@ const TEN_NHOM: Record<string, string> = {
   other: "Khác",
 };
 
+/** Số bài mỗi mẻ khi chạy `--tat-ca`. */
+const MOI_ME = 30;
+
 async function main() {
   const gioiHan = thamSo("so") ?? 20;
+  const tatCa = process.argv.includes("--tat-ca");
   const uuTien = process.argv.includes("--uu-tien");
   const chiBaiViet = process.argv.includes("--bai-viet");
   // Podcast ra vài tuần một tập, còn tin thời sự ra hàng ngày. Hàng chờ xếp
@@ -59,13 +68,45 @@ async function main() {
     return;
   }
 
-  const kq = await phanLoaiHangLoat(
-    gioiHan,
-    (dong) => console.log(dong),
-    uuTien,
-    chiBaiViet,
-    chiPodcast ? ["podcast_episode"] : undefined,
-  );
+  const motMe = () =>
+    phanLoaiHangLoat(
+      tatCa ? MOI_ME : gioiHan,
+      (dong) => console.log(dong),
+      uuTien,
+      chiBaiViet,
+      chiPodcast ? ["podcast_episode"] : undefined,
+    );
+
+  let kq = await motMe();
+
+  if (tatCa) {
+    let daLam = kq.thanhCong;
+    while (kq.daXet > 0) {
+      // Dừng khi một mẻ không phân loại nổi bài nào. Không có chốt này thì mấy
+      // bài luôn lỗi sẽ được lấy ra lại mãi mãi.
+      if (kq.thanhCong === 0) {
+        console.log("\nMẻ vừa rồi không phân loại được bài nào — dừng.");
+        break;
+      }
+      console.log(`\n  … đã phân loại ${daLam}, chạy mẻ tiếp\n`);
+      const me = await motMe();
+      if (me.daXet === 0) break;
+      daLam += me.thanhCong;
+      kq = {
+        ...me,
+        daXet: kq.daXet + me.daXet,
+        thanhCong: kq.thanhCong + me.thanhCong,
+        loi: kq.loi + me.loi,
+        tongTokenVao: kq.tongTokenVao + me.tongTokenVao,
+        tongTokenRa: kq.tongTokenRa + me.tongTokenRa,
+        tongTokenNhoLai: kq.tongTokenNhoLai + me.tongTokenNhoLai,
+        theoNhom: Object.entries(me.theoNhom).reduce(
+          (gom, [n, s]) => ({ ...gom, [n]: (gom[n] ?? 0) + s }),
+          { ...kq.theoNhom },
+        ),
+      };
+    }
+  }
 
   console.log(`\nĐã xét ${kq.daXet} — thành công ${kq.thanhCong}, lỗi ${kq.loi}`);
 

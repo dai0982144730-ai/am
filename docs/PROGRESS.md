@@ -2140,3 +2140,43 @@ npx tsx scripts/phan-loai-lai.ts tat-ca   # chạy tới khi xong
   rộng ra ngoài khi không đủ (100 đơn vị).
 - **Lọc theo giảng sư / tác giả** cần Phase 6. Nút đã hiện nhưng làm mờ.
 - **Nhánh nhạc** cần nguồn nhạc dài thật.
+
+---
+
+## Nguồn nhạc thật — XONG (2026-08-16)
+
+Đo ra một chuyện không ai để ý: **không nguồn nào trong kho được đánh dấu là
+nguồn nhạc**. Cả nhánh Music sống nhờ clip lọt vào tình cờ từ kênh khác, và cả
+15 "bản nhạc" hoá ra là Shorts 13–33 giây từ một kênh dance challenge. Sau khi
+luật 5 phút dọn dẹp, mục Music còn đúng **1 bài**.
+
+### `scripts/them-kenh-nhac.ts`
+
+Tìm kênh theo năm thể loại rồi **kiểm thời lượng thật trước khi nhận**. Ba chốt
+chặn, cả ba đều sinh ra từ thứ đo được chứ không phải phòng xa:
+
+| Chốt | Vì sao |
+|---|---|
+| ≥ 2 bài **và** ≥ 40% dài hơn 5 phút | Chặn kênh toàn Shorts — đúng cái đã làm hỏng nhánh nhạc |
+| ≥ 3 video mới đủ căn cứ | Tách khỏi lý do trên, kẻo báo "toàn Shorts" cho kênh vừa đăng một video 107 phút |
+| ≥ 1.000 người theo dõi | Lượt chạy đầu trả về kênh 11, 22, 28 người theo dõi — kênh đăng lại của người khác |
+
+Kết quả: **15 kênh vào kho, 20 kênh bị loại**. Tốn 1.393 đơn vị hạn mức trong
+ngân sách 10.000/ngày.
+
+Riêng **dance và nhạc vàng lần đầu không nhận được kênh nào** — cả tám kết quả
+đều là kênh đăng lại. Chữa bằng cách tìm theo **tên người và tên chương trình**
+thay vì mô tả chung chung: kênh gốc mang tên riêng, kênh đăng lại đặt tên theo
+từ khoá để hứng tìm kiếm.
+
+Quét về **72 video, 61 bài dài hơn 5 phút** — khác hẳn 0/15 trước đó.
+
+### Sửa luôn một lỗi ở bước quét
+
+35 trong 72 video bị xếp vào hàng chờ lấy lời thoại, tức là chờ một thứ vĩnh
+viễn không tới rồi nằm im ngoài kho. Nguyên nhân: `quetKenh.ts` chỉ **đoán từ
+tiêu đề** xem có phải nhạc không, mà một bản mix tên "Running Cadence 168"
+chẳng có từ khoá nhạc nào.
+
+Sửa: hỏi `contentGroupHint` của kênh trước, đoán từ tiêu đề sau. Kênh đã đánh
+dấu là kênh nhạc thì khỏi đoán.
