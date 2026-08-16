@@ -2660,3 +2660,30 @@ phải lướt qua đúng những cái tên vừa nói là sai.
 
 Thử vòng tròn trên dữ liệu thật: bác "Thầy Minh Tuệ" → `choDuyet` 73 → 72, thẻ
 xuống cuối danh sách, **8 nội dung vẫn nguyên**; nhận lại → về đúng như cũ.
+
+---
+
+## 2026-08-16 (tối, tiếp) — Việc 4: audio bản tin sáng
+
+Phần này hoá ra **đã viết xong từ Phase 10**, chỉ chưa từng chạy vì lúc đó chưa
+có khoá TTS. Giờ có rồi nên chạy thật để kiểm, và nó chạy đúng:
+
+| | |
+|---|---|
+| Bản tin | 8 mục nổi bật + 4 xem thêm, chắt từ 160 nội dung |
+| Kịch bản | 1.273 ký tự |
+| Audio | mp3 **77 giây** |
+| Hạn mức tiêu thêm | 1.273 ký tự (0,03% mức miễn phí tháng) |
+
+Trình phát trên `/ban-tin` nạp đúng file mới, `duration = 77,16s`, không lỗi.
+
+Cái phanh hạn mức nằm đúng chỗ: `docThanhTieng` gọi `conDocDuoc` trước khi gửi
+đi, nên cả đường bản tin lẫn đường bản thuật lại đều không thể vượt ngưỡng khoá
+90%.
+
+### Dọn lại các dòng lộ trình đã cũ
+
+Bốn dòng trong `plan.md` còn ghi trạng thái không còn đúng: Phase 2 và 10 ghi
+"chờ khoá TTS" (TTS đã chạy thật), Phase 4 ghi "trừ UI chỉnh trọng số" (đã có
+trong Cài đặt), Phase 13 chưa đánh dấu xong (khung trò chuyện đã đủ neo mép, kéo
+thả 8 hướng, dính mép kiểu Windows, Ctrl+K). Đã sửa cả bốn.
