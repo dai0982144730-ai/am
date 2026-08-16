@@ -24,6 +24,7 @@ import path from "node:path";
 import { prisma } from "@/lib/db/prisma";
 
 import { docThanhTieng } from "./doc";
+import { doDaiMp3 } from "./doDaiMp3";
 import { HetHanMucTts } from "./hanMuc";
 
 /** Thư mục chứa file âm thanh, nằm trong `public` nên Next phục vụ thẳng. */
@@ -82,11 +83,23 @@ export async function taoAmThanhChoThuatLai(
     try {
       const am = await docThanhTieng(ban.scriptText);
       const ten = `thuat-lai-${ban.id}.mp3`;
-      await writeFile(path.join(THU_MUC, ten), am.amThanh);
+      const duongDan = path.join(THU_MUC, ten);
+      await writeFile(duongDan, am.amThanh);
+
+      // Đo ngay lúc vừa ghi file. Trang Hàng chờ cộng thời lượng lại để xếp
+      // cho vừa 30 phút, mà bản đọc chỉ dài bằng khoảng 64% clip gốc (đã đo
+      // trên 29 bản) — lấy nhầm con số của clip gốc là hàng chờ dài hơn thực
+      // tế hẳn một nửa. Bài blog thì còn nặng hơn: chúng không có thời lượng
+      // gốc nào cả, nên không có con số này là không xếp vào hàng chờ được.
+      const giay = await doDaiMp3(duongDan);
 
       await prisma.narrationAsset.update({
         where: { id: ban.id },
-        data: { ttsAudioUrl: `${GOC_WEB}/${ten}`, ttsVoice: am.giong },
+        data: {
+          ttsAudioUrl: `${GOC_WEB}/${ten}`,
+          ttsVoice: am.giong,
+          durationSeconds: giay,
+        },
       });
 
       kq.thanhCong += 1;

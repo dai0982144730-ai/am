@@ -2433,3 +2433,67 @@ chúng chảy vào tab Ngẫu hứng.
 - SoundCloud và wiki tổng hợp định kỳ (Phase 8 còn dở)
 - Phase 9 cá nhân hoá — **chặn**: cần pgvector mà bản Postgres portable đang
   chạy không có
+
+---
+
+## 2026-08-16 (tối) — Phase 12: Hàng chờ
+
+Trang `/hang-cho`. "Tôi có 20 phút" là câu hỏi **khác hẳn** "cái nào hay nhất",
+và không giải được bằng cách sắp xếp: bài hay nhất dài 2 tiếng thì với 20 phút
+nó là câu trả lời sai, dù điểm cao nhất.
+
+**Không dùng thuật toán xếp balô.** Xếp balô cho ra kết quả khít nhất về mặt
+toán học, nhưng nó sẵn sàng bỏ bài 9 điểm để nhét hai bài 5 điểm chỉ vì cộng
+lại vừa hơn 40 giây. Thay vào đó: ưu tiên bài hay, chỉ dùng độ khít để lấp phần
+thừa. Cho phép tràn 10% vì bài cuối gần như không bao giờ dài đúng bằng chỗ
+còn lại — không chừa thì "20 phút" hay thành 14 phút.
+
+### Ba lỗi tự bắt được khi đo trên dữ liệu thật
+
+**1. Quên luật 5 phút.** Hàng chờ 30 phút đầu tiên trả về 8 bài thì 4 bài là
+Shorts nhảy 20 giây. `TOI_THIEU_GIAY` khi đó còn là hằng số riêng trong
+`timVaLoc.ts`. Đã **xuất ra ngoài** thay vì chép thêm một số 300 nữa — cùng lý
+do `chuaLuotQua` phải để một chỗ.
+
+**2. Bài blog có bản đọc bị loại oan.** Bài viết không có `durationSeconds`,
+nên chỉ hỏi cột đó là toàn bộ blog rơi ra — mà blog đã có mp3 lại đúng là thứ
+hợp chế độ chỉ nghe nhất. Hàng chờ "chỉ nghe" 60 phút chỉ ra **3 bài** trong
+khi kho có 29 bản đọc. Sửa xong: **6 bài, toàn bản đọc tiếng Việt**.
+
+**3. Thời lượng bản đọc sai hệ thống.** Cả 29 `NarrationAsset` đều để trống
+`durationSeconds`, nên hàng chờ lấy thời lượng clip gốc. Đo lại: **bản đọc chỉ
+dài bằng 64% clip gốc** — bản thuật lại là bản cô đặc, không phải dịch từng
+câu. Hàng chờ vì thế luôn dài hơn thực tế hơn một nửa.
+
+### Đo mp3 không cần cài thêm gì
+
+`src/lib/tts/doDaiMp3.ts` đọc thẳng header khung mp3 đầu tiên. **Không gọi
+ffprobe** dù máy này có sẵn: nó là chương trình cài ngoài repo, máy ở văn phòng
+có thể không có, và lúc đó việc tạo âm thanh hỏng vì lý do chẳng liên quan gì
+tới âm thanh.
+
+Đối chiếu với ffprobe trên 4 file:
+
+| ffprobe | cách đọc header | lệch |
+|---|---|---|
+| 1168,7s | 1169s | 0,03% |
+| 79,6s | 80s | 0,49% |
+| 706,5s | 706s | 0,07% |
+| 439,9s | 440s | 0,02% |
+
+`taoAmThanh.ts` giờ đo ngay lúc ghi file, nên không phát sinh lại.
+
+### Trình phát hàng chờ
+
+Một thẻ `<audio>` duy nhất, chỉ đổi `src`. Bản đầu đặt `key={id}` — và như thế
+mỗi lần sang bài React thay hẳn thẻ, **quyền "được phát không cần bấm" chết
+theo thẻ cũ**, đúng thứ cả thiết kế sinh ra để giữ. Lời chú thích nói một đằng
+code làm một nẻo; đã bỏ `key`, chuyển việc phát tiếp sang `useEffect` (lúc
+`sang()` chạy React chưa gắn `src` mới).
+
+### Hàng đợi theo nhịp
+
+Nửa đầu nhịp tăng, nửa sau giảm — buổi tập không kết thúc ở lúc mệt nhất. Dữ
+liệu thật: 10 bài có nhịp ghi rõ, tất cả đều là mix 34–96 phút, nên 45 phút chỉ
+vừa **một** bài. Không phải lỗi: mix chạy bộ vốn dài, và bài không ghi rõ nhịp
+thì không lọt vào (thà thiếu còn hơn lệch buổi tập).

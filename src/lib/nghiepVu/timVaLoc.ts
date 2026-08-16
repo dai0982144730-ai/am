@@ -96,8 +96,13 @@ export const SO_MOI_TRANG = 24;
  *      5 phút do cô đặc nội dung.** Cột này giữ thời lượng của clip GỐC, còn độ
  *      dài file mp3 nằm ở `NarrationAsset` — nên bản rút gọn vẫn được giữ.
  *      Đúng ý: mp3 ngắn đi vì cô đặc là dấu hiệu chất lượng, không phải clip vụn.
+ *
+ * XUẤT RA NGOÀI vì trang Hàng chờ cũng phải theo đúng luật này. Chép thêm một
+ * con số 300 nữa sang đó thì sớm muộn hai chỗ lệch nhau, và người dùng gặp lại
+ * đúng thứ vừa bị loại ở một trang khác mà không hiểu vì sao — cùng lý do
+ * `chuaLuotQua` phải để một chỗ duy nhất.
  */
-const TOI_THIEU_GIAY = 300;
+export const TOI_THIEU_GIAY = 300;
 
 /**
  * Sắp theo tỷ lệ thì phải có đủ lượt xem, nếu không con số vô nghĩa.

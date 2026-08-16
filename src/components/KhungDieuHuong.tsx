@@ -27,6 +27,7 @@ import {
   House,
   Library,
   ListMusic,
+  ListPlus,
   Menu,
   MessageCircle,
   PenLine,
@@ -71,6 +72,13 @@ const NHOM_CUA_BAN: MucDieuHuong[] = [
     tenNgan: "Lịch sử",
     bieuTuong: History,
     duongDan: "/lich-su",
+  },
+  {
+    // "Tôi có 20 phút" — câu hỏi khác hẳn "cái nào hay nhất" mà Khám phá trả
+    // lời, nên phải là một mục riêng chứ không phải một kiểu sắp xếp
+    ten: "Hàng chờ",
+    bieuTuong: ListPlus,
+    duongDan: "/hang-cho",
   },
   { ten: "Thư viện", bieuTuong: Library, duongDan: "/thu-vien" },
   { ten: "Playlist", bieuTuong: ListMusic, duongDan: "/playlist" },
