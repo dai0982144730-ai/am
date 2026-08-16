@@ -635,10 +635,32 @@ model DedupGroup {
 
 /// Từ khoá người dùng tự nhập, thay đổi theo ngày.
 /// Mỗi từ khoá bật tự quét tốn 100 units quota mỗi ngày (search.list).
+/// Một "đơn đặt hàng" cho chuyên mục Ngẫu hứng.
+///
+/// ## Vì sao không chỉ là một từ khoá
+///
+/// Bản đầu chỉ có `keyword` — một cụm chữ ném thẳng vào ô tìm kiếm YouTube.
+/// Chủ dự án chốt 2026-08-16 rằng thứ họ cần là **đặt hàng bằng lời thường**:
+///
+/// > *"Tìm thể loại sách về truyện nhưng phải là truyện kinh dị của Trung quốc
+/// > loại ngắn có thời lượng trên 1h và nội dung hiện đại"*
+///
+/// Câu đó chứa bốn điều kiện mà một từ khoá không diễn đạt nổi: thể loại, xuất
+/// xứ, thời lượng, và thời đại. Nên `yeuCau` giữ nguyên văn để Claude đọc và tự
+/// rút ra tiêu chí, còn `chuDeCon` là ba hướng cụ thể để đi tìm.
+///
+/// Kết quả **chỉ có vào hôm sau**, không tìm ngay lúc gõ: tìm kiếm YouTube tốn
+/// 100 đơn vị hạn mức mỗi lượt, và một câu đặt hàng đẻ ra nhiều lượt tìm.
 model AdHocInterest {
   id      String  @id @default(cuid())
   keyword String  @unique
   note    String?
+
+  /// Câu đặt hàng viết bằng lời thường, nguyên văn chủ nhà gõ
+  yeuCau   String?  @db.Text
+  /// Ba hướng cụ thể, ví dụ ["nói về ma", "hiện tượng có thật", "tìm mộ"].
+  /// Chính ba chữ này hiện ra ngoài màn hình chính.
+  chuDeCon String[] @default([])
 
   active   Boolean @default(true)
   autoScan Boolean @default(true)
@@ -991,6 +1013,25 @@ model UserAssistantSettings {
   /// chỉnh **lượng việc** trong một lượt chạy. Đặt 0 thì hai thứ trùng tác
   /// dụng, nhưng ở khoảng giữa thì không cái nào thay được cái nào.
   cuongDoQuet     Int     @default(100)
+
+  /// Số bài mỗi chuyên mục được phân loại mỗi đêm.
+  ///
+  /// Dạng `{ "ai": 10, "triet_hoc": 10, "truyen": 10, "music": 10,
+  /// "khoa_hoc": 10, "ngau_hung": 10 }` — chủ dự án chốt 2026-08-16, mặc định
+  /// 10 mỗi mục, tổng 60. Mỗi thanh kéo từ 0 tới 6 lần mức mặc định.
+  ///
+  /// ĐỂ DẠNG JSON chứ không phải sáu cột: sáu cột thì thêm một chuyên mục là
+  /// một migration, mà chuyên mục vốn đã là enum có thể dài ra.
+  suatChuyenMuc   Json?
+
+  /// Phần trăm theo loại nguồn, `{ "youtube": 45, "nghe": 45, "viet": 10 }`.
+  ///
+  /// Ba con số luôn cộng đúng 100 — giao diện tự tính ô thứ ba, và chốt chặn ở
+  /// máy chủ tính lại lần nữa.
+  ///
+  /// "nghe" gộp podcast với SoundCloud, "viet" gộp blog với diễn đàn — đúng
+  /// cách bộ lọc ở trang Khám phá đã gộp từ trước.
+  tyLeNguon       Json?
 
   updatedAt DateTime @updatedAt
 }

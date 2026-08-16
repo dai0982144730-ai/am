@@ -5,6 +5,7 @@ import { ChonTongMau } from "@/components/ChonTongMau";
 import { ThanhTrongSo } from "@/components/ThanhTrongSo";
 import { ThemPodcast } from "@/components/ThemPodcast";
 import { ThemSoundCloud } from "@/components/ThemSoundCloud";
+import { DatHangNgauHung } from "@/components/DatHangNgauHung";
 import { ThanhTyLeNguonMoi } from "@/components/ThanhTyLeNguonMoi";
 import { TinhHinhGiongDoc } from "@/components/TinhHinhGiongDoc";
 import { prisma } from "@/lib/db/prisma";
@@ -42,6 +43,17 @@ export default async function TrangCaiDat() {
   // sửa được. Minh bạch thì tốt hơn là giấu đi.
   const cacBoTrongSo = await prisma.sourceQualityProfile.findMany({
     orderBy: { sourceType: "asc" },
+  });
+
+  const donNgauHung = await prisma.adHocInterest.findFirst({
+    where: { active: true },
+    orderBy: { createdAt: "desc" },
+    select: {
+      yeuCau: true,
+      chuDeCon: true,
+      lastScannedAt: true,
+      resultCount: true,
+    },
   });
 
   const kenhSoundCloud = await prisma.source.findMany({
@@ -192,6 +204,28 @@ export default async function TrangCaiDat() {
             soTap: k._count.contentItems,
             duongDanFeed: k.externalId,
           }))}
+        />
+        </div>
+
+        <div className="mb-10 break-inside-avoid">
+        <DatHangNgauHung
+          laChu={laChu}
+          banDau={
+            donNgauHung
+              ? {
+                  yeuCau: donNgauHung.yeuCau ?? "",
+                  chuDeCon: donNgauHung.chuDeCon,
+                  quetLanCuoi:
+                    donNgauHung.lastScannedAt?.toLocaleString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }) ?? null,
+                  soBaiTimDuoc: donNgauHung.resultCount,
+                }
+              : null
+          }
         />
         </div>
 

@@ -355,3 +355,70 @@ export async function boPodcast(idNguon: string): Promise<{
     thongDiep: `Đã bỏ "${nguon.title}" cùng ${nguon._count.contentItems} tập.`,
   };
 }
+
+/**
+ * Lưu đơn đặt hàng cho chuyên mục Ngẫu hứng.
+ *
+ * **Ghi đè đơn cũ chứ không thêm đơn mới.** Chủ dự án chốt 2026-08-16 rằng đây
+ * là một chỗ đặt hàng cho phiên tới, không phải một danh sách tích luỹ — giữ cả
+ * đống đơn cũ thì mỗi đêm máy đi tìm theo mười thứ đã hết quan tâm, và tiêu hạn
+ * mức cho từng thứ một.
+ *
+ * KHÔNG tìm ngay ở đây: mỗi lượt tìm YouTube tốn 100 đơn vị, bấm lưu vài lần
+ * trong một buổi tối là cạn hạn mức cả ngày. Việc tìm chờ lượt quét đêm.
+ */
+export async function datHangNgauHung(
+  yeuCau: string,
+  chuDeCon: string[],
+): Promise<{ ok: boolean; thongDiep: string }> {
+  try {
+    await doiHoiChuDuAn("đặt hàng Ngẫu hứng");
+  } catch (e) {
+    return {
+      ok: false,
+      thongDiep: e instanceof Error ? e.message : "Không có quyền.",
+    };
+  }
+
+  const cau = yeuCau.trim().slice(0, 2_000);
+  const huong = chuDeCon
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+
+  if (!cau && huong.length === 0) {
+    return { ok: false, thongDiep: "Chưa điền gì cả." };
+  }
+
+  // `keyword` vẫn phải có vì cột đó là khoá duy nhất từ bản đầu. Dùng ba hướng
+  // ghép lại làm nhãn ngắn — cũng chính là chuỗi hiện ngoài màn hình chính.
+  const nhan = huong.length > 0 ? huong.join(", ") : cau.slice(0, 80);
+
+  const cu = await prisma.adHocInterest.findFirst({
+    where: { active: true },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+
+  if (cu) {
+    await prisma.adHocInterest.update({
+      where: { id: cu.id },
+      data: { keyword: nhan, yeuCau: cau, chuDeCon: huong, autoScan: true },
+    });
+  } else {
+    await prisma.adHocInterest.create({
+      data: { keyword: nhan, yeuCau: cau, chuDeCon: huong, autoScan: true },
+    });
+  }
+
+  revalidatePath("/cai-dat");
+  revalidatePath("/");
+  revalidatePath("/kham-pha");
+
+  return {
+    ok: true,
+    thongDiep:
+      `Đã lưu. Lượt quét đêm nay sẽ đi tìm theo ${huong.length} hướng` +
+      `${huong.length ? ` (${huong.join(", ")})` : ""}, kết quả có vào sáng mai.`,
+  };
+}

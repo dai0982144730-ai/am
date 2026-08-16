@@ -11,13 +11,17 @@ import { AlertTriangle, CheckCircle2, Download, XCircle } from "lucide-react";
 
 import { KhungTrang } from "@/components/KhungTrang";
 import { ThanhCuongDoQuet } from "@/components/ThanhCuongDoQuet";
+import { ThanhSuatPhanLoai } from "@/components/ThanhSuatPhanLoai";
 import { emailChuDuAn, laChuDuAn } from "@/lib/quyen";
 import { docCuongDo } from "@/lib/vanHanh/cuongDo";
+import { docCaiDatSuat } from "@/lib/vanHanh/suatPhanLoai";
+import { prisma } from "@/lib/db/prisma";
 import {
   docTinhHinhVanHanh,
   type LanChay,
   type TinhHinhVanHanh,
 } from "@/lib/vanHanh/tinhHinh";
+import type { ContentStatus } from "@/generated/prisma/enums";
 import type { TenLenh } from "@/lib/youtube/giaLenh";
 
 export const dynamic = "force-dynamic";
@@ -78,13 +82,50 @@ function docKeoDai(giay: number | null): string {
   return phut < 60 ? `${phut} phút` : `${Math.floor(phut / 60)} giờ ${phut % 60} phút`;
 }
 
-export default async function TrangVanHanh() {
-  const [email, laChu, tinhHinh, cuongDo] = await Promise.all([
-    emailChuDuAn(),
-    laChuDuAn(),
-    docTinhHinhVanHanh(),
-    docCuongDo(),
+/**
+ * Đếm hàng đang chờ phân loại theo ba nhóm nguồn.
+ *
+ * Dùng để nói thẳng chỗ nào hụt ngay dưới thanh trượt: đặt 45% podcast trong
+ * khi cả kho chỉ có 4 kênh podcast thì con số ấy không bao giờ lấp được, và
+ * người dùng phải nhìn thấy điều đó chứ không phải tự đoán.
+ */
+async function demHangCho() {
+  const dk = {
+    status: {
+      in: ["pending_classification", "transcript_unavailable"] as ContentStatus[],
+    },
+    classification: null,
+  };
+  const [youtube, nghe, viet] = await Promise.all([
+    prisma.contentItem.count({
+      where: { ...dk, source: { type: "youtube_channel" } },
+    }),
+    prisma.contentItem.count({
+      where: {
+        ...dk,
+        source: { type: { in: ["podcast_rss", "soundcloud_channel"] } },
+      },
+    }),
+    prisma.contentItem.count({
+      where: {
+        ...dk,
+        source: { type: { in: ["blog_feed", "forum_community"] } },
+      },
+    }),
   ]);
+  return { youtube, nghe, viet };
+}
+
+export default async function TrangVanHanh() {
+  const [email, laChu, tinhHinh, cuongDo, caiDatSuat, hangCon] =
+    await Promise.all([
+      emailChuDuAn(),
+      laChuDuAn(),
+      docTinhHinhVanHanh(),
+      docCuongDo(),
+      docCaiDatSuat(),
+      demHangCho(),
+    ]);
 
   const { youtube, tts, cacLanChay, troLyApi, cacPhienBanDiem } = tinhHinh;
   const lanChayCuoi = cacLanChay[0] ?? null;
@@ -152,6 +193,11 @@ export default async function TrangVanHanh() {
             {/* Khách vẫn thấy mức đang đặt — minh bạch thì tốt hơn giấu đi,
                 cùng lý do với bảng trọng số chấm điểm trong Cài đặt */}
             <ThanhCuongDoQuet banDau={cuongDo} choPhepSua={laChu} />
+            <ThanhSuatPhanLoai
+              banDau={caiDatSuat}
+              hangCon={hangCon}
+              choPhepSua={laChu}
+            />
             <BangLichChay cacLanChay={cacLanChay} />
             <BangPhienBanDiem
               cacPhienBanDiem={cacPhienBanDiem}

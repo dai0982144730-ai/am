@@ -28,6 +28,12 @@
 
 import { prisma } from "@/lib/db/prisma";
 import { apCuongDo, docCuongDo } from "@/lib/vanHanh/cuongDo";
+import {
+  chiaSuatPhanLoai,
+  TEN_CHUYEN_MUC,
+  TEN_NHOM_NGUON,
+  tomTatChiaSuat,
+} from "@/lib/vanHanh/suatPhanLoai";
 import { phanLoaiHangLoat } from "@/lib/llm/luuPhanLoai";
 import { thuatLaiHangLoat } from "@/lib/llm/luuThuatLai";
 import { quetBlog } from "@/lib/nguon/quetBlog";
@@ -279,7 +285,32 @@ export async function quetDem(
     await chayMotBuoc(
       "Nhờ Claude phân loại vào chuyên mục",
       async () => {
-        const kq = await phanLoaiHangLoat(dinhMuc.soPhanLoai);
+        // Chọn TRƯỚC theo suất từng chuyên mục và tỷ lệ từng loại nguồn, rồi
+        // mới đưa danh sách sang cho Claude. Trước đây bước này tự lấy N bài
+        // mới nhất, và YouTube nuốt hết suất vì nó có 269 kênh còn podcast có 4.
+        const chia = await chiaSuatPhanLoai(cuongDo / 100);
+        bao?.(`  ${tomTatChiaSuat(chia)}`);
+
+        for (const m of chia.theoMuc) {
+          if (m.chonDuoc < m.datRa) {
+            const thieu = m.hut
+              .map((h) => `${TEN_NHOM_NGUON[h.nhom]} ${h.co}/${h.can}`)
+              .join(", ");
+            bao?.(
+              `    ${TEN_CHUYEN_MUC[m.chuyenMuc]} hụt ${m.datRa - m.chonDuoc} bài` +
+                (thieu ? ` — ${thieu}` : ""),
+            );
+          }
+        }
+
+        const kq = await phanLoaiHangLoat(
+          chia.cacId.length,
+          undefined,
+          false,
+          false,
+          undefined,
+          chia.cacId,
+        );
         const theoNhom = Object.entries(kq.theoNhom)
           .map(([nhom, so]) => `${nhom} ${so}`)
           .join(", ");

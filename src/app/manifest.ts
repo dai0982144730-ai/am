@@ -50,11 +50,6 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: "Bản tin",
         url: "/ban-tin",
       },
-      {
-        name: "Hàng chờ",
-        short_name: "Hàng chờ",
-        url: "/hang-cho?che_do=chi_nghe",
-      },
     ],
   };
 }

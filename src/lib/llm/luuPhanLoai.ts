@@ -226,9 +226,26 @@ export async function phanLoaiHangLoat(
   chiLayCoTrienVong = false,
   chiLayBaiViet = false,
   chiLayLoai?: ContentItemType[],
+  /**
+   * Danh sách id đã được `chiaSuatPhanLoai` chọn sẵn.
+   *
+   * Truyền vào thì hàm này **không tự chọn nữa** — nó chỉ đi làm đúng danh sách
+   * ấy. Việc chọn ai được phân loại đã thành một bài toán riêng (chia suất theo
+   * chuyên mục và theo loại nguồn), không còn là "lấy N bài mới nhất".
+   */
+  chiLayId?: string[],
 ): Promise<KetQuaPhanLoaiHangLoat> {
+  if (chiLayId && chiLayId.length === 0) {
+    return {
+      daXet: 0, thanhCong: 0, loi: 0,
+      tongTokenVao: 0, tongTokenRa: 0, tongTokenNhoLai: 0,
+      theoNhom: {}, cachGoi: null,
+    };
+  }
+
   const cacMuc = await prisma.contentItem.findMany({
     where: {
+      ...(chiLayId ? { id: { in: chiLayId } } : {}),
       status: { in: ["pending_classification", "transcript_unavailable"] },
       classification: null,
       ...(chiLayLoai?.length ? { type: { in: chiLayLoai } } : {}),

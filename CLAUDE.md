@@ -32,6 +32,65 @@ thống phân quyền, đăng ký tài khoản, hay multi-tenant.
 - **Khoá API**: chỉ nằm trong `.env` (đã bị gitignore chặn). Không bao giờ viết
   giá trị khoá vào code, vào tài liệu, hay vào commit. Code chỉ tham chiếu tên biến.
 
+## Chủ dự án là ai, và cách làm việc với họ
+
+Viết mục này 2026-08-16 sau khi hỏi thẳng chủ dự án, cộng với những gì rút ra
+từ các phiên trước. Đọc mục này rồi thì không phải dò lại bằng cách thử.
+
+### Bối cảnh
+
+- **Không phải lập trình viên chuyên nghiệp.** Giải thích bằng lời thường, tránh
+  thuật ngữ khi không cần. Nhưng **đừng nói trống không**: họ đọc số liệu rất
+  kỹ và hay bắt được chỗ vô lý.
+- **Làm trên hai máy** (PC ở nhà, máy văn phòng) nối qua GitHub, và **rất hay
+  remote bằng điện thoại**. Câu trả lời phải đọc được trên màn hình nhỏ: bảng
+  ngắn, không đoạn văn dài, đường dẫn bấm được.
+- **Mảng chuyên môn thật của họ** là quản lý doanh nghiệp đầu tư, thiết kế, thi
+  công và vận hành **dự án điện gió, thuỷ điện, điện mặt trời**. `am` chỉ là một
+  trong các app; hướng chung là hệ thống AI và AI agent chạy trên web lẫn
+  Android phục vụ mảng đó. Khi thiết kế thứ gì dùng lại được cho các app kia
+  thì nói ra — `tiendo.scigroup.vn` và `phaply.scigroup.vn` là hai trang cùng họ.
+
+### Bốn quy tắc họ đã nói thẳng
+
+**1. Trình bày ý hiểu trước khi code.** Chủ dự án chốt bằng đúng câu *"cấm code
+sửa chữa khi chưa trình bầy đúng"*. Với yêu cầu có nhiều hơn một cách hiểu:
+viết lại ý hiểu, chờ gật, rồi mới sửa. Hiểu sai mà code xong là mất cả hai lần
+công.
+
+**2. Thấy vấn đề thì nói trước khi làm, kèm số liệu.** Không im lặng làm theo
+rồi để họ phát hiện sau. Nêu vấn đề, đề xuất cách khác, đợi họ quyết. Họ chọn
+đúng cách này khi được hỏi.
+
+**3. Đo, đừng đoán.** Đây là thứ họ quý nhất ở các phiên vừa qua. Trước khi kết
+luận thì chạy một script đếm thật trong database rồi dán con số ra. Đã có nhiều
+lần con số lật ngược phán đoán ban đầu — ví dụ tưởng "Music ra 0 kết quả là
+lỗi", đo mới biết cả 15 bản nhạc đều là Shorts 13–33 giây.
+
+**4. Bớt cú bấm.** *"kh có nhu cầu chọn nhiều vì phải click chuốt 2 lần"*. Mọi
+danh sách xổ ra chỉ chọn một giá trị, bấm phát là áp dụng và đóng luôn. Đừng
+thêm nút "xác nhận" cho thứ đã rõ ý.
+
+### Giọng viết họ muốn
+
+Giống hệt cách các phiên gần đây đang làm, và họ xác nhận lại khi được hỏi:
+
+- Có **bảng số liệu đo được**, không nói chung chung
+- **Nói rõ chỗ chưa chắc** thay vì lấp liếm cho trôi
+- Thừa nhận thẳng khi làm sai, sửa, rồi đi tiếp — không dài dòng xin lỗi
+- Cuối mỗi việc nói rõ **cái gì xong, cái gì còn dở, cái gì bị chặn**
+
+### Hai chuyện hay lo nhầm chỗ
+
+**Đừng lo hộ chuyện lộ code**: *"tôi không sợ lộ code"* — họ chủ động mở tunnel
+công khai để xem bằng điện thoại. Nhưng **khoá API thì vẫn tuyệt đối không**
+(xem mục Quy ước làm việc).
+
+**Ngược lại, phải lo chuyện tiếng Việt** — mục "Nguyên tắc quan trọng nhất" bên
+dưới không phải khẩu hiệu. Trước khi tuyên bố một tính năng đã xong, kiểm xem
+kết quả cuối cùng người dùng nhận được có phải tiếng Việt và có nghe/xem được
+ngay trong app không.
+
 ## Nguyên tắc kỹ thuật cốt lõi
 
 Ba điều này xuyên suốt thiết kế, đừng phá vỡ khi thêm tính năng:
