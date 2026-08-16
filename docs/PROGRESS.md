@@ -2249,3 +2249,34 @@ Sunhuyn lấy được 0 tập: mô tả của kênh này chỉ có lời rao, k
 
 Thử bằng `curl` phải kèm `-L` mới thấy nội dung. `fetch` của Node tự đi theo
 chuyển hướng nên code không phải sửa. Ghi lại vì lần đầu thử tưởng feed hỏng.
+
+---
+
+## Mục Ngẫu hứng — XONG (2026-08-16)
+
+Chỗ để lúc rảnh muốn xem hài, thể thao, ẩm thực — thứ không thuộc năm mảng.
+
+### Kho chứa đã có sẵn, không phải quét thêm gì
+
+Đây là điểm hay nhất của cách làm này. Ngẫu hứng gom đúng ba nguồn, cả ba đều
+đang nằm im trong database từ trước:
+
+1. Nội dung từ **145 kênh đã xếp là ngoài năm mảng**
+2. Nội dung **đã bị loại** ở bước phân loại
+3. Nội dung từ **từ khoá chủ nhà tự gõ**
+
+Nên bấm vào Ngẫu hứng là có ngay **446 nội dung**, không tốn một đơn vị hạn mức
+nào. Chỉ khi tìm không ra mới cần gọi YouTube, và lúc đó giao diện phải nói
+thẳng cái giá 100 đơn vị.
+
+### Chip tâm trạng chỉ là từ khoá gõ sẵn
+
+*Hài · Thể thao · Ẩm thực · Du lịch · Nhạc sống · Xe cộ · Thời sự* — bấm vào là
+điền vào ô tìm kiếm. Không thêm trường nào trong database, và gõ tay thứ khác
+cũng đi cùng một đường.
+
+### Điểm khác biệt duy nhất về mặt truy vấn
+
+Ngẫu hứng là chỗ **duy nhất** lấy cả nội dung `rejected`. Năm mục kia chỉ lấy
+`classified`. Đúng tinh thần: thứ bị loại khỏi luồng chính không bị xoá, nó chỉ
+lui về đây chờ lúc được cần.

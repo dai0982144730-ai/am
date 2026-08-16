@@ -168,17 +168,46 @@ const KHOANG_THOI_GIAN: Record<MaThoiGian, { tu?: number; den?: number }> = {
 
 /** Dựng điều kiện lọc từ những gì người dùng chọn. */
 function dungDieuKien(loc: BoLoc): Prisma.ContentItemWhereInput {
-  const dieuKien: Prisma.ContentItemWhereInput = { status: "classified" };
+  const laNgauHung = loc.nhom === "ngau_hung";
+  const dieuKien: Prisma.ContentItemWhereInput = laNgauHung
+    ? // Ngẫu hứng lấy CẢ thứ đã bị loại — đó là điểm khác biệt của nó.
+      { status: { in: ["classified", "rejected"] } }
+    : { status: "classified" };
   const va: Prisma.ContentItemWhereInput[] = [];
   const phanLoai: Prisma.ContentClassificationWhereInput = {};
 
   // --- Chuyên mục ---
   //
-  // "Ngẫu hứng" không phải một chuyên mục chủ đề mà là NGUỒN GỐC: thứ có mặt
-  // trong kho vì chính chủ nhà gõ từ khoá gọi ra. Một bài về máy tính lượng tử
-  // tìm được kiểu đó vẫn mang nhãn `khoa_hoc` — đúng chủ đề thật của nó.
-  if (loc.nhom === "ngau_hung") dieuKien.adHocInterestId = { not: null };
-  else if (loc.nhom) dieuKien.contentGroup = loc.nhom;
+  // "Ngẫu hứng" KHÔNG phải chuyên mục thứ sáu. Nó là **kho chứa của mọi thứ
+  // nằm ngoài năm mảng** — chỗ để lúc rảnh muốn xem hài, thể thao, ẩm thực.
+  //
+  // Chỗ hay của cách làm này: kho chứa ấy **đã có sẵn, không phải quét thêm gì**.
+  // Nó gồm đúng hai nguồn, cả hai đều đang nằm im trong database:
+  //
+  //   1. Nội dung từ **145 kênh đã xếp là ngoài năm mảng** (`xepKenh.ts`) —
+  //      chúng bị lượt quét đêm bỏ qua, nhưng thứ quét được từ trước vẫn còn
+  //   2. Nội dung **đã bị loại** ở bước phân loại — 275 bài tính tới 2026-08-16
+  //
+  // Nhờ vậy bấm vào Ngẫu hứng là có kết quả ngay, không tốn một đơn vị hạn mức
+  // nào. Chỉ khi tìm không ra mới cần gọi YouTube, và lúc đó giao diện phải nói
+  // thẳng cái giá 100 đơn vị ra.
+  //
+  // Nội dung từ từ khoá chủ nhà tự gõ cũng gom vào đây: nó cũng là thứ "tự dưng
+  // muốn xem" chứ không thuộc năm mảng cố định.
+  if (laNgauHung) {
+    va.push({
+      OR: [
+        { adHocInterestId: { not: null } },
+        { source: { contentGroupHint: "other" } },
+        { status: "rejected" },
+      ],
+    });
+  } else if (loc.nhom && loc.nhom !== "ngau_hung") {
+    // Nhánh này chỉ còn năm mảng cố định, và chúng trùng tên với `ContentGroup`
+    // trong database. Phải so sánh lại tường minh vì `laNgauHung` là một biến
+    // riêng nên TypeScript không tự thu hẹp kiểu giúp.
+    dieuKien.contentGroup = loc.nhom;
+  }
 
   // --- Luật 5 phút, luôn bật ---
   //

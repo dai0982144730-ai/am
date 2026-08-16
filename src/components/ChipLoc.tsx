@@ -258,6 +258,23 @@ const CHUA_LAM: Record<string, string> = {
   truyen: "Tác giả",
 };
 
+/**
+ * Chip tâm trạng của mục Ngẫu hứng.
+ *
+ * Chúng chỉ là **từ khoá gõ sẵn** — bấm vào là điền vào ô tìm kiếm, không phải
+ * một loại bộ lọc mới. Nhờ vậy không cần thêm trường nào trong database, và gõ
+ * tay thứ khác cũng ra cùng một đường.
+ */
+const TAM_TRANG = [
+  "Hài",
+  "Thể thao",
+  "Ẩm thực",
+  "Du lịch",
+  "Nhạc sống",
+  "Xe cộ",
+  "Thời sự",
+];
+
 // ==========================================================================
 
 const KIEU_NUT =
@@ -587,6 +604,16 @@ export function ChipLoc({
             </button>
           ) : null}
         </div>
+
+        {/* Chip tâm trạng — chỉ hiện ở mục Ngẫu hứng */}
+        {nhomHienTai === "ngau_hung" ? (
+          <div className="mt-2 flex items-center gap-1.5 overflow-x-auto border-t border-dashed border-neutral-300 pt-2 dark:border-neutral-700">
+            <NhanHang chu="Hôm nay xem gì" />
+            {TAM_TRANG.map((t) =>
+              nutDon("q", t.toLowerCase(), t),
+            )}
+          </div>
+        ) : null}
 
         {/* Dải BPM — chỉ bung ra khi đã chọn loại nhạc có nhịp */}
         {hienBpm ? (
