@@ -15,6 +15,16 @@
  * xuống, ô ba không bao giờ âm.
  *
  * Ba thanh này hiện **số bài**, không hiện phần trăm.
+ *
+ * ## Số hiện lên đã nhân cường độ
+ *
+ * Thanh trượt giữ **mức thường ngày** (mặc định 10), còn con số bên phải là
+ * *thật sự đêm nay chạy bao nhiêu* — tức đã nhân hệ số cường độ ở khối trên.
+ * Kéo cường độ lên 200% thì mỗi mục hiện 20 bài và tổng hiện 120, đúng như chủ
+ * dự án chỉ ra 2026-08-16: *"kéo thanh bên trên tới 200% thì bên dưới phải tự
+ * động chuyển thành 120 mới là đúng"*.
+ *
+ * Vì vậy `muc`/`tyLe` do `KhoiCuongDoVaSuat` giữ hộ — nó biết cả cường độ.
  */
 
 import { useState, useTransition } from "react";
@@ -25,10 +35,11 @@ import {
   CAC_NHOM_NGUON,
   DON_VI_NGUON,
   SO_LAN_TOI_DA,
+  suatSauCuongDo,
   SUAT_MAC_DINH,
   TEN_CHUYEN_MUC,
   TEN_NHOM_NGUON,
-  type CaiDatSuat,
+  tongSuat,
   type MaChuyenMuc,
   type MaNhomNguon,
 } from "@/lib/vanHanh/mucSuat";
@@ -41,20 +52,29 @@ export interface HangCon {
 }
 
 export function ThanhSuatPhanLoai({
-  banDau,
+  muc,
+  tyLe,
+  heSo,
   hangCon,
   choPhepSua,
+  onDoiMuc,
+  onDoiTyLe,
 }: {
-  banDau: CaiDatSuat;
+  muc: Record<MaChuyenMuc, number>;
+  tyLe: Record<MaNhomNguon, number>;
+  /** Hệ số cường độ đang kéo. 1 = mức thường ngày */
+  heSo: number;
   hangCon: HangCon;
   choPhepSua: boolean;
+  onDoiMuc: (m: MaChuyenMuc, x: number) => Record<MaChuyenMuc, number>;
+  onDoiTyLe: (n: MaNhomNguon, x: number) => Record<MaNhomNguon, number>;
 }) {
-  const [muc, setMuc] = useState(banDau.chuyenMuc);
-  const [tyLe, setTyLe] = useState(banDau.tyLeNguon);
   const [dangGhi, batDau] = useTransition();
   const [daLuu, setDaLuu] = useState(true);
 
-  const tong = CAC_CHUYEN_MUC.reduce((t, m) => t + muc[m], 0);
+  // Số THẬT SỰ chạy đêm nay, không phải số ghi trên thanh trượt
+  const thuc = suatSauCuongDo(muc, heSo);
+  const tong = tongSuat(thuc);
 
   function ghi(mucMoi = muc, tyLeMoi = tyLe) {
     if (!choPhepSua) return;
@@ -63,32 +83,6 @@ export function ThanhSuatPhanLoai({
       await datSuatPhanLoai(mucMoi, tyLeMoi);
       setDaLuu(true);
     });
-  }
-
-  function doiMuc(m: MaChuyenMuc, x: number) {
-    const moi = { ...muc, [m]: x };
-    setMuc(moi);
-    return moi;
-  }
-
-  /**
-   * Kéo YouTube hoặc Podcast thì ô Blog tự tính lại.
-   *
-   * Kéo YouTube lên quá cao thì Podcast bị đẩy xuống trước, Blog giữ 0 — chứ
-   * không để Blog âm.
-   */
-  function doiTyLe(n: MaNhomNguon, x: number) {
-    let youtube = tyLe.youtube;
-    let nghe = tyLe.nghe;
-    if (n === "youtube") {
-      youtube = Math.min(100, x);
-      nghe = Math.min(nghe, 100 - youtube);
-    } else {
-      nghe = Math.min(x, 100 - youtube);
-    }
-    const moi = { youtube, nghe, viet: 100 - youtube - nghe };
-    setTyLe(moi);
-    return moi;
   }
 
   return (
@@ -112,6 +106,13 @@ export function ThanhSuatPhanLoai({
         </span>
       </div>
 
+      {heSo !== 1 ? (
+        <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+          Thanh trượt giữ mức thường ngày; số bài bên phải đã nhân cường độ{" "}
+          {Math.round(heSo * 100)}%.
+        </p>
+      ) : null}
+
       <div className="mt-2 space-y-2.5">
         {CAC_CHUYEN_MUC.map((m) => (
           <MotThanh
@@ -119,10 +120,10 @@ export function ThanhSuatPhanLoai({
             nhan={TEN_CHUYEN_MUC[m]}
             giaTri={muc[m]}
             toiDa={SUAT_MAC_DINH[m] * SO_LAN_TOI_DA}
-            duoi={`${muc[m]} bài`}
+            duoi={`${thuc[m]} bài`}
             tat={!choPhepSua || dangGhi}
-            onDoi={(x) => setMuc({ ...muc, [m]: x })}
-            onXong={(x) => ghi(doiMuc(m, x), tyLe)}
+            onDoi={(x) => onDoiMuc(m, x)}
+            onXong={(x) => ghi(onDoiMuc(m, x), tyLe)}
           />
         ))}
       </div>
@@ -159,8 +160,8 @@ export function ThanhSuatPhanLoai({
                 </>
               }
               tat={!choPhepSua || dangGhi}
-              onDoi={(x) => doiTyLe(n, x)}
-              onXong={(x) => ghi(muc, doiTyLe(n, x))}
+              onDoi={(x) => onDoiTyLe(n, x)}
+              onXong={(x) => ghi(muc, onDoiTyLe(n, x))}
             />
           );
         })}

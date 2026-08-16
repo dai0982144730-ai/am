@@ -4,7 +4,7 @@
  * ## Vì sao phải tách khỏi `cuongDo.ts`
  *
  * Thanh trượt chạy ở trình duyệt và cần đọc `CUONG_DO_TOI_DA` cùng
- * `moTaCuongDo()`. Nếu mấy thứ đó nằm chung file với hàm hỏi database thì nhập
+ * `CUONG_DO_MAC_DINH`. Nếu mấy thứ đó nằm chung file với hàm hỏi database thì nhập
  * một cái là kéo theo cả prisma và thư viện `pg` xuống trình duyệt — mà `pg`
  * cần `net`, `tls`, `fs`, những thứ trình duyệt không có. Đã vấp thật: trang
  * Vận hành trắng bóc với bảy lỗi "Module not found: Can't resolve 'net'".
@@ -131,14 +131,4 @@ export function apCuongDo(cuongDo: number): DinhMucMotDem {
     soChuDeTuTim: nhan(GIOI_HAN_MOI_DEM.soChuDeTuTim),
     soDocThanhTieng: nhan(GIOI_HAN_MOI_DEM.soDocThanhTieng),
   };
-}
-
-/** Câu mô tả ngắn hiện dưới thanh trượt. */
-export function moTaCuongDo(cuongDo: number): string {
-  const c = kepCuongDo(cuongDo);
-  if (c === 0) return "Đứng im — không quét, không gọi Claude, không tiêu hạn mức";
-  if (c === CUONG_DO_MAC_DINH) return "Như thiết kế gốc";
-  if (c < CUONG_DO_MAC_DINH) return `Làm ${c}% lượng việc thường ngày`;
-  if (c === CUONG_DO_TOI_DA) return "Gấp đôi lượng việc thường ngày";
-  return `Gấp ${(c / 100).toFixed(1).replace(".", ",")} lần lượng việc thường ngày`;
 }

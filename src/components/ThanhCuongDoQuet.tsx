@@ -13,33 +13,53 @@
  *
  * ## Vì sao có nấc 100 rõ ràng
  *
- * Mốc giữa là "như thiết kế gốc" và người ta sẽ quay về đó thường xuyên. Thanh
+ * Mốc giữa là mức thường ngày và người ta sẽ quay về đó thường xuyên. Thanh
  * trượt trơn thì canh đúng 100 rất khó — trượt tay một chút là 97 hay 104, chạy
  * đêm ra kết quả hơi khác mà không hiểu vì sao. Bước nhảy 10 làm mốc giữa bắt
  * dính, và không ai cần độ chính xác hơn thế.
+ *
+ * ## Vì sao mốc ghi bằng SỐ BÀI chứ không bằng chữ
+ *
+ * Bản đầu ghi "100% · thường ngày" rồi thêm một câu giải thích ở dưới. Chủ dự
+ * án chốt 2026-08-16: *"100% thường ngày phải quy theo số bài … nhìn số bài
+ * trên thanh là đc rồi"*. Nên chữ đi hẳn, mốc nói thẳng bao nhiêu bài.
+ *
+ * Con số ấy **không cứng trong file này**. Nó là tổng sáu thanh chuyên mục ngay
+ * bên dưới (mặc định 60). Trước đây chỗ này ghi cứng 80 — số cũ từ thời chưa có
+ * thanh chuyên mục — nên màn hình hứa 80 bài trong khi máy chạy 60.
+ *
+ * ## Vì sao giá trị nằm ở component cha
+ *
+ * Kéo thanh này lên 200% thì sáu thanh chuyên mục bên dưới phải đổi theo — mỗi
+ * mục 10 bài thành 20, tổng 60 thành 120. Hai component anh em không thấy state
+ * của nhau, nên `KhoiCuongDoVaSuat` giữ hộ cả hai. File này chỉ nhận số và báo
+ * lên khi tay đổi.
  */
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 
 import { datCuongDoQuet } from "@/app/van-hanh/actions";
-import {
-  CUONG_DO_MAC_DINH,
-  CUONG_DO_TOI_DA,
-  moTaCuongDo,
-} from "@/lib/vanHanh/mucCuongDo";
-
-/** Ví dụ cho dễ hình dung: mỗi đêm phân loại chừng này nội dung ở mức 100%. */
-const VI_DU_MOC_100 = 80;
+import { CUONG_DO_MAC_DINH, CUONG_DO_TOI_DA } from "@/lib/vanHanh/mucCuongDo";
 
 export function ThanhCuongDoQuet({
+  giaTri,
   banDau,
+  soBaiMoc100,
+  soBai,
   choPhepSua,
+  onDoi,
 }: {
+  giaTri: number;
+  /** Mức đang lưu trong database — để biết đã ghi hay chưa */
   banDau: number;
+  /** Tổng sáu thanh chuyên mục — số bài mỗi đêm khi cường độ ở mức 100% */
+  soBaiMoc100: number;
+  /** Số bài thật của mức đang kéo, do component cha tính */
+  soBai: number;
   /** Khách vẫn THẤY mức đang đặt, chỉ không kéo được */
   choPhepSua: boolean;
+  onDoi: (x: number) => void;
 }) {
-  const [giaTri, setGiaTri] = useState(banDau);
   const [dangGhi, batDau] = useTransition();
 
   const daLuu = giaTri === banDau;
@@ -74,6 +94,9 @@ export function ThanhCuongDoQuet({
           >
             {giaTri}%
           </span>
+          <span className="flex-1 text-sm text-neutral-500 dark:text-neutral-400">
+            {soBai} bài mỗi đêm
+          </span>
           <span className="text-xs text-neutral-500 dark:text-neutral-400">
             {!choPhepSua
               ? "đăng nhập để chỉnh"
@@ -92,7 +115,7 @@ export function ThanhCuongDoQuet({
           step={10}
           value={giaTri}
           disabled={dangGhi || !choPhepSua}
-          onChange={(e) => setGiaTri(Number(e.target.value))}
+          onChange={(e) => onDoi(Number(e.target.value))}
           onPointerUp={() => ghi(giaTri)}
           onKeyUp={() => ghi(giaTri)}
           aria-label="Cường độ quét đêm"
@@ -101,23 +124,16 @@ export function ThanhCuongDoQuet({
 
         <div className="mt-1 flex justify-between text-[11px] text-neutral-400 dark:text-neutral-500">
           <span>0% · đứng im</span>
-          <span>100% · thường ngày</span>
-          <span>200% · gấp đôi</span>
+          <span>100% · {soBaiMoc100} bài</span>
+          <span>200% · {soBaiMoc100 * 2} bài</span>
         </div>
 
-        <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
-          {moTaCuongDo(giaTri)}
-        </p>
-
-        {/* Nói bằng con số cụ thể, vì "gấp đôi" một mình thì không hình dung được */}
-        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          {giaTri === 0
-            ? "Lịch chạy 21h vẫn tới, nhưng lượt chạy sẽ thoát ngay và không ghi lại gì."
-            : `Mỗi đêm nhờ Claude phân loại chừng ${Math.max(
-                1,
-                Math.ceil((VI_DU_MOC_100 * giaTri) / 100),
-              )} nội dung (mức thường ngày là ${VI_DU_MOC_100}).`}
-        </p>
+        {giaTri === 0 ? (
+          <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+            Lịch chạy 21h vẫn tới, nhưng lượt chạy sẽ thoát ngay và không ghi
+            lại gì.
+          </p>
+        ) : null}
 
         {giaTri > CUONG_DO_MAC_DINH ? (
           <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:bg-amber-950 dark:text-amber-300">

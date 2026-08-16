@@ -96,6 +96,26 @@ export interface CaiDatSuat {
   tyLeNguon: Record<MaNhomNguon, number>;
 }
 
+/**
+ * Suất thật sự của đêm nay = suất đã đặt × hệ số cường độ.
+ *
+ * Phép làm tròn ở đây phải **khớp từng chữ** với `chiaSuatPhanLoai` bên
+ * `suatPhanLoai.ts`. Màn hình và máy chạy dùng chung một công thức thì mới
+ * không có chuyện hứa 120 bài rồi chạy ra 118.
+ */
+export function suatSauCuongDo(
+  muc: Record<MaChuyenMuc, number>,
+  heSo: number,
+): Record<MaChuyenMuc, number> {
+  const kq = {} as Record<MaChuyenMuc, number>;
+  for (const m of CAC_CHUYEN_MUC) kq[m] = Math.round(muc[m] * heSo);
+  return kq;
+}
+
+export function tongSuat(muc: Record<MaChuyenMuc, number>): number {
+  return CAC_CHUYEN_MUC.reduce((t, m) => t + muc[m], 0);
+}
+
 export function doSo(x: unknown, mac: number, tran: number): number {
   const n = typeof x === "number" ? x : Number(x);
   if (!Number.isFinite(n)) return mac;

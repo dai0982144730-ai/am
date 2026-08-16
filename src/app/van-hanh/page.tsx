@@ -9,9 +9,8 @@
 
 import { AlertTriangle, CheckCircle2, Download, XCircle } from "lucide-react";
 
+import { KhoiCuongDoVaSuat } from "@/components/KhoiCuongDoVaSuat";
 import { KhungTrang } from "@/components/KhungTrang";
-import { ThanhCuongDoQuet } from "@/components/ThanhCuongDoQuet";
-import { ThanhSuatPhanLoai } from "@/components/ThanhSuatPhanLoai";
 import { emailChuDuAn, laChuDuAn } from "@/lib/quyen";
 import { docCuongDo } from "@/lib/vanHanh/cuongDo";
 import { docCaiDatSuat } from "@/lib/vanHanh/suatPhanLoai";
@@ -190,11 +189,9 @@ export default async function TrangVanHanh() {
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
           <BangHanMucYouTube tinhHinh={tinhHinh} />
           <div className="space-y-8">
-            {/* Khách vẫn thấy mức đang đặt — minh bạch thì tốt hơn giấu đi,
-                cùng lý do với bảng trọng số chấm điểm trong Cài đặt */}
-            <ThanhCuongDoQuet banDau={cuongDo} choPhepSua={laChu} />
-            <ThanhSuatPhanLoai
-              banDau={caiDatSuat}
+            <KhoiCuongDoVaSuat
+              cuongDoBanDau={cuongDo}
+              suatBanDau={caiDatSuat}
               hangCon={hangCon}
               choPhepSua={laChu}
             />
