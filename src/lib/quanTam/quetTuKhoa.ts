@@ -249,22 +249,38 @@ export async function quetTuKhoaQuanTam(
   const cacTuKhoa = await prisma.adHocInterest.findMany({
     where: { active: true, autoScan: true },
     orderBy: { createdAt: "asc" },
-    select: { id: true, keyword: true },
+    select: { id: true, keyword: true, chuDeCon: true },
   });
+
+  // TÌM THEO TỪNG HƯỚNG MỘT, không ném cả câu vào ô tìm kiếm.
+  //
+  // Đơn đặt hàng mới có ba hướng cụ thể (`chuDeCon`), ví dụ "truyện ma có
+  // thật" · "hiện tượng bí ẩn" · "tìm mộ trùng tang". Ghép ba cái thành một
+  // chuỗi rồi tìm một lượt thì YouTube hiểu là phải khớp cả ba, và gần như
+  // luôn ra rỗng. Tìm riêng từng hướng thì mỗi hướng ra một mẻ riêng.
+  //
+  // Đơn cũ chưa có `chuDeCon` thì rơi về `keyword` như trước, không phải sửa
+  // dữ liệu cũ.
+  const canTim = cacTuKhoa.flatMap((tu) =>
+    (tu.chuDeCon.length > 0 ? tu.chuDeCon : [tu.keyword]).map((huong) => ({
+      id: tu.id,
+      huong,
+    })),
+  );
 
   const ketQua: KetQuaQuetMotTuKhoa[] = [];
   let tongThemMoi = 0;
   let hanMucDaTieu = 0;
 
-  for (const tu of cacTuKhoa) {
+  for (const tu of canTim) {
     try {
-      const kq = await quetMotTuKhoa(tu.id, tu.keyword, soNgayGanDay);
+      const kq = await quetMotTuKhoa(tu.id, tu.huong, soNgayGanDay);
       ketQua.push(kq);
       tongThemMoi += kq.soThemMoi;
       hanMucDaTieu += GIA_MOT_TU_KHOA + 1;
     } catch (e) {
       ketQua.push({
-        tuKhoa: tu.keyword,
+        tuKhoa: tu.huong,
         soTimThay: 0,
         soThemMoi: 0,
         loi: e instanceof Error ? e.message : String(e),
