@@ -383,30 +383,28 @@ export async function timNoiDung(loc: BoLoc): Promise<KetQuaTim> {
  * nào để bấm vào.
  */
 export async function demTheoNhom(): Promise<Record<string, number>> {
-  const chung = chuaLuotQua({
-    status: "classified" as const,
-    OR: [
-      { durationSeconds: null },
-      { durationSeconds: { gte: TOI_THIEU_GIAY } },
-    ],
-  });
+  // Đếm bằng CHÍNH `dungDieuKien` mà danh sách dùng, mỗi chuyên mục một lượt.
+  //
+  // Tốn sáu truy vấn thay vì một `groupBy`, nhưng đổi lại con số trên chip
+  // BẰNG NHAU VỚI DANH SÁCH theo cấu tạo, không phải nhờ nhớ đồng bộ.
+  //
+  // Bản `groupBy` trước đó đã sai đúng kiểu này: nó bỏ qua hai bộ lọc chạy
+  // ngầm, nên chip Truyện ghi **16** mà bấm vào chỉ ra **15** — một truyện nghi
+  // AI viết bị loại khỏi danh sách nhưng vẫn được đếm.
+  const cac = [
+    "ai",
+    "triet_hoc",
+    "truyen",
+    "music",
+    "khoa_hoc",
+    "ngau_hung",
+  ] as const;
 
-  const [nhom, ngauHung] = await Promise.all([
-    prisma.contentItem.groupBy({
-      by: ["contentGroup"],
-      where: chung,
-      _count: { _all: true },
-    }),
-    prisma.contentItem.count({
-      where: { ...chung, adHocInterestId: { not: null } },
-    }),
-  ]);
-
-  const dem = Object.fromEntries(
-    nhom
-      .filter((n) => n.contentGroup !== "other")
-      .map((n) => [n.contentGroup, n._count._all]),
+  const so = await Promise.all(
+    cac.map((nhom) =>
+      prisma.contentItem.count({ where: chuaLuotQua(dungDieuKien({ nhom })) }),
+    ),
   );
-  dem.ngau_hung = ngauHung;
-  return dem;
+
+  return Object.fromEntries(cac.map((nhom, i) => [nhom, so[i]]));
 }

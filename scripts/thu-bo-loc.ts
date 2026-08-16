@@ -30,6 +30,14 @@ async function main() {
   for (const [k, v] of Object.entries(dem)) console.log(`  ${k.padEnd(12)} ${v}`);
   console.log(`  CÓ 'other' không? ${"other" in dem ? "CÓ — SAI" : "không — đúng"}`);
 
+  // Con số trên chip là một LỜI HỨA: bấm vào sẽ thấy đúng chừng đó. Kiểm thẳng.
+  console.log("\n=== Chip có nói dối không? ===");
+  for (const [ma, so] of Object.entries(dem)) {
+    const that = (await timNoiDung({ nhom: ma as never })).tongSo;
+    const khop = so === that;
+    console.log(`  ${ma.padEnd(12)} chip ${String(so).padStart(3)} · danh sách ${String(that).padStart(3)}  ${khop ? "khớp" : "LỆCH — SAI"}`);
+  }
+
   console.log("\n=== Luật 5 phút ===");
   const duoi5 = await prisma.contentItem.count({
     where: { status: "classified", durationSeconds: { lt: 300, not: null } },
