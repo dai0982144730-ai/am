@@ -116,11 +116,30 @@ scripts/chay-database.cmd
 Địa chỉ Neon vẫn nằm trong `.env` dưới dạng ghi chú — muốn quay lại chỉ việc đổi
 chỗ dấu `#`, **code không phải sửa một dòng nào**.
 
-**pgvector chưa có trên bản này.** Bản Windows không kèm sẵn, mà hiện cũng chưa
-dùng tới: hai bảng embedding đều 0 dòng và không code nào đụng tới. Tới Phase 9
-(cá nhân hoá) mới phải lo — khi đó cần cài pgvector rồi tạo lại hai cột `vector`
-cùng hai chỉ mục HNSW. `scripts/check-db.ts` biết phân biệt "chưa cài pgvector"
-với "cài rồi mà mất chỉ mục", nên đừng hoảng khi thấy nó báo chưa có.
+**pgvector chưa có trên bản này.** Bản Windows không kèm sẵn, và hai cột
+`vector` cũng chưa hề tồn tại trong database dù `schema.prisma` có khai
+(`Unsupported("vector(1024)")`). `scripts/check-db.ts` biết phân biệt "chưa cài
+pgvector" với "cài rồi mà mất chỉ mục", nên đừng hoảng khi thấy nó báo chưa có.
+
+Chủ dự án chốt 2026-08-16: **cài pgvector vào bản ở máy**, không chuyển sang
+Neon. Hai bước, làm một lần:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/cai-pgvector.ps1
+```
+
+```bash
+npx tsx scripts/bat-pgvector.ts
+```
+
+Bước một dựng pgvector từ mã nguồn chính thức — **không có bản cài sẵn cho
+Windows**, cũng không có trong catalog StackBuilder (đã kiểm). Nó cần Visual
+Studio Build Tools khoảng 3–6 GB; script tự báo lệnh cài nếu thiếu. Bước hai tạo
+cột `vector` rồi dựng hai chỉ mục HNSW.
+
+Hai chỉ mục HNSW **cố ý nằm ngoài migration**: Prisma không hiểu loại chỉ mục
+này nên mỗi lần `migrate dev` nó đều định xoá đi. Để trong một script chạy lại
+được bất cứ lúc nào thì không có gì để xoá nhầm.
 
 ## Cạm bẫy đã gặp — đọc trước khi chạy migration
 

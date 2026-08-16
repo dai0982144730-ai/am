@@ -2855,17 +2855,16 @@ chính thức duy nhất là dựng từ mã nguồn bằng bộ biên dịch c�
 3–6 GB. Phần Postgres thì đã sẵn sàng: có `include/server` và `lib/postgres.lib`,
 tức là dựng extension được.
 
-**3. Cột `vector` chưa hề tồn tại trong database** — đây là chỗ bất ngờ. Hỏi
-thẳng `information_schema`:
+**3. Cột `vector` chưa hề tồn tại trong database.** `CLAUDE.md` đã ghi sẵn điều
+này từ trước; kiểm lại bằng cách hỏi thẳng `information_schema` cho chắc:
 
 ```
 ContentEmbedding: id, contentItemId, embeddingModel, sourceText, createdAt
 NoteEmbedding:    id, noteId,        embeddingModel, sourceText, createdAt
 ```
 
-Không có cột `vector` nào cả. Lượt migration đầu tiên chạy trên bản Postgres
-thiếu pgvector nên câu tạo cột hỏng, phần còn lại vẫn đi tiếp. Nhìn vào
-`schema.prisma` thì tưởng có, vì ở đó khai `Unsupported("vector(1024)")`.
+Đúng là không có cột `vector` nào. Nhìn vào `schema.prisma` thì tưởng có, vì ở
+đó khai `Unsupported("vector(1024)")` — nên chỗ này dễ nhầm nếu chỉ đọc file.
 
 Nên `scripts/bat-pgvector.ts` phải **tạo cột trước rồi mới dựng chỉ mục** — bản
 đầu tôi viết chỉ dựng chỉ mục, và nó sẽ hỏng ngay ở dòng đầu tiên.
