@@ -12,10 +12,11 @@
 | **3** — Nhánh nhạc | ✅ xong, chạy hoàn toàn bằng luật |
 | **4** — Chấm chất lượng | ✅ xong trọn: hai vòng chấm + màn hình chỉnh trọng số |
 | **4b** — Tìm kiếm & bộ lọc | ✅ xong, tìm được cả trong nhận xét của Claude |
-| **4c** — Chuyên mục New | ✅ xong, gõ từ khoá là đêm tự tìm |
+| **4c** — Ngẫu hứng (trước gọi "New") | ✅ gộp vào chip Khám phá, gỡ trang /quan-tam riêng — 2026-08-17 |
 | **7a** — Thư viện cá nhân | ✅ xong, thư mục tự đặt tên + trạng thái đọc |
 | **8** — Ghi chú khi xem | ✅ xong, gõ hoặc nói, Claude tự xếp ngăn |
-| **7b** — Playlist YouTube | ✅ xong phần đề xuất & duyệt; ghi thật cần cấp thêm quyền |
+| **7b** — Playlist YouTube | ✅ đồng bộ hai chiều + xoá/đổi tên qua đề xuất, menu Thêm vào Playlist — 2026-08-17 |
+| **Theo dõi bộ nhiều tập** | ✅ dò tập 1 trước khi theo, thả dần theo tốc độ xem, loại nếu 3 ngày không xem — 2026-08-17 |
 | **Khoa học** | ✅ chuyên mục thứ 5 + 7 nguồn báo/diễn đàn khoa học |
 | **Lịch sử xem** | ✅ mở ra là rời luồng chính, không bày lại |
 | **Tông màu** | ✅ nền be, điểm nhấn cam, menu trái đậm hơn |
@@ -2876,3 +2877,46 @@ bất cứ lúc nào: Prisma không hiểu loại chỉ mục này nên mỗi l�
 Đã viết sẵn hai script và ghi vào `CLAUDE.md`. Chưa chạy vì cài 3–6 GB công cụ
 Microsoft là việc chủ dự án nên tự bấm — nhất là khi vừa từ chối cài bộ Android
 8–12 GB.
+
+---
+
+## 2026-08-17 — Ngẫu hứng gộp vào Khám phá, Playlist đồng bộ hai chiều, luồng theo dõi bộ nhiều tập
+
+Ba việc lớn trong một phiên, tất cả đã kiểm bằng kịch bản thật chạy trên
+database, không chỉ đọc code bằng mắt.
+
+**Mốc cường độ quét đêm** giờ ghi thẳng số bài (`100% · 60 bài`, `200% · 120
+bài`) thay vì chữ "Như thiết kế gốc" và ví dụ 80 bài ghi cứng từ trước khi có
+sáu thanh chuyên mục — số 80 đó đã sai, không khớp suất thật. Kéo thanh cường
+độ giờ cũng cập nhật đúng số bài hiện trên sáu thanh chuyên mục bên dưới; hai
+khối trước là hai component tách rời không thấy state của nhau nên không sửa
+tại chỗ được, phải gom cả hai vào `KhoiCuongDoVaSuat`.
+
+**Gỡ trang "New" (`/quan-tam`)**, dồn việc quản lý chủ đề Ngẫu hứng vào đúng
+chip Ngẫu hứng ở Khám phá — trước đây hai giao diện cùng ghi vào một bảng
+`AdHocInterest` theo hai kiểu khác nhau (đơn nhất vs. danh sách), có nguy cơ
+ghi đè nhầm. Giờ chip Ngẫu hứng có thêm khối "Cấu hình" thu gọn (thêm/bật-tắt
+chủ đề) và hàng "Riêng Ngẫu hứng" lọc theo từng chủ đề đang tự quét.
+
+**Playlist đồng bộ hai chiều.** Trước chỉ đọc tên và số lượng playlist, không
+biết đích xác video nào ở đâu. Giờ đọc cả danh sách video thật
+(`lastSyncedVideoIds`), so với "ý Am muốn" (`PlaylistItem`, sửa tự do không
+cần duyệt) để tự sinh/tự đóng đề xuất ghi thật. Thêm được ba việc trước đây
+không có: xoá playlist (qua đề xuất, lần đầu tiên hệ thống có đường này —
+trước đây cố tình cấm), đổi tên, và thư mục trộn nguồn ngoài YouTube. Menu ba
+chấm mới trên mỗi thẻ nội dung (Thêm vào thư viện / Thêm vào Playlist).
+
+**Luồng theo dõi bộ nhiều tập** — hoàn toàn mới, tách khỏi suất phân loại
+thường. Gặp tập giữa chừng có vẻ hay thì không lấy ngay, dò tập 1 trước; tập
+1 đạt điểm mới thả tập 1+2, sau đó tối đa 2 tập/ngày và chỉ khi đã xem hết
+tập trước, ba ngày không xem thì loại hẳn. Áp dụng cho YouTube và podcast.
+Chạy như một bước mới trong quét đêm, ngay sau chấm điểm vòng 1.
+
+### Giới hạn đã biết, chưa làm
+
+- Playlist: chưa đồng bộ thứ tự (reorder) trong playlist, chỉ thêm/bớt.
+- Bộ tập: trần 2 tập/ngày chỉ chắc với phần Am chủ động ưu tiên phân loại;
+  suất chuyên mục thường vẫn có thể vô tình phân loại một tập mà không qua
+  trần này.
+- pgvector vẫn chưa cài — mục tìm kiếm ngữ nghĩa chưa bật được (xem mục
+  2026-08-16 phía trên).
