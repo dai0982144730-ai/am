@@ -2180,3 +2180,72 @@ chẳng có từ khoá nhạc nào.
 
 Sửa: hỏi `contentGroupHint` của kênh trước, đoán từ tiêu đề sau. Kênh đã đánh
 dấu là kênh nhạc thì khỏi đoán.
+
+---
+
+## Xếp kênh theo chuyên mục + nguồn tiếng Việt (2026-08-16)
+
+### Kênh đi theo chủ đề, nên xếp ở mức KÊNH chứ không chỉ từng video
+
+Chủ dự án chốt: *"các kênh của tôi nó theo chủ đề. nên cứ mỗi tuần quét một lần
+xem kênh nào nằm trong các chuyên đề cố định và đưa vào danh sách. các kênh còn
+lại dùng khi đột nhiên cần chủ đề ngẫu hứng"*.
+
+`scripts/xep-kenh.ts` xếp từng kênh vào một trong sáu ô, dùng ba nguồn tin:
+
+1. Tên kênh — đã có sẵn
+2. Mô tả kênh — `channels.list` gộp 50 kênh một lệnh
+3. **Vài tiêu đề video đã có trong kho** — miễn phí, và thường nói thật hơn mô
+   tả kênh, vốn hay viết hoa mỹ
+
+Kết quả: **233 kênh xếp xong trong một lượt, 0 lỗi, tốn 5 đơn vị hạn mức.**
+
+| Nhóm | Số kênh |
+|---|---|
+| Ngoài năm mảng | 145 |
+| AI | 22 |
+| Truyện | 21 |
+| Nhạc | 16 |
+| Khoa học | 15 |
+| Triết học | 14 |
+
+Lượt quét đêm giờ chỉ đụng **96/239 kênh** — bỏ qua 143 kênh mỗi đêm. Chúng
+không bị xoá, chỉ đứng ngoài, chờ lúc chủ nhà muốn xem thứ ngẫu hứng
+(`caKenhNgoaiMang: true`).
+
+Kênh **chưa xếp vẫn được quét**: kênh mới thêm chưa kịp qua lượt xếp hằng tuần
+thì không có lý do bỏ rơi. Chỉ kênh đã xét và kết luận là ngoài năm mảng mới
+đứng ngoài.
+
+### Nguồn tiếng Việt — bỏ qua được cả bước dịch
+
+Đây là chỗ đáng giá hơn vẻ ngoài: nội dung tiếng Việt **không phải đi qua bước
+thuật lại**, mà bước đó đang là chỗ nghẽn lớn nhất — mỗi bài hơn chục giây của
+Claude, mỗi đêm chỉ làm được 5 bài.
+
+| Nguồn | Loại | Nhóm | Đã lấy |
+|---|---|---|---|
+| VnExpress — Khoa học | blog | khoa_hoc | 10 |
+| Tuổi Trẻ — Khoa học | blog | khoa_hoc | 10 |
+| VnExpress — Số hoá | blog | ai | 10 |
+| Giác Ngộ | blog | triet_hoc | 10 |
+| Tri Kỷ Cảm Xúc | **SoundCloud** | triet_hoc | 10 |
+| Better Version | podcast | triet_hoc | 6 |
+| Sunhuyn Podcast | podcast | triet_hoc | 0 |
+
+**Giác Ngộ là nguồn CHỮ đầu tiên cho mục Triết học**, vốn tới giờ sống hoàn toàn
+bằng video YouTube.
+
+**Tri Kỷ Cảm Xúc chạy trên feed SoundCloud** — nên nhánh SoundCloud không còn
+trắng như bảng cũ ghi.
+
+Đã bỏ qua **Vietnam Innovators** dù tìm thấy: đó là podcast phỏng vấn doanh
+nhân, cùng loại với 5 tập Have A Sip vừa bị loại. Thêm vào chỉ để bị vứt.
+
+Sunhuyn lấy được 0 tập: mô tả của kênh này chỉ có lời rao, không qua nổi ngưỡng
+`TOI_THIEU_MO_TA`.
+
+### Feed tiếng Việt trả về 302
+
+Thử bằng `curl` phải kèm `-L` mới thấy nội dung. `fetch` của Node tự đi theo
+chuyển hướng nên code không phải sửa. Ghi lại vì lần đầu thử tưởng feed hỏng.

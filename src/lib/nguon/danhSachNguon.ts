@@ -178,4 +178,57 @@ export const NGUON_KHOI_DAU: NguonKhoiDau[] = [
     layDuocToanVan: false,
     ghiChu: "25 bài. Cộng đồng nhỏ, thiên kỹ thuật, ít rác",
   },
+
+  // ----- Nguồn tiếng Việt -----
+  //
+  // Thêm 2026-08-16 theo yêu cầu của chủ dự án. Phần này quan trọng hơn vẻ
+  // ngoài của nó: nội dung tiếng Việt **không phải đi qua bước thuật lại**, mà
+  // bước đó đang là chỗ nghẽn lớn nhất — mỗi bài tốn hơn chục giây của Claude
+  // và mỗi đêm chỉ làm được 5 bài. Một bài tiếng Việt vào kho là đọc được ngay.
+  //
+  // Việc bỏ qua bước dịch diễn ra tự động, không cần đánh dấu gì: Claude đọc
+  // nội dung rồi ghi `originalLanguage = "vi"`, còn điều kiện `CHO_LONG_TIENG`
+  // chỉ nhặt những bài KHÔNG phải tiếng Việt.
+  //
+  // Bốn feed dưới đây đều đã thử tải thật ngày 2026-08-16 và đếm được số bài.
+  // Chúng trả về 302 rồi mới tới nội dung, nên thử bằng `curl` phải kèm `-L`;
+  // `fetch` của Node tự đi theo chuyển hướng nên code không phải sửa gì.
+  {
+    ten: "VnExpress — Khoa học",
+    duongDanFeed: "https://vnexpress.net/rss/khoa-hoc.rss",
+    trangChu: "https://vnexpress.net/khoa-hoc",
+    tangUyTin: "aggregator",
+    nhomGoiY: "khoa_hoc",
+    layDuocToanVan: true,
+    ghiChu: "60 bài. Tiếng Việt — không cần thuật lại",
+  },
+  {
+    ten: "Tuổi Trẻ — Khoa học",
+    duongDanFeed: "https://tuoitre.vn/rss/khoa-hoc.rss",
+    trangChu: "https://tuoitre.vn/khoa-hoc.htm",
+    tangUyTin: "aggregator",
+    nhomGoiY: "khoa_hoc",
+    layDuocToanVan: true,
+    ghiChu: "50 bài. Tiếng Việt — không cần thuật lại",
+  },
+  {
+    ten: "VnExpress — Số hoá",
+    duongDanFeed: "https://vnexpress.net/rss/so-hoa.rss",
+    trangChu: "https://vnexpress.net/so-hoa",
+    tangUyTin: "aggregator",
+    nhomGoiY: "ai",
+    layDuocToanVan: true,
+    ghiChu:
+      "60 bài. Tiếng Việt. Lẫn nhiều tin điện thoại mới và review — phần đó sẽ bị bước phân loại gạt ra, chỉ giữ tin AI",
+  },
+  {
+    ten: "Giác Ngộ",
+    duongDanFeed: "https://giacngo.vn/rss/home.rss",
+    trangChu: "https://giacngo.vn",
+    tangUyTin: "aggregator",
+    nhomGoiY: "triet_hoc",
+    layDuocToanVan: true,
+    ghiChu:
+      "50 bài. Báo Phật giáo tiếng Việt — nguồn CHỮ đầu tiên cho mục Triết học, vốn tới giờ sống hoàn toàn bằng video YouTube",
+  },
 ];

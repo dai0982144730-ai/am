@@ -207,6 +207,15 @@ export async function dongBoNguonTuKenhDaDangKy(): Promise<KetQuaDongBoNguon> {
   return { themMoi, capNhat, khongLayDuoc };
 }
 
+/** Năm chuyên mục cố định mà chủ nhà thật sự đi tìm. */
+export const NAM_MANG_CO_DINH = [
+  "ai",
+  "triet_hoc",
+  "truyen",
+  "music",
+  "khoa_hoc",
+] as const;
+
 export interface TuyChonQuet {
   /** Chỉ lấy video đăng trong ngần này ngày gần đây. Mặc định 7. */
   soNgayGanDay?: number;
@@ -214,6 +223,21 @@ export interface TuyChonQuet {
   videoMoiKenh?: number;
   /** Chỉ quét ngần này kênh — để chạy thử mà không tốn nhiều hạn mức. */
   gioiHanKenh?: number;
+  /**
+   * Quét cả những kênh nằm ngoài năm mảng cố định.
+   *
+   * MẶC ĐỊNH LÀ KHÔNG, và đó là thay đổi lớn của bản 2026-08-16. Chủ dự án chốt
+   * rằng kênh của họ đi theo chủ đề, nên mỗi tuần xếp kênh một lần rồi lượt quét
+   * đêm chỉ đụng vào những kênh thuộc năm mảng.
+   *
+   * Đo lúc đổi: 269 kênh trong kho, chỉ **124 kênh thuộc năm mảng**. Quét cả
+   * 269 là tốn hạn mức mang về thứ sẽ bị loại — trong 411 bài phân loại lại hôm
+   * đó, 264 bài bị vứt.
+   *
+   * Bật cờ này khi chủ nhà muốn xem thứ ngẫu hứng: 145 kênh còn lại không bị
+   * xoá, chúng nằm chờ đúng lúc đó.
+   */
+  caKenhNgoaiMang?: boolean;
 }
 
 export interface KetQuaQuet {
@@ -241,6 +265,12 @@ export async function quetVideoMoi(
     where: {
       type: "youtube_channel",
       uploadsPlaylistId: { not: null },
+      // Kênh chưa xếp (`null`) VẪN ĐƯỢC QUÉT. Kênh mới thêm vào chưa kịp qua
+      // lượt xếp hằng tuần thì không có lý do gì bỏ rơi nó — chỉ những kênh đã
+      // xét và kết luận là ngoài năm mảng mới đứng ngoài.
+      ...(tuyChon.caKenhNgoaiMang
+        ? {}
+        : { OR: [{ contentGroupHint: null }, { contentGroupHint: { in: [...NAM_MANG_CO_DINH] } }] }),
     },
     select: {
       id: true,
