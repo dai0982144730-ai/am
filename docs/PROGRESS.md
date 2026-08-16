@@ -2687,3 +2687,60 @@ Bốn dòng trong `plan.md` còn ghi trạng thái không còn đúng: Phase 2 v
 "chờ khoá TTS" (TTS đã chạy thật), Phase 4 ghi "trừ UI chỉnh trọng số" (đã có
 trong Cài đặt), Phase 13 chưa đánh dấu xong (khung trò chuyện đã đủ neo mép, kéo
 thả 8 hướng, dính mép kiểu Windows, Ctrl+K). Đã sửa cả bốn.
+
+---
+
+## 2026-08-16 (tối, tiếp) — Việc 5: hồ sơ gu cá nhân
+
+Phase 9 có bốn phần, và **chỉ một phần bị chặn**. Kiểm lại cho chắc thay vì tin
+ghi chú cũ:
+
+```
+PostgreSQL 18.4 on x86_64-windows
+pgvector có sẵn để cài: false
+pgvector đã cài:        false
+```
+
+Chỉ **embeddings** cần pgvector. Hồ sơ gu, gu theo khung giờ và khởi động nguội
+chỉ cần đọc dữ liệu đã có — làm được ngay, và đã làm.
+
+### Tín hiệu chính không nằm trong app
+
+| Nguồn | Số lượng |
+|---|---|
+| Tín hiệu từ tài khoản YouTube | **1.029** (523 playlist · 282 đã thích · 224 đăng ký) |
+| Phiên nghe trong app | 39, **không phiên nào xem hết** |
+
+39 phiên dở dang thì kết luận gì cũng là bịa. Còn 282 video đã thích và 523
+video tự tay bỏ vào playlist là gu thật, tích trong nhiều năm — đúng việc mà
+`YouTubeAccountSignal` sinh ra để làm. Nên lời dặn nói thẳng với Claude rằng
+hành vi trong app là **tín hiệu yếu, dùng để đối chiếu thôi**, và nghe 30% một
+video không có nghĩa là chán.
+
+### Bản 1, dựng thật
+
+Độ tin cậy tự chấm: **vừa** (không phải "cao"). Ba chỗ cho thấy nó không bịa:
+
+- **Để trống `guTheoKhungGio`** thay vì đoán ra một cái lịch nghe cho đẹp — dữ
+  liệu không cho thấy nếp giờ giấc nào thì đúng là phải để trống
+- **Tự nói ra chỗ chưa chắc**: "có xu hướng bỏ dở… các video triết học/tôn giáo
+  trong app, nên chưa rõ có thực sự thích thể loại này hay không dù có đăng ký
+  vài kênh Phật giáo"
+- Chủ đề nổi nhất là `theo_doi_su_kien_Thich_Minh_Tue` (0,95) — khớp với chuyện
+  kho có hẳn 8 nội dung gắn tên đó
+
+Lưu theo **phiên bản tăng dần**, không đè bản cũ: một tuần mở toàn video linh
+tinh có thể làm hồ sơ lệch hẳn, và lúc đó phải quay lại được.
+
+Chạy trong lượt quét đêm ở bước 8c, **trước** bước viết bản tin (bản tin chính
+là thứ hồ sơ gu phục vụ). Tự bỏ qua khi bản hiện tại còn mới — dưới 10 phiên
+nghe mới kể từ lần dựng trước thì không gọi Claude.
+
+Trang Vận hành giờ hiện "Hồ sơ gu cá nhân: bản 1, dựng 19:23 16-08" thay vì
+"chưa dựng lần nào".
+
+### Còn chặn thật
+
+Embeddings (`ContentEmbedding`, `NoteEmbedding`) và tìm kiếm ngữ nghĩa vẫn cần
+pgvector. Hai đường ra: cài pgvector vào bản Postgres đang chạy, hoặc chuyển hẳn
+sang Neon. Chưa quyết.

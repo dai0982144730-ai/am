@@ -17,6 +17,8 @@
  *   6. Thuật lại bài nước ngoài sang tiếng Việt
  *   7. Chấm điểm chất lượng vòng 1 (bằng số liệu)
  *   8. Vòng 2 — Claude đọc bình luận của nhóm đứng đầu, rồi chấm lại
+ *   8b. Gắn nhãn ghi chú mới, rồi viết lại wiki cho các ngăn đã đổi
+ *   8c. Dựng lại hồ sơ gu nếu có đủ hành vi mới
  *   9. Viết bản tin cho sáng mai — thứ người dùng thật sự đọc
  *
  * NGUYÊN TẮC: **một bước hỏng không được làm chết cả đêm**. Mạng chập chờn,
@@ -32,6 +34,7 @@ import { quetBlog } from "@/lib/nguon/quetBlog";
 import { quetPodcast } from "@/lib/nguon/quetPodcast";
 import { ganNhanHangLoat } from "@/lib/ghiChu/ganNhan";
 import { tongHopWikiHangLoat } from "@/lib/ghiChu/tongHopWiki";
+import { dungHoSoGu } from "@/lib/caNhanHoa/dungHoSoGu";
 import { timNguonMoi } from "@/lib/khamPha/timNguonMoi";
 import { quetTuKhoaQuanTam } from "@/lib/quanTam/quetTuKhoa";
 import { chamDiemHangLoat } from "@/lib/scoring/chamDiem";
@@ -366,6 +369,27 @@ export async function quetDem(
           (kq.cacNganDaViet.length ? ` — ${kq.cacNganDaViet.join(", ")}` : "") +
           (kq.boQuaChuaDoi ? `, bỏ qua ${kq.boQuaChuaDoi} ngăn chưa đổi` : "")
         );
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước 8d: dựng lại hồ sơ gu nếu có đủ hành vi mới -----
+  //
+  // Đặt TRƯỚC bước viết bản tin, vì bản tin là thứ hồ sơ gu phục vụ. Dựng sau
+  // thì bản tin sáng mai vẫn dùng hồ sơ của hôm qua, và cái mới nằm chờ thêm
+  // một ngày.
+  //
+  // Hàm tự bỏ qua khi bản hiện tại còn mới — gu một người không đổi sau một
+  // đêm, còn mỗi lần dựng là một lần gọi Claude với cả nghìn dòng dữ liệu.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Dựng lại hồ sơ gu cá nhân",
+      async () => {
+        const kq = await dungHoSoGu();
+        return kq.daDung
+          ? `bản ${kq.phienBan}, độ tin cậy ${kq.doTinCay}, từ ${kq.soTinHieu} tín hiệu`
+          : (kq.lyDo ?? "không dựng");
       },
       bao,
     ),
