@@ -404,7 +404,7 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 | **11** | Mở rộng nguồn: Podcast RSS → SoundCloud — **podcast xong 2026-08-15**, tìm kênh bằng cách gõ tên qua API tra cứu miễn phí của Apple; SoundCloud chưa làm |
 | **12** | Audio-only & smart queue (kể cả hàng đợi theo BPM) |
 | **13** | **Khung trò chuyện với trợ lý** — trọng tâm là **giao diện**, không phải phần gọi API. Chủ dự án chốt 2026-08-15 khi chỉ vào `ChatWidget.tsx` của QLDA: khung **neo được mép trái hoặc mép phải**, kéo thanh dọc đổi bề rộng, và **đẩy nội dung sang bên chứ không che lên**; hoặc chuyển sang **khung nổi** kéo thả tự do, đổi kích thước từ cả 8 hướng, kéo sát mép thì tự dính như cửa sổ Windows, thu gọn thành dải mảnh, mở ra cửa sổ riêng, bật tắt bằng Ctrl+K. Mô tả cũ — "chat agent tool-use tích hợp toàn bộ API" — **không đúng ý**: phần gọi API chỉ là thứ chạy bên dưới, còn thứ chủ dự án cần thấy là cái khung |
-| **14** | Vận hành: dashboard quota/chi phí, score versioning, export dữ liệu cá nhân |
+| **14** | Vận hành: dashboard quota/chi phí, score versioning, export dữ liệu cá nhân — **xong 2026-08-16**, trang `/van-hanh`. Không viết thêm chỗ đếm nào mới: số liệu đã được `youtube/hanMuc.ts` và `tts/hanMuc.ts` ghi sẵn từ Phase 0, trang này chỉ gọi lại đúng hai file đó. File xuất **không chứa token Google và không chứa nội dung gốc** — chỉ giữ thứ không tái tạo được |
 | **15** | **Cổng API trợ lý** (`/api/v1/tro-ly/*`) — chuẩn dùng chung với `tiendo`/`phaply`, chuẩn bị cho app Android. Chi tiết ở mục ngay dưới đây |
 
 > Phase 15 **không phải** làm sau cùng theo nghĩa chờ hết 0–14 mới bắt đầu —

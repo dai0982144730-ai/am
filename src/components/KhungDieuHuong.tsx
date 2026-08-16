@@ -22,6 +22,7 @@
 import {
   BookMarked,
   Compass,
+  Gauge,
   History,
   House,
   Library,
@@ -85,6 +86,14 @@ const NHOM_TRO_LY: MucDieuHuong[] = [
     tenNgan: "Chat",
     bieuTuong: MessageCircle,
     moTroLy: true,
+  },
+  {
+    // Trang duy nhất nói về CHÍNH APP chứ không nói về nội dung: hạn mức
+    // YouTube còn bao nhiêu, đêm qua quét có chạy không. Để cạnh Cài đặt vì
+    // cùng là chỗ "xem máy móc bên trong", không phải chỗ để nghe
+    ten: "Vận hành",
+    bieuTuong: Gauge,
+    duongDan: "/van-hanh",
   },
   { ten: "Cài đặt", bieuTuong: Settings, duongDan: "/cai-dat" },
 ];

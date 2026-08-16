@@ -2367,3 +2367,69 @@ dung lượng đáng kể mà chưa đổi lại được gì.
 Thêm cột xong, trang Tủ sách trả 500 với `Unknown field theoDoi`. `next dev` giữ
 bản Prisma cũ trong bộ nhớ, `prisma generate` không lay chuyển được. Phải khởi
 động lại máy chủ. Đúng y như mục đã ghi — đọc rồi vẫn vấp.
+
+---
+
+## 2026-08-16 (chiều) — Phase 14: trang Vận hành
+
+Trang `/van-hanh` — trang duy nhất trong app nói về **chính app** chứ không nói
+về nội dung.
+
+**Không viết thêm một chỗ đếm nào mới.** Hạn mức YouTube và hạn mức đọc thành
+tiếng đã được `youtube/hanMuc.ts` và `tts/hanMuc.ts` ghi từ Phase 0 — chính hai
+file đó quyết định lúc nào ngắt việc. Trang này gọi lại đúng chúng. Tự cộng lại
+theo cách khác thì màn hình có thể báo "còn 3.000 đơn vị" trong khi cái phanh
+thật đã hạ xuống, và người xem sẽ tin màn hình.
+
+Bốn ô tóm tắt trên cùng trả lời "có ổn không" trong ba giây. Đọc từ database
+thật lúc dựng trang:
+
+| | |
+|---|---|
+| Hạn mức YouTube hôm nay | 1.975 / 10.000 |
+| Đọc thành tiếng tháng 08 | 5% (212.738 / 4.000.000 ký tự) |
+| Lần chạy gần nhất | dựng bản tin 00:36 15-08, xong |
+| Cổng API trợ lý 30 ngày | 8 lượt, 3 lỗi, trung bình 1.326ms |
+
+Phần lịch sử 14 ngày tách rõ từng lệnh tiêu bao nhiêu, và số liệu thật xác nhận
+đúng điều bản thiết kế lo: ngày 15-08 tiêu 1.975 đơn vị thì **1.800 là của 18
+lần tìm kiếm** — 91%. Trong khi 70 lần đọc thông tin kênh chỉ tốn 70.
+
+`TEN_LENH` khai kiểu `Record<TenLenh, string>` chứ không phải `Record<string,
+string>`: thêm lệnh vào bảng giá mà quên đặt tên tiếng Việt thì TypeScript báo
+lỗi ngay. Bản đầu dùng `Record<string, string>` và màn hình lòi ra
+`commentThreads.list` giữa một trang toàn tiếng Việt.
+
+### Xuất dữ liệu cá nhân
+
+`/van-hanh/xuat` trả về một file JSON tải về được. Chạy thử trên dữ liệu thật:
+93 KB, gồm 23 dòng lịch sử xem, 29 phiên nghe, 7 mốc đang dở, ghi chú, thư
+viện, cài đặt, bản tin, nhật ký playlist.
+
+Hai thứ **cố ý không có trong file**:
+
+- **Token đăng nhập Google.** Chỉ giữ email và phạm vi quyền. Token là chìa khoá
+  vào thẳng tài khoản YouTube thật; file tải về nằm trong Downloads, gửi qua
+  Zalo, đồng bộ lên đám mây — mỗi chỗ là một chỗ chìa khoá rơi ra. Đã kiểm bằng
+  cách quét chuỗi `accessToken|refreshToken` trong file sinh ra: không có.
+- **Nội dung gốc** (video, bài viết, transcript). Quét lại được. Kéo vào thì file
+  phình lên hàng chục MB và phần cá nhân thật sự chìm nghỉm.
+
+### Phiên bản chấm điểm
+
+Bày ra số nội dung theo từng `scoreVersion`. Hiện 314 nội dung đều ở `v1` nên
+chưa có gì trộn lẫn — nhưng lúc đổi công thức mà quên chấm lại phần cũ thì bảng
+xếp hạng sẽ trộn hai thước đo, và chỗ này là nơi duy nhất nhìn ra được.
+
+### Phân loại lại xong
+
+Mẻ nền chạy hết: **791 nội dung, 0 lỗi**. Kết quả: Khác 457 · khoa học 79 ·
+AI 67 · Triết học 66 · Nhạc 64 · Truyện 58. Số "Khác" lớn là đúng thiết kế —
+chúng chảy vào tab Ngẫu hứng.
+
+### Việc kế tiếp
+
+- Phase 12 — chế độ chỉ nghe, hàng chờ thông minh, hàng đợi theo BPM
+- SoundCloud và wiki tổng hợp định kỳ (Phase 8 còn dở)
+- Phase 9 cá nhân hoá — **chặn**: cần pgvector mà bản Postgres portable đang
+  chạy không có
