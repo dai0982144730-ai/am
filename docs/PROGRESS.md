@@ -2630,3 +2630,33 @@ Chạy lại ngay lần hai: `daXet=0, boQuaChuaDoi=1` — đúng như thiết k
 
 Thêm `soTongHopWiki: 3` vào bảng định mức, nên thanh trượt cường độ điều khiển
 cả bước này.
+
+---
+
+## 2026-08-16 (tối, tiếp) — Việc 3: hàng đợi duyệt tác giả
+
+Bản thiết kế đòi tác giả do máy phát hiện phải được **duyệt tay** mới cộng điểm
+uy tín. Trước hôm nay việc duyệt chỉ có **một chiều**: bấm "Thêm vào tủ" là công
+nhận. Không có cách nào nói "cái này máy rút nhầm".
+
+Đo trong kho: **77 tác giả, 76 đang chờ duyệt**, tất cả đều do Claude tự rút ra.
+Rút nhầm là chuyện thường — tên chương trình, tên người dẫn, một cụm chữ trong
+tiêu đề đều có thể thành "tác giả". Không có nút bác thì những cái tên sai nằm
+đó mãi, và mỗi lần mở Tủ sách lại phải lướt qua chúng.
+
+**Đánh dấu chứ không xoá** (`Author.biTuChoi`). Tên tác giả do Claude rút ra từ
+chính nội dung, nên lượt phân loại sau sẽ rút đúng cái tên đó lần nữa và dựng
+lại y nguyên — xoá là mỗi tuần lại phải bác một lần cùng một cái tên. Cột này
+sống sót qua `upsert` trong `gom-tac-gia.ts` vì nhánh `update` chỉ đụng tới
+`aliases`.
+
+Bác **không gỡ liên kết** với các nội dung đã gắn. Liên kết đó vô hại — nó chỉ
+ngừng được dùng để cộng điểm uy tín trong `chamDiem.ts`. Gỡ ra thì mất thông
+tin, mà bác nhầm là chuyện có thật.
+
+Trang Tủ sách chia **ba khối** thay vì hai: đang theo dõi · chưa trong tủ · đã
+bác (gập lại ở cuối). Để khối đã bác lẫn vào "chưa trong tủ" thì lần nào mở cũng
+phải lướt qua đúng những cái tên vừa nói là sai.
+
+Thử vòng tròn trên dữ liệu thật: bác "Thầy Minh Tuệ" → `choDuyet` 73 → 72, thẻ
+xuống cuối danh sách, **8 nội dung vẫn nguyên**; nhận lại → về đúng như cũ.

@@ -396,7 +396,7 @@ Next.js (App Router, TS) · Prisma · **PostgreSQL + pgvector** (Neon/Supabase) 
 | **4b** | Search/Filter API với toàn bộ trường lọc + 3 kiểu sắp xếp + UI duyệt — **xong 2026-08-15** |
 | **4c** | Chuyên mục **New**: `AdHocInterest` (ô nhập từ khoá, bật/tắt tự quét), tích hợp vào cron 21:00 + hiển thị chi phí quota — **xong 2026-08-15** |
 | **5** | Player + theo dõi hành vi + `ResumePoint` đồng bộ đa thiết bị + rating cảm xúc — **xong 2026-08-15** |
-| **6** | Xác thực tác giả nâng cao: LLM auto-discovery + `pendingReview` + tủ sách tác giả + full-text search |
+| **6** | Xác thực tác giả nâng cao: LLM auto-discovery + `pendingReview` + tủ sách tác giả + full-text search — **xong 2026-08-16**. "Duyệt" có hai chiều: bấm *Thêm vào tủ* là công nhận, bấm *Không phải tác giả* là bác. Bác thì **đánh dấu chứ không xoá** (`Author.biTuChoi`) — tên do Claude rút ra từ nội dung nên xoá đi là lượt phân loại sau dựng lại y nguyên |
 | **7** | Thư viện cá nhân + quản lý playlist YouTube — **xong 2026-08-15**. Khác bản thiết kế ban đầu ở một chỗ: **mọi thao tác ghi đều chờ duyệt**, kể cả thêm/tạo, theo đúng `CLAUDE.md`. Không bao giờ xoá playlist |
 | **8** | Trợ lý ghi chú: `Note` (text/voice), auto-tag, `KnowledgeCollection` + wiki, `ActionItem` — **xong 2026-08-15**, phần wiki tổng hợp định kỳ **xong 2026-08-16**. Chỉ viết lại ngăn **đã đổi** kể từ lần tổng hợp trước, nên đêm nào cũng chạy mà không tốn lần gọi Claude nào khi ghi chú đứng yên |
 | **9** | Personalization engine: taste profile, embeddings, mood-theo-giờ, cold-start onboarding |

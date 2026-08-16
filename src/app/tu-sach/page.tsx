@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { KhungTrang } from "@/components/KhungTrang";
+import { NutDuyetTacGia } from "@/components/NutDuyetTacGia";
 import { NutTheoDoiTacGia } from "@/components/NutTheoDoiTacGia";
 import { docTuSach, TEN_LINH_VUC } from "@/lib/tacGia/tuSach";
 import { emailChuDuAn } from "@/lib/quyen";
@@ -18,7 +19,12 @@ export default async function TrangTuSach() {
   const [email, cacTacGia] = await Promise.all([emailChuDuAn(), docTuSach()]);
 
   const trongTu = cacTacGia.filter((t) => t.theoDoi);
-  const chuaTrongTu = cacTacGia.filter((t) => !t.theoDoi);
+  // Ba khối, không phải hai: người đã bác tách hẳn ra cuối trang. Để lẫn vào
+  // "chưa trong tủ" thì lần nào mở Tủ sách cũng phải lướt qua đúng những cái
+  // tên vừa nói là sai — mà đó chính là việc nút bác sinh ra để khỏi phải làm.
+  const chuaTrongTu = cacTacGia.filter((t) => !t.theoDoi && !t.biTuChoi);
+  const daBac = cacTacGia.filter((t) => t.biTuChoi);
+  const choDuyet = chuaTrongTu.filter((t) => t.choDuyet).length;
 
   return (
     <KhungTrang emailNguoiDung={email}>
@@ -60,12 +66,37 @@ export default async function TrangTuSach() {
               {trongTu.length > 0 ? "Chưa trong tủ" : "Chọn người muốn theo dõi"}{" "}
               · {chuaTrongTu.length}
             </h2>
+            {choDuyet > 0 ? (
+              <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+                {choDuyet} cái tên do Claude tự rút ra từ nội dung, chưa ai nhìn
+                tới. Rút nhầm là chuyện thường — tên chương trình, tên người dẫn,
+                một cụm chữ trong tiêu đề đều có thể thành &ldquo;tác giả&rdquo;.
+                Bấm <strong>Không phải tác giả</strong> để dẹp hẳn khỏi đây.
+              </p>
+            ) : null}
             <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
               {chuaTrongTu.map((t) => (
                 <TheTacGia key={t.id} tacGia={t} />
               ))}
             </div>
           </section>
+        ) : null}
+        {daBac.length > 0 ? (
+          <details className="mt-8">
+            <summary className="cursor-pointer text-sm font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+              Đã bác · {daBac.length}
+            </summary>
+            <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+              Vẫn giữ trong kho chứ không xoá: tên do Claude rút ra từ nội dung
+              nên lượt phân loại sau sẽ rút đúng cái tên đó lần nữa. Đánh dấu thì
+              không phải bác lại mỗi tuần.
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {daBac.map((t) => (
+                <TheTacGia key={t.id} tacGia={t} />
+              ))}
+            </div>
+          </details>
         ) : null}
       </div>
     </KhungTrang>
@@ -94,7 +125,15 @@ function TheTacGia({
             </p>
           ) : null}
         </div>
-        <NutTheoDoiTacGia tacGiaId={tacGia.id} dangTheoDoi={tacGia.theoDoi} />
+        <div className="flex shrink-0 items-center gap-1.5">
+          {!tacGia.biTuChoi ? (
+            <NutTheoDoiTacGia
+              tacGiaId={tacGia.id}
+              dangTheoDoi={tacGia.theoDoi}
+            />
+          ) : null}
+          <NutDuyetTacGia tacGiaId={tacGia.id} biTuChoi={tacGia.biTuChoi} />
+        </div>
       </div>
 
       {tacGia.cacNguon.length > 1 ? (

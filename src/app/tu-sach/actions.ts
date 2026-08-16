@@ -42,3 +42,36 @@ export async function doiTheoDoiTacGia(
   revalidatePath("/tu-sach");
   revalidatePath("/kham-pha");
 }
+
+/**
+ * Bác một cái tên: "đây không phải tên tác giả".
+ *
+ * VÌ SAO ĐÁNH DẤU CHỨ KHÔNG XOÁ: tên tác giả do Claude rút ra từ chính nội
+ * dung, nên lượt phân loại sau sẽ rút ra đúng cái tên đó lần nữa và dựng lại y
+ * nguyên. Xoá là mỗi tuần lại phải bác một lần cùng một cái tên.
+ *
+ * Bác cũng KHÔNG gỡ liên kết với các nội dung đã gắn. Liên kết đó vô hại — nó
+ * chỉ ngừng được dùng để cộng điểm uy tín. Gỡ ra thì mất luôn thông tin, mà bác
+ * nhầm là chuyện có thật, và bấm lại "Nhận lại" phải trả về đúng như cũ.
+ */
+export async function doiTuChoiTacGia(
+  tacGiaId: string,
+  biTuChoi: boolean,
+): Promise<void> {
+  await doiHoiChuDuAn("duyệt tác giả");
+
+  await prisma.author.update({
+    where: { id: tacGiaId },
+    data: {
+      biTuChoi,
+      // Bác rồi thì không còn nằm trong hàng chờ nữa, và dĩ nhiên không còn
+      // được công nhận lẫn theo dõi
+      ...(biTuChoi
+        ? { pendingReview: false, approvedByUser: false, theoDoi: false }
+        : { pendingReview: true }),
+    },
+  });
+
+  revalidatePath("/tu-sach");
+  revalidatePath("/kham-pha");
+}

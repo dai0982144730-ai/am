@@ -44,6 +44,10 @@ export interface TacGiaTrongTuSach {
   linhVuc: AuthorDomain;
   theoDoi: boolean;
   daCongNhan: boolean;
+  /** Chủ nhà đã xem và bác — "đây không phải tên người" */
+  biTuChoi: boolean;
+  /** Máy tự rút tên ra, chưa ai nhìn tới */
+  choDuyet: boolean;
   soBai: number;
   /** Nguồn đã đăng nội dung của người này — cái làm nên "xuyên nhiều kênh" */
   cacNguon: string[];
@@ -68,6 +72,8 @@ export async function docTuSach(
       domain: true,
       theoDoi: true,
       approvedByUser: true,
+      biTuChoi: true,
+      pendingReview: true,
     },
   });
   if (cacTacGia.length === 0) return [];
@@ -110,6 +116,8 @@ export async function docTuSach(
         linhVuc: t.domain,
         theoDoi: t.theoDoi,
         daCongNhan: t.approvedByUser,
+        biTuChoi: t.biTuChoi,
+        choDuyet: t.pendingReview && !t.approvedByUser && !t.biTuChoi,
         soBai: bai.length,
         cacNguon: [...new Set(bai.map((b) => b.source.title))],
         baiMoi: bai.slice(0, SO_BAI_MOI_TAC_GIA).map((b) => ({
@@ -124,8 +132,10 @@ export async function docTuSach(
     })
     .filter((t) => t.soBai > 0)
     .sort((a, b) => {
-      // Người đang theo dõi lên trước, rồi tới người có nhiều nội dung hơn
+      // Người đang theo dõi lên trước, người bị bác xuống cuối, còn lại xếp
+      // theo số nội dung
       if (a.theoDoi !== b.theoDoi) return a.theoDoi ? -1 : 1;
+      if (a.biTuChoi !== b.biTuChoi) return a.biTuChoi ? 1 : -1;
       return b.soBai - a.soBai;
     });
 }

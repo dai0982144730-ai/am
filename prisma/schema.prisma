@@ -438,6 +438,17 @@ model Author {
   approvedByUser Boolean @default(false)
   pendingReview  Boolean @default(false)
 
+  /// Chủ nhà đã xem và nói "đây không phải tên người".
+  ///
+  /// CẦN MỘT CỘT RIÊNG chứ không xoá bản ghi đi: tên tác giả do Claude rút ra
+  /// từ nội dung, nên lượt phân loại sau sẽ rút ra đúng cái tên đó lần nữa và
+  /// dựng lại y nguyên. Xoá là mỗi tuần lại phải từ chối một lần. Đánh dấu thì
+  /// `upsert` trong `gom-tac-gia.ts` chỉ cập nhật biệt danh, cột này giữ nguyên.
+  ///
+  /// KHÁC `approvedByUser = false`: chưa duyệt nghĩa là chưa ai nhìn tới, còn
+  /// cột này nghĩa là đã nhìn và đã bác.
+  biTuChoi Boolean @default(false)
+
   /// Có trong Tủ sách hay không — TÁCH HẲN khỏi `approvedByUser`.
   /// Công nhận một tác giả là có thật khác với muốn theo dõi họ; gộp làm một
   /// thì không diễn đạt được trường hợp thường gặp nhất là công nhận mà không
