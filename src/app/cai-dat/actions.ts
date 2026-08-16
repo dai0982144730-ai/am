@@ -12,7 +12,11 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db/prisma";
 import { timPodcast, type KetQuaTim } from "@/lib/nguon/podcast";
-import { quetPodcast, themKenhPodcast } from "@/lib/nguon/quetPodcast";
+import {
+  quetPodcast,
+  themKenhPodcast,
+  themKenhSoundCloud,
+} from "@/lib/nguon/quetPodcast";
 import { doiHoiChuDuAn } from "@/lib/quyen";
 import { CAC_GIONG } from "@/lib/tts/giong";
 import { TOC_DO_MAX, TOC_DO_MIN } from "@/components/TrinhPhatAmThanh";
@@ -276,6 +280,44 @@ export async function themPodcast(duongDanFeed: string): Promise<{
   };
 }
 
+/**
+ * Thêm một kênh SoundCloud bằng đường dẫn trang rồi lấy luôn vài bài mới nhất.
+ *
+ * Ô nhập ở đây là **đường dẫn trang**, không phải RSS — đó là thứ duy nhất
+ * người dùng thật sự nhìn thấy và sao chép được từ SoundCloud. Việc đổi nó
+ * sang đường dẫn RSS là của máy.
+ */
+export async function themSoundCloud(duongDanTrang: string): Promise<{
+  ok: boolean;
+  thongDiep: string;
+  canhBao?: string;
+}> {
+  try {
+    await doiHoiChuDuAn("thêm kênh SoundCloud");
+  } catch (e) {
+    return {
+      ok: false,
+      thongDiep: e instanceof Error ? e.message : "Không có quyền.",
+    };
+  }
+
+  const kq = await themKenhSoundCloud(duongDanTrang);
+  if (!kq.ok) return { ok: false, thongDiep: kq.thongDiep };
+
+  // Lấy luôn bài về, cùng lý do như bên podcast: thêm xong mà trống trơn thì
+  // không biết là hỏng hay là chưa chạy
+  const quet = await quetPodcast(5, 120);
+
+  revalidatePath("/cai-dat");
+  revalidatePath("/");
+
+  return {
+    ok: true,
+    thongDiep: `${kq.thongDiep} Đã lấy về ${quet.soTapThemMoi} bài mới nhất — chúng sẽ được xếp chuyên mục trong lượt chạy đêm.`,
+    canhBao: kq.canhBaoNgonNgu,
+  };
+}
+
 /** Bỏ một kênh podcast cùng toàn bộ tập của nó. */
 export async function boPodcast(idNguon: string): Promise<{
   ok: boolean;
@@ -290,8 +332,14 @@ export async function boPodcast(idNguon: string): Promise<{
     };
   }
 
+  // Nhận cả kênh SoundCloud: hai loại nguồn này cùng là feed RSS và cùng dùng
+  // một nút "Bỏ". Vẫn kẹp danh sách loại chứ không bỏ hẳn điều kiện, để một id
+  // kênh YouTube gửi nhầm vào đây không xoá mất cả kênh cùng toàn bộ video.
   const nguon = await prisma.source.findFirst({
-    where: { id: idNguon, type: "podcast_rss" },
+    where: {
+      id: idNguon,
+      type: { in: ["podcast_rss", "soundcloud_channel"] },
+    },
     select: { title: true, _count: { select: { contentItems: true } } },
   });
 

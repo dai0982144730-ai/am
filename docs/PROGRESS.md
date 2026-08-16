@@ -2545,3 +2545,55 @@ với bảy lỗi `Module not found: Can't resolve 'net' / 'tls' / 'fs' / 'dns'`
 Tách `mucCuongDo.ts` (thuần, không nạp gì) khỏi `cuongDo.ts` (hỏi database) —
 đúng cách `giaLenh.ts` đã tách khỏi `hanMuc.ts` bên YouTube, và lời giải thích
 cho việc tách đó đã nằm sẵn trong file. Đọc rồi vẫn vấp lại.
+
+---
+
+## 2026-08-16 (tối, tiếp) — Việc 1: SoundCloud
+
+Adapter cuối cùng trong năm loại nguồn. Thêm kênh bằng cách dán đường dẫn trang,
+lấy bài qua **RSS công khai** của SoundCloud.
+
+**Không dùng API riêng của SoundCloud.** Họ đóng cửa đăng ký ứng dụng mới từ
+nhiều năm nay, nên cách duy nhất là moi `client_id` ra khỏi chính mã JavaScript
+của trang web họ — đúng cách mọi công cụ tải nhạc lậu vẫn làm. Không làm: đó là
+lách chốt kiểm soát truy cập của người ta, và khoá đổi lúc nào là app chết câm
+lúc đó.
+
+Đường đi hợp lệ: đọc trang hồ sơ (trang họ phục vụ cho mọi trình duyệt) để lấy
+mã người dùng trong khối `window.__sc_hydration`, rồi dựng địa chỉ RSS chính
+thức `feeds.soundcloud.com/users/soundcloud:users:<mã>/sounds.rss`.
+
+### Cái giá, đo thật 2026-08-16
+
+RSS chỉ chứa bài tác giả **bật phân phối podcast**:
+
+| Tài khoản | Bài trên trang | Bài trong RSS |
+|---|---|---|
+| Trinh Thang Binh (ca sĩ) | 131 | **0** |
+| sachnoi | 25 | **0** |
+| waves-podcast | 4 | **4** |
+
+Nghĩa là nhánh SoundCloud **hợp kênh nói hơn kênh nhạc**. Điều quan trọng là
+app *nói thẳng* điều đó: thêm một kênh nhạc thì bị từ chối kèm giải thích, chứ
+không lặng lẽ thêm một nguồn đêm nào cũng lấy về 0 bài rồi để chủ nhà tự đoán.
+
+### Dùng lại nguyên bộ máy podcast
+
+SoundCloud phát hành RSS đúng chuẩn podcast nên từ chỗ đọc feed trở đi dùng lại
+hết — đúng nguyên tắc số một của bản thiết kế. Chỉ khác hai chỗ: `type` nguồn là
+`soundcloud_channel` và `type` nội dung là `audio_track` thay vì
+`podcast_episode`. Bộ lọc "Podcast & SoundCloud" ở trang Khám phá vốn đã gộp sẵn
+hai loại nguồn này từ trước.
+
+Thêm loại lỗi `LoiFeedRong` tách khỏi `LoiDocPodcast`: cùng một sự việc nhưng
+nguyên nhân khác hẳn theo nơi gọi — với podcast, feed rỗng gần như luôn là dán
+nhầm feed blog; với SoundCloud đó là chuyện bình thường. Bắt lỗi bằng cách so
+chuỗi thông báo thì sửa một chữ trong câu là hỏng.
+
+### Thử đầu-cuối
+
+Thêm `waves-podcast` → quét → 4 bài vào kho đúng dạng `audio_track`, có
+`audioUrl`, `human_voice`, thời lượng 35–46 phút. Đã xoá nguồn thử nghiệm sau
+khi kiểm. Lượt quét đó chạy với cửa sổ 10 năm nên có kéo thêm 5 tập podcast cũ
+từ các kênh đang theo dõi vào kho — nội dung thật, lượt quét đêm sớm muộn cũng
+lấy về.

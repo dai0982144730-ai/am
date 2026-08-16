@@ -4,6 +4,7 @@ import { KhungTrang } from "@/components/KhungTrang";
 import { ChonTongMau } from "@/components/ChonTongMau";
 import { ThanhTrongSo } from "@/components/ThanhTrongSo";
 import { ThemPodcast } from "@/components/ThemPodcast";
+import { ThemSoundCloud } from "@/components/ThemSoundCloud";
 import { ThanhTyLeNguonMoi } from "@/components/ThanhTyLeNguonMoi";
 import { TinhHinhGiongDoc } from "@/components/TinhHinhGiongDoc";
 import { prisma } from "@/lib/db/prisma";
@@ -41,6 +42,17 @@ export default async function TrangCaiDat() {
   // sửa được. Minh bạch thì tốt hơn là giấu đi.
   const cacBoTrongSo = await prisma.sourceQualityProfile.findMany({
     orderBy: { sourceType: "asc" },
+  });
+
+  const kenhSoundCloud = await prisma.source.findMany({
+    where: { type: "soundcloud_channel" },
+    select: {
+      id: true,
+      title: true,
+      url: true,
+      _count: { select: { contentItems: true } },
+    },
+    orderBy: { title: "asc" },
   });
 
   const kenhPodcast = await prisma.source.findMany({
@@ -179,6 +191,18 @@ export default async function TrangCaiDat() {
             ten: k.title,
             soTap: k._count.contentItems,
             duongDanFeed: k.externalId,
+          }))}
+        />
+        </div>
+
+        <div className="mb-10 break-inside-avoid">
+        <ThemSoundCloud
+          laChu={laChu}
+          daThem={kenhSoundCloud.map((k) => ({
+            id: k.id,
+            ten: k.title,
+            soBai: k._count.contentItems,
+            trangChu: k.url,
           }))}
         />
         </div>

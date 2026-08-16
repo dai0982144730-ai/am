@@ -275,6 +275,21 @@ export class LoiDocPodcast extends Error {
 }
 
 /**
+ * Feed đọc được nhưng không có bài nào kèm file tiếng.
+ *
+ * TÁCH RIÊNG THÀNH MỘT LOẠI LỖI vì cùng một sự việc mà nguyên nhân khác hẳn
+ * theo nơi gọi. Với podcast, feed rỗng gần như luôn là dán nhầm feed blog. Với
+ * SoundCloud thì đó là chuyện bình thường: tác giả chưa bật phân phối podcast.
+ * Bắt lỗi bằng cách so chuỗi thông báo thì sửa một chữ trong câu là hỏng.
+ */
+export class LoiFeedRong extends LoiDocPodcast {
+  constructor(thongDiep: string) {
+    super(thongDiep);
+    this.name = "LoiFeedRong";
+  }
+}
+
+/**
  * Đọc một feed podcast.
  *
  * **Chỉ giữ mục có file âm thanh.** Đây chính là chỗ phân biệt podcast với
@@ -341,7 +356,7 @@ export async function docFeedPodcast(
   }
 
   if (cacTap.length === 0) {
-    throw new LoiDocPodcast(
+    throw new LoiFeedRong(
       "Feed này không có tập nào kèm file âm thanh. Nhiều khả năng đây là feed " +
         "blog chứ không phải podcast — nếu vậy thì thêm nó ở mục nguồn bài viết.",
     );

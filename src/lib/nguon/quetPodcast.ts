@@ -17,7 +17,27 @@
 import type { ContentGroup } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 
-import { docFeedPodcast, laTiengViet, type TapPodcast } from "./podcast";
+import {
+  docFeedPodcast,
+  laTiengViet,
+  LoiFeedRong,
+  type TapPodcast,
+} from "./podcast";
+import { docHoSo } from "./soundcloud";
+
+/**
+ * Hai loại nguồn cùng chạy qua bộ máy này.
+ *
+ * SoundCloud phát hành RSS đúng chuẩn podcast, nên mọi thứ từ chỗ đọc feed trở
+ * đi dùng lại nguyên vẹn — đúng nguyên tắc số một của bản thiết kế: thêm nguồn
+ * mới là thêm một adapter, không sửa cấu trúc dữ liệu.
+ *
+ * Vẫn giữ hai `type` riêng trong database chứ không gộp làm một: bộ lọc
+ * "Podcast & SoundCloud" gộp chúng lại được, nhưng lúc muốn biết một kênh lấy
+ * từ đâu về thì phải phân biệt được.
+ */
+const CAC_LOAI_FEED = ["podcast_rss", "soundcloud_channel"] as const;
+type LoaiFeed = (typeof CAC_LOAI_FEED)[number];
 
 /** Thời gian tối đa cho một lượt ghi, và thời gian chờ để bắt đầu ghi. */
 const HAN_GHI_MS = 60_000;
@@ -124,12 +144,112 @@ export async function themKenhPodcast(
   };
 }
 
+/**
+ * Thêm một kênh SoundCloud bằng đường dẫn trang.
+ *
+ * KHÁC `themKenhPodcast` ở đúng hai chỗ: phải tra mã người dùng để dựng đường
+ * dẫn RSS trước, và phải **nói thẳng khi feed rỗng**.
+ *
+ * Chỗ thứ hai mới là chỗ quan trọng. SoundCloud chỉ đưa vào RSS những bài tác
+ * giả bật phân phối podcast — kênh nhạc gần như không bật. Thêm một kênh 131
+ * bài mà đêm nào cũng lấy về 0 rồi để chủ nhà tự đoán vì sao thì tệ hơn hẳn là
+ * báo ngay lúc thêm.
+ */
+export async function themKenhSoundCloud(
+  duongDanTrang: string,
+  nhomGoiY?: ContentGroup,
+): Promise<KetQuaThemKenh> {
+  let hoSo;
+  try {
+    hoSo = await docHoSo(duongDanTrang);
+  } catch (e) {
+    return {
+      ok: false,
+      thongDiep: e instanceof Error ? e.message : "Không tra được tài khoản.",
+    };
+  }
+
+  const daCo = await prisma.source.findUnique({
+    where: {
+      type_externalId: {
+        type: "soundcloud_channel",
+        externalId: hoSo.duongDanRss,
+      },
+    },
+    select: { id: true, title: true },
+  });
+  if (daCo) {
+    return {
+      ok: false,
+      thongDiep: `"${daCo.title}" đã có trong danh sách nguồn rồi.`,
+      idNguon: daCo.id,
+    };
+  }
+
+  let feed;
+  try {
+    feed = await docFeedPodcast(hoSo.duongDanRss);
+  } catch (e) {
+    // Feed rỗng KHÔNG phải hỏng hóc ở đây — với SoundCloud đó là chuyện thường,
+    // và câu giải thích của bên podcast ("nhiều khả năng đây là feed blog")
+    // hoàn toàn sai chỗ này. Thêm vào cũng chẳng lấy về được gì, nên không thêm
+    // và nói rõ lý do thật.
+    if (e instanceof LoiFeedRong) {
+      return {
+        ok: false,
+        thongDiep:
+          `Tài khoản "${hoSo.ten}"` +
+          (hoSo.soBaiTrenTrang
+            ? ` có ${hoSo.soBaiTrenTrang} bài trên trang`
+            : "") +
+          ", nhưng feed RSS công khai không có bài nào. SoundCloud chỉ đưa vào " +
+          "RSS những bài tác giả bật phân phối podcast — kênh nhạc gần như " +
+          "không bật. Thêm vào cũng không lấy về được gì nên bỏ qua kênh này.",
+      };
+    }
+    return {
+      ok: false,
+      thongDiep:
+        `Tìm thấy tài khoản "${hoSo.ten}" nhưng không đọc được feed RSS: ` +
+        (e instanceof Error ? e.message : String(e)),
+    };
+  }
+
+  const nguon = await prisma.source.create({
+    data: {
+      type: "soundcloud_channel",
+      externalId: hoSo.duongDanRss,
+      url: hoSo.trangChu,
+      title: feed.ten || hoSo.ten,
+      followerCount: hoSo.soTheoDoi,
+      contentGroupHint: nhomGoiY,
+      // Chủ nhà tự tay tìm và tự tay thêm — nguồn quen, vào thẳng phần đã theo dõi
+      subscriptionStatus: "subscribed",
+    },
+    select: { id: true },
+  });
+
+  return {
+    ok: true,
+    thongDiep: `Đã thêm "${feed.ten || hoSo.ten}" — ${feed.cacTap.length} bài có sẵn trong feed.`,
+    idNguon: nguon.id,
+    ten: feed.ten || hoSo.ten,
+    soTapTrongFeed: feed.cacTap.length,
+    canhBaoNgonNgu: laTiengViet(feed.ngonNgu)
+      ? undefined
+      : `Feed tự khai ngôn ngữ "${feed.ngonNgu ?? "không ghi"}". Thẻ này hay ` +
+        "sai nên vẫn thêm được, nhưng nếu kênh đúng là tiếng nước ngoài thì " +
+        "các bài sẽ bị ẩn khỏi trang chính.",
+  };
+}
+
 /** Lưu một tập podcast. Trả về `true` nếu là tập mới. */
 async function luuMotTap(
   idNguon: string,
   tap: TapPodcast,
   ngonNguKenh: string | null,
   anhBiaKenh: string | null,
+  loai: LoaiFeed = "podcast_rss",
 ): Promise<boolean> {
   const daCo = await prisma.contentItem.findUnique({
     where: { sourceId_externalId: { sourceId: idNguon, externalId: tap.ma } },
@@ -150,7 +270,7 @@ async function luuMotTap(
           externalId: tap.ma,
           url: tap.duongDanTrang ?? tap.duongDanAmThanh,
           audioUrl: tap.duongDanAmThanh,
-          type: "podcast_episode",
+          type: loai === "soundcloud_channel" ? "audio_track" : "podcast_episode",
           title: tap.tieuDe,
           description: tap.moTa?.slice(0, 2_000) ?? null,
           thumbnailUrl: tap.anh ?? anhBiaKenh,
@@ -205,8 +325,9 @@ export async function quetPodcast(
   bao?: (dong: string) => void,
 ): Promise<KetQuaQuetPodcast> {
   const cacKenh = await prisma.source.findMany({
-    where: { type: "podcast_rss" },
-    select: { id: true, title: true, externalId: true },
+    // Cả podcast lẫn SoundCloud — cùng là feed RSS, cùng một đường xử lý
+    where: { type: { in: [...CAC_LOAI_FEED] } },
+    select: { id: true, title: true, externalId: true, type: true },
   });
 
   const moc = new Date(Date.now() - soNgayGanDay * 86_400_000);
@@ -239,7 +360,13 @@ export async function quetPodcast(
     for (const tap of canXet) {
       soTapXet += 1;
       try {
-        const themDuoc = await luuMotTap(kenh.id, tap, du.ngonNgu, du.anhBia);
+        const themDuoc = await luuMotTap(
+          kenh.id,
+          tap,
+          du.ngonNgu,
+          du.anhBia,
+          kenh.type as LoaiFeed,
+        );
         if (!themDuoc) continue;
 
         soTapThemMoi += 1;
