@@ -51,8 +51,8 @@ const TEN_NHOM: Record<string, string> = {
   truyen: "Truyện",
   music: "Music",
   khoa_hoc: "Khoa học",
-  new_search: "New",
-  other: "Khác",
+  new_search: "Ngẫu hứng",
+  other: "Ngẫu hứng",
 };
 
 export default async function TrangXem({

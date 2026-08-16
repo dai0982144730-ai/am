@@ -79,6 +79,15 @@ export interface BoLoc {
   /** Giảng sư (mục Triết học) hoặc nhà văn (mục Truyện) */
   tacGiaId?: string;
 
+  /**
+   * Chỉ trong nội dung do MỘT chủ đề Ngẫu hứng cụ thể tìm ra.
+   *
+   * Là id của `AdHocInterest`. Chỉ có nghĩa khi `nhom === "ngau_hung"` — bộ lọc
+   * riêng của mọi chuyên mục khác đều rỗng theo nghĩa khác, đây rỗng theo nghĩa
+   * "chưa chọn chủ đề nào, xem hết cả rổ Ngẫu hứng".
+   */
+  nq?: string;
+
   trang?: number;
 }
 
@@ -201,7 +210,10 @@ function dungDieuKien(loc: BoLoc): Prisma.ContentItemWhereInput {
   //
   // Nội dung từ từ khoá chủ nhà tự gõ cũng gom vào đây: nó cũng là thứ "tự dưng
   // muốn xem" chứ không thuộc năm mảng cố định.
-  if (laNgauHung) {
+  if (laNgauHung && loc.nq) {
+    // Đã chọn đúng một chủ đề — thu hẹp hẳn, không còn cần rổ chung nữa.
+    dieuKien.adHocInterestId = loc.nq;
+  } else if (laNgauHung) {
     va.push({
       OR: [
         { adHocInterestId: { not: null } },

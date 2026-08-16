@@ -30,7 +30,6 @@ import {
   Menu,
   MessageCircle,
   PenLine,
-  Search,
   Settings,
   Sparkles,
   type LucideIcon,
@@ -62,7 +61,6 @@ const NHOM_CHINH: MucDieuHuong[] = [
     duongDan: "/ban-tin",
   },
   { ten: "Khám phá", bieuTuong: Compass, duongDan: "/kham-pha" },
-  { ten: "New", bieuTuong: Search, duongDan: "/quan-tam" },
 ];
 
 const NHOM_CUA_BAN: MucDieuHuong[] = [

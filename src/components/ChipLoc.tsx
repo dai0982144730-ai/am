@@ -28,6 +28,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 
+import {
+  KhoiCauHinhNgauHung,
+  type TuKhoaGon,
+} from "@/components/KhoiCauHinhNgauHung";
+
 interface LuaChon {
   ma: string;
   ten: string;
@@ -258,23 +263,6 @@ const TEN_O_TAC_GIA: Record<string, string> = {
   truyen: "Tác giả",
 };
 
-/**
- * Chip tâm trạng của mục Ngẫu hứng.
- *
- * Chúng chỉ là **từ khoá gõ sẵn** — bấm vào là điền vào ô tìm kiếm, không phải
- * một loại bộ lọc mới. Nhờ vậy không cần thêm trường nào trong database, và gõ
- * tay thứ khác cũng ra cùng một đường.
- */
-const TAM_TRANG = [
-  "Hài",
-  "Thể thao",
-  "Ẩm thực",
-  "Du lịch",
-  "Nhạc sống",
-  "Xe cộ",
-  "Thời sự",
-];
-
 // ==========================================================================
 
 const KIEU_NUT =
@@ -447,10 +435,17 @@ function NhanHang({ chu }: { chu: string }) {
 export function ChipLoc({
   demTheoNhom,
   cacTacGia,
+  cacTuKhoaNgauHung,
+  laChu,
+  nganSachNgay,
 }: {
   demTheoNhom: Record<string, number>;
   /** Giảng sư hoặc nhà văn của chuyên mục đang mở; rỗng ở các mục khác */
   cacTacGia: { id: string; ten: string; soBai: number; choDuyet: boolean }[];
+  /** Mọi chủ đề Ngẫu hứng đang có — chỉ dùng khi đang mở đúng mục này */
+  cacTuKhoaNgauHung: TuKhoaGon[];
+  laChu: boolean;
+  nganSachNgay: number;
 }) {
   const duongDan = usePathname();
   const thamSo = useSearchParams();
@@ -482,6 +477,7 @@ export function ChipLoc({
     }
     moi.delete("bpm");
     moi.delete("tac_gia");
+    moi.delete("nq");
     moi.delete("trang");
     if (ma) moi.set("nhom", ma);
     else moi.delete("nhom");
@@ -527,6 +523,8 @@ export function ChipLoc({
         }
       : null;
   const hienBpm = nhomHienTai === "music" && thamSo.get("ms_the_loai") === "workout_bpm";
+  const laNgauHung = nhomHienTai === "ngau_hung";
+  const cacChuDeDangQuet = cacTuKhoaNgauHung.filter((t) => t.autoScan);
 
   return (
     <div className={dangChuyen ? "opacity-60 transition-opacity" : undefined}>
@@ -599,7 +597,25 @@ export function ChipLoc({
                 : "Riêng"
             }
           />
-          {cacRieng.length === 0 && !tenOTacGia ? (
+          {laNgauHung && cacChuDeDangQuet.length === 0 ? (
+            <span className="shrink-0 text-xs italic text-neutral-400 dark:text-neutral-500">
+              Chưa có chủ đề nào đang tự quét — mở Cấu hình bên dưới để thêm
+            </span>
+          ) : null}
+          {laNgauHung
+            ? cacChuDeDangQuet.map((t) => {
+                const bat = thamSo.get("nq") === t.id;
+                return (
+                  <NutDon
+                    key={t.id}
+                    nhan={t.keyword}
+                    bat={bat}
+                    bam={() => doiThamSo("nq", bat ? null : t.id)}
+                  />
+                );
+              })
+            : null}
+          {!laNgauHung && cacRieng.length === 0 && !tenOTacGia ? (
             <span className="shrink-0 text-xs italic text-neutral-400 dark:text-neutral-500">
               Chuyên mục này không có bộ lọc riêng
             </span>
@@ -629,14 +645,13 @@ export function ChipLoc({
           ) : null}
         </div>
 
-        {/* Chip tâm trạng — chỉ hiện ở mục Ngẫu hứng */}
-        {nhomHienTai === "ngau_hung" ? (
-          <div className="mt-2 flex items-center gap-1.5 overflow-x-auto border-t border-dashed border-neutral-300 pt-2 dark:border-neutral-700">
-            <NhanHang chu="Hôm nay xem gì" />
-            {TAM_TRANG.map((t) =>
-              nutDon("q", t.toLowerCase(), t),
-            )}
-          </div>
+        {/* Cấu hình — chỉ hiện ở mục Ngẫu hứng, thu gọn mặc định */}
+        {laNgauHung ? (
+          <KhoiCauHinhNgauHung
+            cacTuKhoa={cacTuKhoaNgauHung}
+            laChu={laChu}
+            nganSachNgay={nganSachNgay}
+          />
         ) : null}
 
         {/* Dải BPM — chỉ bung ra khi đã chọn loại nhạc có nhịp */}

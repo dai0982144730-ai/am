@@ -5,13 +5,15 @@ import { ChipLoc } from "@/components/ChipLoc";
 import { KhungTrang } from "@/components/KhungTrang";
 import { OTimKiem } from "@/components/OTimKiem";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
+import { prisma } from "@/lib/db/prisma";
 import {
   danhSachTacGia,
   demTheoNhom,
   timNoiDung,
   type BoLoc,
 } from "@/lib/nghiepVu/timVaLoc";
-import { emailChuDuAn } from "@/lib/quyen";
+import { emailChuDuAn, laChuDuAn } from "@/lib/quyen";
+import { nganSachMoiNgay } from "@/lib/youtube/hanMuc";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +55,7 @@ function docBoLoc(tham: Record<string, string | undefined>): BoLoc {
     msDaiBpm: tham.bpm,
     khLinhVuc: tham.kh_linh_vuc as BoLoc["khLinhVuc"],
     tacGiaId: tham.tac_gia,
+    nq: tham.nq,
 
     trang: doSo(tham.trang) ?? 1,
   };
@@ -67,12 +70,27 @@ export default async function TrangKhamPha({
 
   const boLoc = docBoLoc(tham);
 
-  const [email, dem, cacTacGia, ketQua] = await Promise.all([
-    emailChuDuAn(),
-    demTheoNhom(),
-    danhSachTacGia(boLoc.nhom),
-    timNoiDung(boLoc),
-  ]);
+  const [email, laChu, dem, cacTacGia, ketQua, cacTuKhoaNgauHung] =
+    await Promise.all([
+      emailChuDuAn(),
+      laChuDuAn(),
+      demTheoNhom(),
+      danhSachTacGia(boLoc.nhom),
+      timNoiDung(boLoc),
+      // Chỉ cần khi mở đúng mục Ngẫu hứng, nhưng dữ liệu nhẹ nên lấy sẵn — đỡ
+      // phải chờ thêm một vòng khi bấm đổi chuyên mục.
+      prisma.adHocInterest.findMany({
+        orderBy: [{ autoScan: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          keyword: true,
+          note: true,
+          autoScan: true,
+          resultCount: true,
+          lastScannedAt: true,
+        },
+      }),
+    ]);
 
   /** Giữ nguyên mọi bộ lọc khi chuyển trang, chỉ đổi số trang. */
   function duongDanTrang(trang: number): string {
@@ -97,7 +115,13 @@ export default async function TrangKhamPha({
 
         <div className="mt-4">
           <Suspense fallback={<div className="h-20" />}>
-            <ChipLoc demTheoNhom={dem} cacTacGia={cacTacGia} />
+            <ChipLoc
+              demTheoNhom={dem}
+              cacTacGia={cacTacGia}
+              cacTuKhoaNgauHung={cacTuKhoaNgauHung}
+              laChu={laChu}
+              nganSachNgay={nganSachMoiNgay()}
+            />
           </Suspense>
         </div>
 

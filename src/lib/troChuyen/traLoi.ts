@@ -146,8 +146,8 @@ const TEN_NHOM: Record<string, string> = {
   truyen: "Truyện",
   music: "Nhạc",
   khoa_hoc: "Khoa học",
-  new_search: "New",
-  other: "Khác",
+  new_search: "Ngẫu hứng",
+  other: "Ngẫu hứng",
 };
 
 export async function traLoiTroChuyen(

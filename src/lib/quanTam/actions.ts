@@ -56,7 +56,7 @@ export async function themTuKhoa(
     data: { keyword: sach, note: ghiChu.trim() || null },
   });
 
-  revalidatePath("/quan-tam");
+  revalidatePath("/kham-pha");
   return {
     ok: true,
     thongDiep: `Đã thêm "${sach}". Tối nay máy sẽ tìm giúp, sáng mai có trong bản tin.`,
@@ -76,7 +76,7 @@ export async function batTatTuQuet(id: string, bat: boolean): Promise<KetQua> {
     data: { autoScan: bat, active: bat },
   });
 
-  revalidatePath("/quan-tam");
+  revalidatePath("/kham-pha");
   return {
     ok: true,
     thongDiep: bat ? "Đã bật tự quét." : "Đã tắt — không tiêu hạn mức nữa.",
@@ -105,7 +105,7 @@ export async function goTuKhoa(id: string): Promise<KetQua> {
 
   await prisma.adHocInterest.delete({ where: { id } });
 
-  revalidatePath("/quan-tam");
+  revalidatePath("/kham-pha");
   return {
     ok: true,
     thongDiep: `Đã gỡ "${tu.keyword}". ${tu.resultCount} nội dung đã tìm được vẫn giữ nguyên trong kho.`,
