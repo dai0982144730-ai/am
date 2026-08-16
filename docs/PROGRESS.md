@@ -2837,3 +2837,43 @@ phát triển nó trả lại trang cũ và mọi thay đổi vừa sửa đều
 Sửa một lỗi thấy trên ảnh chụp màn hình điện thoại: nút trò chuyện tròn cố định
 ở góc phải dưới **đè lên hàng chọn tốc độ** của trình phát hàng chờ. Thêm
 `pb-24` cho trang.
+
+---
+
+## 2026-08-16 (tối, tiếp) — pgvector: chuẩn bị xong, chờ cài Build Tools
+
+Chủ dự án chọn cài pgvector vào Postgres ở máy thay vì chuyển sang Neon. Rà lại
+thì có ba việc phải biết trước:
+
+**1. Không có bản dựng sẵn nào cho Windows.** Trang phát hành pgvector trên
+GitHub (mới nhất `v0.8.6`) không kèm file cài nào, và catalog StackBuilder của
+EDB cũng không có — đã tải về xem: có PostGIS, có pgAgent, không có vector. Cách
+chính thức duy nhất là dựng từ mã nguồn bằng bộ biên dịch của Microsoft.
+
+**2. Máy chưa có bộ biên dịch.** Không có Visual Studio, không có `vswhere`,
+`nmake` và `cl` đều không có trong PATH. Cần cài Build Tools một lần, khoảng
+3–6 GB. Phần Postgres thì đã sẵn sàng: có `include/server` và `lib/postgres.lib`,
+tức là dựng extension được.
+
+**3. Cột `vector` chưa hề tồn tại trong database** — đây là chỗ bất ngờ. Hỏi
+thẳng `information_schema`:
+
+```
+ContentEmbedding: id, contentItemId, embeddingModel, sourceText, createdAt
+NoteEmbedding:    id, noteId,        embeddingModel, sourceText, createdAt
+```
+
+Không có cột `vector` nào cả. Lượt migration đầu tiên chạy trên bản Postgres
+thiếu pgvector nên câu tạo cột hỏng, phần còn lại vẫn đi tiếp. Nhìn vào
+`schema.prisma` thì tưởng có, vì ở đó khai `Unsupported("vector(1024)")`.
+
+Nên `scripts/bat-pgvector.ts` phải **tạo cột trước rồi mới dựng chỉ mục** — bản
+đầu tôi viết chỉ dựng chỉ mục, và nó sẽ hỏng ngay ở dòng đầu tiên.
+
+Hai chỉ mục HNSW cố ý **nằm ngoài migration**, dựng bằng script chạy lại được
+bất cứ lúc nào: Prisma không hiểu loại chỉ mục này nên mỗi lần `migrate dev` nó
+đều định xoá đi. Không nằm trong migration thì không có gì để xoá nhầm.
+
+Đã viết sẵn hai script và ghi vào `CLAUDE.md`. Chưa chạy vì cài 3–6 GB công cụ
+Microsoft là việc chủ dự án nên tự bấm — nhất là khi vừa từ chối cài bộ Android
+8–12 GB.
