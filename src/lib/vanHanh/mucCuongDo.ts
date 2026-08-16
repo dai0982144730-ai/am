@@ -67,6 +67,14 @@ export const GIOI_HAN_MOI_DEM = {
   soDocBinhLuan: 20,
   /** Số ghi chú được Claude gắn nhãn */
   soGanNhan: 30,
+  /**
+   * Số ngăn wiki được viết lại mỗi đêm.
+   *
+   * Thấp có chủ đích: mỗi ngăn tốn một lần gọi Claude cho TOÀN BỘ ghi chú
+   * trong đó, và ngăn không đổi thì vốn đã bị bỏ qua từ trước. Ba ngăn một đêm
+   * là dư sức theo kịp tốc độ ghi chú của một người.
+   */
+  soTongHopWiki: 3,
   /** Số chủ đề đem đi tìm ngoài vùng đã theo dõi. Mỗi chủ đề tốn 101 đơn vị. */
   soChuDeTuTim: 6,
   /**
@@ -119,6 +127,7 @@ export function apCuongDo(cuongDo: number): DinhMucMotDem {
     soThuatLai: nhan(GIOI_HAN_MOI_DEM.soThuatLai),
     soDocBinhLuan: nhan(GIOI_HAN_MOI_DEM.soDocBinhLuan),
     soGanNhan: nhan(GIOI_HAN_MOI_DEM.soGanNhan),
+    soTongHopWiki: nhan(GIOI_HAN_MOI_DEM.soTongHopWiki),
     soChuDeTuTim: nhan(GIOI_HAN_MOI_DEM.soChuDeTuTim),
     soDocThanhTieng: nhan(GIOI_HAN_MOI_DEM.soDocThanhTieng),
   };

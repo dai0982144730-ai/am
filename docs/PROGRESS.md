@@ -2597,3 +2597,36 @@ Thêm `waves-podcast` → quét → 4 bài vào kho đúng dạng `audio_track`,
 khi kiểm. Lượt quét đó chạy với cửa sổ 10 năm nên có kéo thêm 5 tập podcast cũ
 từ các kênh đang theo dõi vào kho — nội dung thật, lượt quét đêm sớm muộn cũng
 lấy về.
+
+---
+
+## 2026-08-16 (tối, tiếp) — Việc 2: wiki tổng hợp định kỳ
+
+`ganNhan.ts` đã xếp ghi chú vào ngăn theo chủ đề, nhưng một ngăn hai chục ghi
+chú vẫn chỉ là hai chục mẩu rời — mỗi mẩu viết cụt trong lúc đang xem dở, ba
+tháng sau đọc lại không nối được thành cái gì. Giờ Claude viết lại cả ngăn
+thành một bài liền mạch, chạy trong lượt quét đêm ngay sau bước gắn nhãn.
+
+**Chỉ viết lại ngăn đã đổi.** Viết lại tốn một lần gọi Claude cho *toàn bộ* ghi
+chú trong ngăn; chạy lại sau mỗi lần ghi thì ngăn hai chục ghi chú tốn hai chục
+lần gọi, mà mười chín bản đầu bị bản sau đè mất ngay. Điều kiện đổi tính theo cả
+`createdAt` lẫn `updatedAt` — chỉ nhìn ngày tạo thì sửa lại một ghi chú cũ sẽ
+không kích hoạt viết lại, và bản tổng hợp lặng lẽ lạc hậu.
+
+### Thử thật
+
+Dựng một ngăn 4 ghi chú gắn vào nội dung triết học có thật trong kho, trong đó
+cố tình để **hai ghi chú mâu thuẫn nhau**. Claude viết ra bài 3 đoạn:
+
+- Nhận ra ý lặp lại ở hai nguồn khác hẳn nhau và **nói rõ chỗ lặp** — "một bên
+  giảng đạo lý tôn giáo, một bên là chuyện tu hành thực tế… cho thấy đây là điều
+  thật sự đọng lại"
+- **Giữ nguyên chỗ mâu thuẫn** thay vì chọn hộ một bên: "Hai vế chưa được giải
+  quyết… nên cứ để ngỏ, tự mình đối chiếu lại khi cần"
+- Dẫn đúng tên nguồn và mốc phút để tìm lại được chỗ gốc
+
+Chạy lại ngay lần hai: `daXet=0, boQuaChuaDoi=1` — đúng như thiết kế, ngăn không
+đổi thì không gọi Claude lần nào. Đã dọn sạch dữ liệu thử sau khi kiểm.
+
+Thêm `soTongHopWiki: 3` vào bảng định mức, nên thanh trượt cường độ điều khiển
+cả bước này.

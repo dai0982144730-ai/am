@@ -31,6 +31,7 @@ import { thuatLaiHangLoat } from "@/lib/llm/luuThuatLai";
 import { quetBlog } from "@/lib/nguon/quetBlog";
 import { quetPodcast } from "@/lib/nguon/quetPodcast";
 import { ganNhanHangLoat } from "@/lib/ghiChu/ganNhan";
+import { tongHopWikiHangLoat } from "@/lib/ghiChu/tongHopWiki";
 import { timNguonMoi } from "@/lib/khamPha/timNguonMoi";
 import { quetTuKhoaQuanTam } from "@/lib/quanTam/quetTuKhoa";
 import { chamDiemHangLoat } from "@/lib/scoring/chamDiem";
@@ -339,6 +340,31 @@ export async function quetDem(
           `xong ${kq.thanhCong}/${kq.daXet}` +
           (kq.soViecCanLam ? `, ${kq.soViecCanLam} việc cần làm` : "") +
           (kq.boSuuTapMoi.length ? `, ${kq.boSuuTapMoi.length} ngăn mới` : "")
+        );
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước 8c: viết lại wiki cho các ngăn đã đổi -----
+  //
+  // Đặt NGAY SAU bước gắn nhãn, vì chính bước đó vừa xếp ghi chú mới vào ngăn —
+  // chạy trước thì tổng hợp lại một ngăn chưa có ghi chú mới, rồi đêm sau mới
+  // bắt kịp.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Viết lại wiki cho các ngăn ghi chú đã đổi",
+      async () => {
+        const kq = await tongHopWikiHangLoat(dinhMuc.soTongHopWiki);
+        if (kq.daXet === 0) {
+          return kq.boQuaChuaDoi > 0
+            ? `${kq.boQuaChuaDoi} ngăn không đổi từ lần trước, không viết lại`
+            : "chưa ngăn nào đủ ghi chú để tổng hợp";
+        }
+        return (
+          `viết lại ${kq.thanhCong}/${kq.daXet} ngăn` +
+          (kq.cacNganDaViet.length ? ` — ${kq.cacNganDaViet.join(", ")}` : "") +
+          (kq.boQuaChuaDoi ? `, bỏ qua ${kq.boQuaChuaDoi} ngăn chưa đổi` : "")
         );
       },
       bao,
