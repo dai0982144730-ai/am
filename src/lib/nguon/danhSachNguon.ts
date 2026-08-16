@@ -147,6 +147,20 @@ export const NGUON_KHOI_DAU: NguonKhoiDau[] = [
     ghiChu:
       "60 bài, nhiều nhất nhóm. Là trang tổng hợp thông cáo báo chí của các đại học nên hay thổi phồng — xếp tầng aggregator để bị trừ điểm uy tín",
   },
+  // Feed chung của Nature CHẬP CHỜN chứ không chết — và suýt nữa tôi kết luận
+  // sai chuyện này.
+  //
+  // Trong một lượt quét ngày 2026-08-16 nó báo `303 → 406`, thử lại bằng `curl`
+  // cũng ra 303. Nhìn vậy tưởng Nature đã bỏ feed. Nhưng đúng lượt quét đó nó
+  // lấy về **10 bài thật**, trong đó có bài về watermark của Anthropic.
+  //
+  // Bài học: một lần gọi hỏng chưa đủ để kết luận một nguồn đã chết. Suýt xoá
+  // mất một nguồn đang chạy.
+  //
+  // Nên giữ nguyên feed chung, và thêm ba feed theo chuyên ngành làm phần chắc
+  // chắn — mỗi feed 30 bài, đã thử cả bảy ngành đều sống. Chỉ lấy ba ngành sát
+  // tiêu chí "ứng dụng được vào đời sống thật" nhất; phần lớn nội dung Nature
+  // là nghiên cứu thuần, ôm hết chỉ tốn công đọc rồi bị loại.
   {
     ten: "Nature",
     duongDanFeed: "https://www.nature.com/nature.rss",
@@ -155,7 +169,35 @@ export const NGUON_KHOI_DAU: NguonKhoiDau[] = [
     nhomGoiY: "khoa_hoc",
     layDuocToanVan: false,
     ghiChu:
-      "76 bài. Tạp chí gốc, uy tín cao nhất, nhưng phần lớn là nghiên cứu thuần — chỉ số ít lọt vào 'khoa_hoc' theo tiêu chí ứng dụng được",
+      "Chập chờn: có lượt trả 303 → 406, có lượt lấy đủ bài. Giữ lại vì khi chạy thì nội dung tốt",
+  },
+  {
+    ten: "Nature — Y học",
+    duongDanFeed: "https://www.nature.com/subjects/medical-research.rss",
+    trangChu: "https://www.nature.com/subjects/medical-research",
+    tangUyTin: "official_vendor",
+    nhomGoiY: "khoa_hoc",
+    layDuocToanVan: false,
+    ghiChu: "30 bài. Thay cho feed chung đã chết (303 → 406)",
+  },
+  {
+    ten: "Nature — Vật liệu",
+    duongDanFeed: "https://www.nature.com/subjects/materials-science.rss",
+    trangChu: "https://www.nature.com/subjects/materials-science",
+    tangUyTin: "official_vendor",
+    nhomGoiY: "khoa_hoc",
+    layDuocToanVan: false,
+    ghiChu: "30 bài",
+  },
+  {
+    ten: "Nature — Năng lượng",
+    duongDanFeed:
+      "https://www.nature.com/subjects/energy-science-and-technology.rss",
+    trangChu: "https://www.nature.com/subjects/energy-science-and-technology",
+    tangUyTin: "official_vendor",
+    nhomGoiY: "khoa_hoc",
+    layDuocToanVan: false,
+    ghiChu: "30 bài",
   },
   {
     ten: "Hacker News — bài khoa học nổi bật",
