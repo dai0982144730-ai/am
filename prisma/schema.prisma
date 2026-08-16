@@ -969,6 +969,18 @@ model UserAssistantSettings {
   /// tiết kiệm được thời gian — nên chặn trần ở đó.
   ttsSpeed        Float   @default(1.0)
 
+  /// Cường độ quét đêm, tính bằng phần trăm. 100 = như thiết kế gốc.
+  ///
+  /// Dải 0–200: kéo hết sang trái là **dừng hẳn**, trợ lý đứng im không quét
+  /// gì; kéo hết sang phải là **gấp đôi** mọi định mức mỗi đêm. Chủ dự án chốt
+  /// 2026-08-16 — có hôm muốn moi thật nhiều, có lúc đi vắng cả tuần thì không
+  /// việc gì phải tiêu hạn mức.
+  ///
+  /// KHÁC `autoScanEnabled`: cái kia là công tắc bật/tắt lịch chạy, cái này
+  /// chỉnh **lượng việc** trong một lượt chạy. Đặt 0 thì hai thứ trùng tác
+  /// dụng, nhưng ở khoảng giữa thì không cái nào thay được cái nào.
+  cuongDoQuet     Int     @default(100)
+
   updatedAt DateTime @updatedAt
 }
 

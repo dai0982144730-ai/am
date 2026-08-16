@@ -10,7 +10,9 @@
 import { AlertTriangle, CheckCircle2, Download, XCircle } from "lucide-react";
 
 import { KhungTrang } from "@/components/KhungTrang";
+import { ThanhCuongDoQuet } from "@/components/ThanhCuongDoQuet";
 import { emailChuDuAn, laChuDuAn } from "@/lib/quyen";
+import { docCuongDo } from "@/lib/vanHanh/cuongDo";
 import {
   docTinhHinhVanHanh,
   type LanChay,
@@ -77,10 +79,11 @@ function docKeoDai(giay: number | null): string {
 }
 
 export default async function TrangVanHanh() {
-  const [email, laChu, tinhHinh] = await Promise.all([
+  const [email, laChu, tinhHinh, cuongDo] = await Promise.all([
     emailChuDuAn(),
     laChuDuAn(),
     docTinhHinhVanHanh(),
+    docCuongDo(),
   ]);
 
   const { youtube, tts, cacLanChay, troLyApi, cacPhienBanDiem } = tinhHinh;
@@ -146,6 +149,9 @@ export default async function TrangVanHanh() {
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
           <BangHanMucYouTube tinhHinh={tinhHinh} />
           <div className="space-y-8">
+            {/* Khách vẫn thấy mức đang đặt — minh bạch thì tốt hơn giấu đi,
+                cùng lý do với bảng trọng số chấm điểm trong Cài đặt */}
+            <ThanhCuongDoQuet banDau={cuongDo} choPhepSua={laChu} />
             <BangLichChay cacLanChay={cacLanChay} />
             <BangPhienBanDiem
               cacPhienBanDiem={cacPhienBanDiem}

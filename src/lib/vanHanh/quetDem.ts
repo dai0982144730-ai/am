@@ -25,6 +25,7 @@
  */
 
 import { prisma } from "@/lib/db/prisma";
+import { apCuongDo, docCuongDo } from "@/lib/vanHanh/cuongDo";
 import { phanLoaiHangLoat } from "@/lib/llm/luuPhanLoai";
 import { thuatLaiHangLoat } from "@/lib/llm/luuThuatLai";
 import { quetBlog } from "@/lib/nguon/quetBlog";
@@ -43,52 +44,6 @@ import {
 import { layLoiThoaiHangLoat } from "@/lib/youtube/loiThoai";
 import { dongBoNguonTuKenhDaDangKy, quetVideoMoi } from "@/lib/youtube/quetKenh";
 
-/**
- * Giới hạn mỗi đêm.
- *
- * Đặt vừa phải có chủ đích: quét hết mọi thứ trong một đêm sẽ chạm hạn mức
- * YouTube và hạn mức gói Claude Pro. Phần chưa xử lý hết sẽ được làm nốt vào
- * đêm sau — kho vẫn đầy dần lên, chỉ là từ tốn.
- */
-export const GIOI_HAN_MOI_DEM = {
-  /** Số video xét mỗi kênh */
-  videoMoiKenh: 8,
-  /** Chỉ lấy nội dung đăng trong ngần này ngày */
-  soNgayGanDay: 3,
-  /** Số bài xét mỗi nguồn blog */
-  baiMoiNguonBlog: 8,
-  /** Số tập xét mỗi kênh podcast */
-  tapMoiKenhPodcast: 5,
-  /**
-   * Podcast nhìn ngược lại xa hơn hẳn các nguồn khác.
-   *
-   * Video và blog ra hàng ngày nên nhìn lại 3 ngày là đủ. Podcast thì mỗi tuần
-   * hoặc mỗi hai tuần mới có một tập — lấy mốc 3 ngày thì hầu hết các đêm chẳng
-   * thấy gì, mà tập mới ra đúng hôm quét trục trặc là mất luôn. Lấy về trùng
-   * không tốn gì: tập đã có trong kho thì bỏ qua ngay.
-   */
-  soNgayGanDayPodcast: 21,
-  /** Số video lấy lời thoại */
-  soLoiThoai: 120,
-  /** Số nội dung nhờ Claude phân loại */
-  soPhanLoai: 80,
-  /** Số bài viết thuật lại sang tiếng Việt */
-  soThuatLai: 5,
-  /** Số ứng viên đứng đầu được đọc bình luận */
-  soDocBinhLuan: 20,
-  /** Số ghi chú được Claude gắn nhãn */
-  soGanNhan: 30,
-  /** Số chủ đề đem đi tìm ngoài vùng đã theo dõi. Mỗi chủ đề tốn 101 đơn vị. */
-  soChuDeTuTim: 6,
-  /**
-   * Số bản thuật lại được đọc thành tiếng mỗi đêm.
-   *
-   * Đặt thấp có chủ đích: mỗi bản khoảng 9.000 ký tự, năm bản là 45.000 — một
-   * tháng chạy đều là 1,35 triệu, vẫn dưới trần 4 triệu của giọng Standard
-   * nhưng đã vượt trần 1 triệu của giọng Wavenet.
-   */
-  soDocThanhTieng: 5,
-} as const;
 
 export interface KetQuaMotBuoc {
   ten: string;
@@ -136,6 +91,9 @@ async function chayMotBuoc(
  * Ghi lại vào bảng `JobRun` để biết đêm nào chạy, chạy bao lâu, hỏng ở đâu.
  * Dùng `idempotencyKey` theo ngày nên chạy hai lần trong cùng một ngày sẽ không
  * tạo hai bản ghi — đúng cách bản thiết kế đề ra để job nền chạy lại an toàn.
+ *
+ * Lượng việc mỗi bước lấy từ thanh trượt cường độ trong trang Vận hành. Kéo hết
+ * sang trái thì hàm này **không làm gì cả** và trả về ngay.
  */
 export async function quetDem(
   bao?: (dong: string) => void,
@@ -143,6 +101,24 @@ export async function quetDem(
   const batDau = new Date();
   const ngay = batDau.toISOString().slice(0, 10);
   const khoaChayLai = `quet-dem-${ngay}`;
+
+  const cuongDo = await docCuongDo();
+  const dinhMuc = apCuongDo(cuongDo);
+
+  // ----- Cường độ 0: đứng im -----
+  //
+  // Thoát TRƯỚC khi tạo bản ghi `JobRun`. Tạo rồi mới thoát thì trang Vận hành
+  // hiện một lượt chạy "thành công" mỗi đêm trong khi thật ra chẳng có gì chạy
+  // — đúng kiểu màn hình nói dối mà cả trang Vận hành sinh ra để chống.
+  if (cuongDo === 0) {
+    bao?.("Cường độ đang đặt 0% — trợ lý đứng im, không quét gì đêm nay.");
+    const ketThucNgay = new Date();
+    return { batDau, ketThuc: ketThucNgay, cacBuoc: [], soBuocHong: 0 };
+  }
+
+  if (cuongDo !== 100) {
+    bao?.(`Cường độ đang đặt ${cuongDo}% — mọi định mức nhân theo hệ số này.`);
+  }
 
   const banGhi = await prisma.jobRun.upsert({
     where: { idempotencyKey: khoaChayLai },
@@ -167,8 +143,8 @@ export async function quetDem(
       async () => {
         await dongBoNguonTuKenhDaDangKy();
         const kq = await quetVideoMoi({
-          soNgayGanDay: GIOI_HAN_MOI_DEM.soNgayGanDay,
-          videoMoiKenh: GIOI_HAN_MOI_DEM.videoMoiKenh,
+          soNgayGanDay: dinhMuc.soNgayGanDay,
+          videoMoiKenh: dinhMuc.videoMoiKenh,
         });
         return `${kq.soKenhQuet} kênh, thêm ${kq.soVideoThemMoi} video mới${
           kq.kenhLoi.length ? `, ${kq.kenhLoi.length} kênh lỗi` : ""
@@ -184,8 +160,8 @@ export async function quetDem(
       "Quét bài mới từ blog và diễn đàn AI",
       async () => {
         const kq = await quetBlog(
-          GIOI_HAN_MOI_DEM.baiMoiNguonBlog,
-          GIOI_HAN_MOI_DEM.soNgayGanDay,
+          dinhMuc.baiMoiNguonBlog,
+          dinhMuc.soNgayGanDay,
         );
         return `${kq.soNguonQuet} nguồn, thêm ${kq.soBaiThemMoi} bài (${kq.soLayDuocToanVan} lấy được chữ)`;
       },
@@ -225,8 +201,8 @@ export async function quetDem(
       "Quét tập mới từ podcast",
       async () => {
         const kq = await quetPodcast(
-          GIOI_HAN_MOI_DEM.tapMoiKenhPodcast,
-          GIOI_HAN_MOI_DEM.soNgayGanDayPodcast,
+          dinhMuc.tapMoiKenhPodcast,
+          dinhMuc.soNgayGanDayPodcast,
         );
         if (kq.soKenhQuet === 0) return "chưa thêm kênh podcast nào";
         return `${kq.soKenhQuet} kênh, thêm ${kq.soTapThemMoi} tập (${kq.soCoMoTa} tập có mô tả riêng)`;
@@ -244,7 +220,7 @@ export async function quetDem(
     await chayMotBuoc(
       "Tìm theo từ khoá đang quan tâm",
       async () => {
-        const kq = await quetTuKhoaQuanTam(GIOI_HAN_MOI_DEM.soNgayGanDay);
+        const kq = await quetTuKhoaQuanTam(dinhMuc.soNgayGanDay);
         if (kq.cacTuKhoa.length === 0) return "chưa đặt từ khoá nào";
         const hong = kq.cacTuKhoa.filter((t) => t.loi).length;
         return (
@@ -266,7 +242,7 @@ export async function quetDem(
     await chayMotBuoc(
       "Tìm nội dung ngoài vùng đã theo dõi",
       async () => {
-        const kq = await timNguonMoi(GIOI_HAN_MOI_DEM.soChuDeTuTim);
+        const kq = await timNguonMoi(dinhMuc.soChuDeTuTim);
         if (kq.cacChuDe.length === 0) {
           return "chưa đủ nội dung điểm cao để rút ra chủ đề";
         }
@@ -287,7 +263,7 @@ export async function quetDem(
     await chayMotBuoc(
       "Lấy lời thoại video mới",
       async () => {
-        const kq = await layLoiThoaiHangLoat(GIOI_HAN_MOI_DEM.soLoiThoai);
+        const kq = await layLoiThoaiHangLoat(dinhMuc.soLoiThoai);
         return `xét ${kq.daXet}, lấy được ${kq.layDuoc}, không có phụ đề ${kq.khongCoPhuDe}`;
       },
       bao,
@@ -299,7 +275,7 @@ export async function quetDem(
     await chayMotBuoc(
       "Nhờ Claude phân loại vào chuyên mục",
       async () => {
-        const kq = await phanLoaiHangLoat(GIOI_HAN_MOI_DEM.soPhanLoai);
+        const kq = await phanLoaiHangLoat(dinhMuc.soPhanLoai);
         const theoNhom = Object.entries(kq.theoNhom)
           .map(([nhom, so]) => `${nhom} ${so}`)
           .join(", ");
@@ -314,7 +290,7 @@ export async function quetDem(
     await chayMotBuoc(
       "Thuật lại bài nước ngoài sang tiếng Việt",
       async () => {
-        const kq = await thuatLaiHangLoat(GIOI_HAN_MOI_DEM.soThuatLai);
+        const kq = await thuatLaiHangLoat(dinhMuc.soThuatLai);
         return `thuật lại ${kq.thanhCong} bài, bỏ qua ${kq.boQuaVietSan} bài đã là tiếng Việt`;
       },
       bao,
@@ -338,7 +314,7 @@ export async function quetDem(
     await chayMotBuoc(
       "Claude đọc bình luận nhóm đứng đầu (vòng 2)",
       async () => {
-        const kq = await chayVongHai(GIOI_HAN_MOI_DEM.soDocBinhLuan);
+        const kq = await chayVongHai(dinhMuc.soDocBinhLuan);
         if (kq.daCham > 0) await chamDiemHangLoat();
         return (
           `đọc ${kq.daCham} video, thảo luận trung bình ${kq.diemTrungBinh.toFixed(2)}` +
@@ -357,7 +333,7 @@ export async function quetDem(
     await chayMotBuoc(
       "Gắn nhãn cho ghi chú mới",
       async () => {
-        const kq = await ganNhanHangLoat(GIOI_HAN_MOI_DEM.soGanNhan);
+        const kq = await ganNhanHangLoat(dinhMuc.soGanNhan);
         if (kq.daXet === 0) return "không có ghi chú mới";
         return (
           `xong ${kq.thanhCong}/${kq.daXet}` +
@@ -393,7 +369,7 @@ export async function quetDem(
         if (!daCauHinh()) return "chưa cấu hình TTS_API_KEY, bỏ qua";
 
         const bt = await taoAmThanhChoBanTin();
-        const tl = await taoAmThanhChoThuatLai(GIOI_HAN_MOI_DEM.soDocThanhTieng);
+        const tl = await taoAmThanhChoThuatLai(dinhMuc.soDocThanhTieng);
 
         const phan = [
           bt.daTao ? "bản tin xong" : `bản tin: ${bt.lyDo}`,

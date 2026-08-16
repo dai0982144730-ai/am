@@ -2497,3 +2497,51 @@ Nửa đầu nhịp tăng, nửa sau giảm — buổi tập không kết thúc 
 liệu thật: 10 bài có nhịp ghi rõ, tất cả đều là mix 34–96 phút, nên 45 phút chỉ
 vừa **một** bài. Không phải lỗi: mix chạy bộ vốn dài, và bài không ghi rõ nhịp
 thì không lọt vào (thà thiếu còn hơn lệch buổi tập).
+
+---
+
+## 2026-08-16 (tối, tiếp) — Thanh trượt cường độ quét
+
+Chủ dự án yêu cầu một thanh trượt trong trang Vận hành: giữa là như hiện nay,
+kéo phải thì máy quét nhiều dần lên tới **gấp đôi**, kéo hết trái thì trợ lý
+**đứng im, không quét, không làm gì cả**.
+
+Thêm cột `UserAssistantSettings.cuongDoQuet` (phần trăm, 0–200, mặc định 100).
+
+**Một con số điều khiển cả mười một định mức.** `GIOI_HAN_MOI_DEM` có mười một
+mức: video mỗi kênh, bài mỗi blog, số nội dung nhờ Claude phân loại… Bày cả
+mười một ra cho người dùng chỉnh là bắt họ hiểu đường ống bên trong mới chỉnh
+nổi, và chỉnh lệch nhau thì ống nghẽn ở khúc giữa — quét về 200 video mà vẫn
+chỉ phân loại 80 thì 120 cái kia nằm chờ vô thời hạn.
+
+Đo thật:
+
+| Thanh trượt | Phân loại | Video/kênh | Thuật lại | Đọc tiếng |
+|---|---|---|---|---|
+| 0% | 0 | 0 | 0 | 0 |
+| 50% | 40 | 4 | 3 | 3 |
+| 100% | 80 | 8 | 5 | 5 |
+| 200% | 160 | 16 | 10 | 10 |
+
+**Hai trường ngày không nhân**: `soNgayGanDay` và `soNgayGanDayPodcast` là cửa
+sổ thời gian, không phải khối lượng. Nhân đôi chúng là moi lại nội dung của sáu
+ngày trước, mà thứ đó đã nằm trong kho từ các đêm trước rồi. Kéo thanh trượt
+phải làm máy xét *nhiều nguồn hơn*, không phải *ngoái lại xa hơn*.
+
+**Làm tròn LÊN với hệ số nhỏ hơn 1.** Ở mức 10% thì `soThuatLai` (vốn là 5)
+thành 0,5 — làm tròn xuống là 0, tức một bước lặng lẽ ngừng chạy dù thanh trượt
+chưa về tận cùng. Chỉ đúng mức 0 mới được dừng.
+
+Ở cường độ 0, `quetDem()` thoát **trước khi** tạo bản ghi `JobRun`. Tạo rồi mới
+thoát thì trang Vận hành hiện một lượt chạy "thành công" mỗi đêm trong khi chẳng
+có gì chạy — đúng kiểu màn hình nói dối mà cả trang này sinh ra để chống.
+
+### Lại vấp: kéo prisma xuống trình duyệt
+
+Thanh trượt là component phía trình duyệt, nhập `CUONG_DO_TOI_DA` từ file có
+`prisma` — thế là Turbopack kéo cả `pg` xuống trình duyệt và trang trắng bóc
+với bảy lỗi `Module not found: Can't resolve 'net' / 'tls' / 'fs' / 'dns'`.
+
+Tách `mucCuongDo.ts` (thuần, không nạp gì) khỏi `cuongDo.ts` (hỏi database) —
+đúng cách `giaLenh.ts` đã tách khỏi `hanMuc.ts` bên YouTube, và lời giải thích
+cho việc tách đó đã nằm sẵn trong file. Đọc rồi vẫn vấp lại.
