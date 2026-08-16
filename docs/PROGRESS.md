@@ -2744,3 +2744,43 @@ Trang Vận hành giờ hiện "Hồ sơ gu cá nhân: bản 1, dựng 19:23 16-
 Embeddings (`ContentEmbedding`, `NoteEmbedding`) và tìm kiếm ngữ nghĩa vẫn cần
 pgvector. Hai đường ra: cài pgvector vào bản Postgres đang chạy, hoặc chuyển hẳn
 sang Neon. Chưa quyết.
+
+---
+
+## 2026-08-16 (tối, tiếp) — Việc 6: rà cổng API trước khi làm app Android
+
+App Android nói chuyện với `am` **chỉ qua cổng API**, nên trước khi viết nó phải
+chắc cổng đó trả đúng thứ website trả. Gọi thử cả sáu tuyến bằng token thật:
+
+| Tuyến | Kết quả |
+|---|---|
+| `suc-khoe` | 200 · 1.216 nội dung, 290 nguồn, 2 bản tin, 52 ms |
+| `tom-tat-hom-nay` | 200 · 154 nội dung chia theo chuyên mục |
+| `cong-cu` | 200 · khai báo tool cho Claude |
+| `tim-kiem` | 200 |
+| không có token | **401** — chốt chặn đúng |
+
+### Bắt được một lỗi thật
+
+`tim-kiem` chỉ tìm trong `title` và `description`, trong khi trang web (từ sáng
+nay) tìm cả lời thoại, bản đọc tiếng Việt, chủ đề và nhận xét của Claude. Hậu
+quả đo được:
+
+| Từ khoá | Web | API (trước) | API (sau khi sửa) |
+|---|---|---|---|
+| chánh niệm | 38 | **0** | **39** |
+
+Cùng một kho, hai câu trả lời khác hẳn nhau. Nguy hiểm ở chỗ **API vẫn trả 200
+kèm danh sách rỗng** — trông hoàn toàn bình thường, nên app Android sẽ mãi là
+bản kém hơn website mà không ai nhận ra. Đã cho API tìm đúng chín chỗ như
+`timVaLoc.ts`.
+
+Con số 39 so với 38 không phải sai lệch: web còn áp luật 5 phút và ẩn thứ đã
+lướt qua, còn API thì không — hỏi thẳng một thứ cụ thể thì phải nhận được nó,
+kể cả đã xem rồi.
+
+### Bẫy lúc thử
+
+Ba lượt thử đầu đều ra 0 và suýt kết luận là chưa sửa được. Thật ra là **shell
+Windows làm hỏng dấu tiếng Việt** trong `curl -d`. Gửi thân yêu cầu qua file
+`--data-binary` thì ra ngay 39. Từ giờ thử API tiếng Việt thì gửi qua file.

@@ -209,10 +209,53 @@ export async function timKiemNoiDung(thamSo: ThamSoTimKiem): Promise<KetQuaTimKi
 
   const soLuong = Math.min(thamSo.soLuong ?? SO_LUONG_MAC_DINH, SO_LUONG_TOI_DA);
 
+  // TÌM Y HỆT TRANG WEB, kể cả trong lời thoại.
+  //
+  // ĐÃ VẤP THẬT (2026-08-16): bản trước chỉ tìm `title` và `description`, nên
+  // gõ "chánh niệm" trên web ra **38 kết quả** còn qua API ra **0**. Cùng một
+  // kho, hai câu trả lời khác hẳn nhau — và app Android chỉ nói chuyện qua API
+  // nên nó sẽ mãi là bản kém hơn website, mà không ai nhận ra vì API vẫn trả
+  // 200 kèm một danh sách rỗng trông rất bình thường.
+  //
+  // Danh sách các chỗ tìm phải khớp `timVaLoc.ts`. Bên đó có ghi kết quả đo:
+  // 1.051 bản lời thoại, 23 MB, quét thẳng mất 150–330 ms nên không cần chỉ mục.
   const dieuKien = {
     OR: [
       { title: { contains: tuKhoa, mode: "insensitive" as const } },
       { description: { contains: tuKhoa, mode: "insensitive" as const } },
+      { source: { title: { contains: tuKhoa, mode: "insensitive" as const } } },
+      {
+        classification: {
+          titleVi: { contains: tuKhoa, mode: "insensitive" as const },
+        },
+      },
+      {
+        classification: {
+          contentQualityNotes: {
+            contains: tuKhoa,
+            mode: "insensitive" as const,
+          },
+        },
+      },
+      { classification: { extractedTopics: { has: tuKhoa } } },
+      {
+        classification: {
+          extractedAuthorNameRaw: {
+            contains: tuKhoa,
+            mode: "insensitive" as const,
+          },
+        },
+      },
+      {
+        transcript: {
+          rawText: { contains: tuKhoa, mode: "insensitive" as const },
+        },
+      },
+      {
+        narrationAsset: {
+          scriptText: { contains: tuKhoa, mode: "insensitive" as const },
+        },
+      },
     ],
     ...(chuyenMuc ? { contentGroup: chuyenMuc } : {}),
     ...(thamSo.tuNgay ? { publishedAt: { gte: new Date(thamSo.tuNgay) } } : {}),
