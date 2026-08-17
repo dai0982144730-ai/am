@@ -2920,3 +2920,83 @@ Chạy như một bước mới trong quét đêm, ngay sau chấm điểm vòng
   trần này.
 - pgvector vẫn chưa cài — mục tìm kiếm ngữ nghĩa chưa bật được (xem mục
   2026-08-16 phía trên).
+
+## 2026-08-17 (buổi hai) — Vá lịch quét đêm bị đứt, lệch số trang chủ/Khám phá, ba lỗi Playlist
+
+Chủ dự án báo ba việc cùng lúc, cả ba hoá ra chung một gốc: **lịch hẹn giờ
+Windows "Am - quet dem" không hề tồn tại trên máy** (kiểm bằng `schtasks` báo
+không tìm thấy). Lần quét đêm tự động thành công gần nhất là 14/08 — ba ngày
+liền không có gì tự chạy, nên bản tin đứng yên, playlist không đồng bộ.
+
+### Số liệu lệch giữa trang chủ và Khám phá
+
+Trang chủ tự viết điều kiện lọc riêng ở `layNoiDungTrangChu.ts`, quên mất
+"Luật 5 phút" mà Khám phá đã có — nên trang chủ bày ra 10 video gắn nhãn nhạc
+mà thật ra là YouTube Shorts 17–33 giây (kênh "3 Fingers", clip thử thách
+nhảy), trong khi Khám phá lọc đúng nên hiện 0. Sửa tận gốc hai lớp:
+
+  1. **Chặn Shorts từ lúc quét** (`quetKenh.ts`): video dưới 60 giây bị loại
+     thẳng, không kịp vào hàng chờ Claude phân loại nữa — trước đó dấu hiệu
+     "#dance" trong tiêu đề đủ mạnh khiến Claude vẫn xếp chúng vào nhạc dù
+     thời lượng vô nghĩa. Dọn luôn 10 bài rác đang có trong kho.
+  2. **Dùng chung một hàm lọc** (`dungDieuKien`, xuất ra từ `timVaLoc.ts`) cho
+     cả trang chủ lẫn Khám phá, thay vì hai nơi tự viết hai điều kiện dễ lệch
+     nhau theo thời gian.
+
+Thêm tổng số vào nút "Tất cả" ở hàng chip Khám phá — trước đó bấm vào không
+hiện số gì cả.
+
+### Ba lỗi Playlist, sửa xong và **đã xác nhận chạy thật trên tài khoản YouTube
+thật** (không chỉ đọc code):
+
+  1. **Đồng bộ không phát hiện playlist đã xoá bên YouTube.** `dongBoPlaylist`
+     trước đây chỉ biết UPSERT những gì đọc VỀ, không tự hỏi "còn cái nào cũ
+     mà giờ không thấy nữa". Sửa: sau mỗi lần đọc, so playlist id cũ trong Am
+     với tập id vừa thấy trên YouTube, cái nào rơi ra thì xoá hẳn khỏi Am
+     (không phải ghi ra thế giới thật nên không cần qua đề xuất — việc đã xảy
+     ra thật rồi). Chạy thử trên tài khoản thật: đọc về 26 playlist, gỡ đúng 1
+     — chính playlist tiếng Anh chủ dự án đã xoá.
+  2. **Số "N mục" trên mỗi playlist luôn sai** (thường là 0). Trang liệt kê
+     đếm `PlaylistItem` (bảng "ý Am muốn") thay vì số thật trên YouTube — mà
+     `PlaylistItem` chỉ có dòng cho video thêm QUA AM, nên mọi playlist có sẵn
+     từ trước khi Am biết tới nó thì mãi mãi đếm ra 0. Sửa: hiện `itemCount`
+     (số YouTube tự báo) cho playlist đã có thật; đồng thời thêm bước "đắp
+     lại" `PlaylistItem` khớp với thành viên thật mỗi lần đồng bộ, cho những
+     video Am đã có sẵn trong kho (khớp qua `externalId`).
+  3. **Chưa có trang xem playlist có gì bên trong**, và menu ba chấm trên mỗi
+     thẻ mới chỉ có "Thêm vào thư viện / Thêm vào Playlist". Thêm trang
+     `/playlist/[id]`, lưới bốn cột y hệt Khám phá; menu ba chấm bên trong đó
+     đổi ngữ cảnh thêm hai lựa chọn "Xoá khỏi playlist" (bỏ thẳng) và "Chuyển
+     đến playlist" (bung danh sách playlist khác + "+ Playlist mới").
+
+**Giới hạn mới lộ ra khi kiểm chứng bằng dữ liệu thật**: hầu hết playlist thật
+trên tài khoản (BlackPink 202 video, Nhạc việt, Xây nhà…) gồm toàn video NGOÀI
+phạm vi các kênh Am đang theo dõi — Am chỉ biết nội dung của video đến từ
+~124 kênh thuộc năm mảng cố định. Nên trang chi tiết vẫn hiện trống với những
+playlist này, dù bên YouTube có đầy đủ — trang đã nói rõ lý do thay vì im
+lặng. Đây là hệ quả tự nhiên của nguyên tắc "mọi thứ xoay quanh
+`Source`/`ContentItem`", không phải lỗi cần vá — nhưng chủ dự án nên biết
+trước khi thử "Chuyển đến playlist" trên một playlist nhạc cá nhân và thấy nó
+trống trơn.
+
+### Việc khác trong phiên này
+
+- Xoá "Kênh test" và 4 bài "Đêm trắng - Tập N" — dữ liệu thử của phiên trước
+  quên dọn sau khi kiểm thử luồng theo dõi bộ tập.
+- **Đăng ký lại lịch Task Scheduler** `Am - quet dem`, chạy 21:00 mỗi tối —
+  đây mới là chỗ hỏng gốc của cả ba việc chủ dự án báo.
+- **Thêm bước đồng bộ Playlist vào chính quét đêm tự động** (`quetDem.ts`,
+  bước 1b) — trước đây việc này CHỈ chạy khi bấm tay nút "Đọc lại từ YouTube"
+  trên trang Playlist, nên không ai bấm thì Am không bao giờ tự biết chủ nhà
+  đã đổi gì bên YouTube.
+- Chạy quét đêm thủ công một lần ngay trong phiên để làm mới ngay, không đợi
+  tới 21:00 — xem log `logs/quet-dem-thu-cong-2026-08-17-*.txt`.
+
+### Chưa kiểm bằng cách bấm thật trong trình duyệt
+
+Trang chi tiết playlist mới và hai lựa chọn menu mới (Xoá khỏi playlist,
+Chuyển đến playlist) mới được xác nhận bằng `tsc`, đọc HTML render ở máy chủ,
+và một kịch bản chạy thẳng vào database thật — **chưa bấm thử trực tiếp**
+trên trình duyệt, vì khung xem trước trong phiên này báo `document.hidden`,
+không dựng được khung hình để bấm. Chủ dự án nên tự thử tay luồng
+thêm/xoá/chuyển playlist một lần khi rảnh.

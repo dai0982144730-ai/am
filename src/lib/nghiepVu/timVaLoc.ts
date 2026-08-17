@@ -182,8 +182,16 @@ const KHOANG_THOI_GIAN: Record<MaThoiGian, { tu?: number; den?: number }> = {
   tren45: { tu: 2_700 },
 };
 
-/** Dựng điều kiện lọc từ những gì người dùng chọn. */
-function dungDieuKien(loc: BoLoc): Prisma.ContentItemWhereInput {
+/**
+ * Dựng điều kiện lọc từ những gì người dùng chọn.
+ *
+ * XUẤT RA NGOÀI để trang chủ dùng lại y hệt — xem `layNoiDungTrangChu.ts`. Bản
+ * đầu trang chủ tự viết điều kiện riêng, quên mất Luật 5 phút, nên hai trang
+ * đếm lệch nhau: trang chủ bày 10 video nhạc thật ra là YouTube Shorts vài chục
+ * giây, Khám phá đúng luật nên không hiện cái nào. Dùng chung một hàm thì hai
+ * trang không thể lệch nhau được nữa, vì chúng CÙNG một điều kiện.
+ */
+export function dungDieuKien(loc: BoLoc): Prisma.ContentItemWhereInput {
   const laNgauHung = loc.nhom === "ngau_hung";
   const dieuKien: Prisma.ContentItemWhereInput = laNgauHung
     ? // Ngẫu hứng lấy CẢ thứ đã bị loại — đó là điểm khác biệt của nó.
@@ -532,11 +540,22 @@ export async function demTheoNhom(): Promise<Record<string, number>> {
     "ngau_hung",
   ] as const;
 
-  const so = await Promise.all(
-    cac.map((nhom) =>
-      prisma.contentItem.count({ where: chuaLuotQua(dungDieuKien({ nhom })) }),
+  const [so, tatCa] = await Promise.all([
+    Promise.all(
+      cac.map((nhom) =>
+        prisma.contentItem.count({ where: chuaLuotQua(dungDieuKien({ nhom })) }),
+      ),
     ),
-  );
+    // "Tất cả" không phải tổng của sáu con số trên — không truyền `nhom` thì
+    // `dungDieuKien` không lọc theo chuyên mục, nên gồm cả nội dung ngoài năm
+    // mảng cố định (thứ Ngẫu hứng cũng bày ra). Đúng nghĩa "tất cả những gì
+    // đang có thể bấm vào xem", khớp với con số Khám phá hiện khi không chọn
+    // chip nào.
+    prisma.contentItem.count({ where: chuaLuotQua(dungDieuKien({})) }),
+  ]);
 
-  return Object.fromEntries(cac.map((nhom, i) => [nhom, so[i]]));
+  return Object.fromEntries([
+    ...cac.map((nhom, i) => [nhom, so[i]] as const),
+    ["tat_ca", tatCa] as const,
+  ]);
 }

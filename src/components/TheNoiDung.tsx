@@ -156,7 +156,14 @@ function thongTinPhu(muc: NonNullable<TheNoiDung>): string[] {
   return phan.filter(Boolean);
 }
 
-export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
+export function TheNoiDungCard({
+  muc,
+  trongPlaylistId,
+}: {
+  muc: NonNullable<TheNoiDung>;
+  /** Có giá trị khi thẻ này hiện trong trang chi tiết một playlist */
+  trongPlaylistId?: string;
+}) {
   const thoiLuong = docThoiLuong(muc.durationSeconds);
   const luotXem = docLuotXem(muc.viewOrPlayCount);
   const khiNao = docThoiGian(muc.publishedAt);
@@ -200,7 +207,7 @@ export function TheNoiDungCard({ muc }: { muc: NonNullable<TheNoiDung> }) {
           </span>
         ) : null}
 
-        <MenuBaCham contentItemId={muc.id} />
+        <MenuBaCham contentItemId={muc.id} trongPlaylistId={trongPlaylistId} />
 
         {/* Điểm chất lượng — bốn trụ tín hiệu đã chuẩn hoá trong cùng loại nguồn */}
         {muc.score?.compositeScore != null ? (

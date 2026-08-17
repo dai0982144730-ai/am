@@ -9,6 +9,11 @@
  * NGAY trên Am — chỉ phần ghi thật lên YouTube mới cần duyệt sau, xem
  * `thanhVien.ts`.
  *
+ * BÊN TRONG TRANG CHI TIẾT MỘT PLAYLIST (`trongPlaylistId`), menu đổi khác:
+ * thêm hai lựa chọn "Xoá khỏi playlist" (bỏ thẳng, không cần bung danh sách)
+ * và "Chuyển đến playlist" (bung danh sách CÁC PLAYLIST KHÁC + "+ Playlist
+ * mới" — chọn một cái là chuyển hẳn, không phải thêm-thêm).
+ *
  * Vẽ bằng cổng ra `document.body`, cùng lý do với `NutXo` ở `ChipLoc.tsx`: thẻ
  * nội dung nằm trong lưới, menu đặt bên trong dễ bị cắt bởi `overflow` của
  * lưới cha.
@@ -20,12 +25,21 @@ import { createPortal } from "react-dom";
 
 import { batTatLuu } from "@/lib/thuVien/actions";
 import {
+  chuyenDenThuMuc,
   layDuLieuMenuBaCham,
   taoThuMuc,
   themVaoThuMuc,
+  xoaKhoiThuMuc,
 } from "@/lib/playlist/actions";
 
-export function MenuBaCham({ contentItemId }: { contentItemId: string }) {
+export function MenuBaCham({
+  contentItemId,
+  trongPlaylistId,
+}: {
+  contentItemId: string;
+  /** Có giá trị khi thẻ này đang hiện trong trang chi tiết một playlist */
+  trongPlaylistId?: string;
+}) {
   const [mo, datMo] = useState(false);
   const [mucPlaylist, setMucPlaylist] = useState(false);
   const [oNut, datONut] = useState<DOMRect | null>(null);
@@ -130,22 +144,42 @@ export function MenuBaCham({ contentItemId }: { contentItemId: string }) {
                       onClick={() => setMucPlaylist(true)}
                       className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
                     >
-                      Thêm vào Playlist
+                      {trongPlaylistId ? "Chuyển đến playlist" : "Thêm vào Playlist"}
                     </button>
+                    {trongPlaylistId ? (
+                      <button
+                        type="button"
+                        disabled={dangChay}
+                        onClick={() =>
+                          batDau(async () => {
+                            const kq = await xoaKhoiThuMuc(contentItemId, trongPlaylistId);
+                            setThongDiep(kq.thongDiep);
+                            setTimeout(dong, 700);
+                          })
+                        }
+                        className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-950/40"
+                      >
+                        Xoá khỏi playlist
+                      </button>
+                    ) : null}
                   </>
                 ) : (
                   <>
                     <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-                      Lưu vào…
+                      {trongPlaylistId ? "Chuyển đến…" : "Lưu vào…"}
                     </p>
-                    {cacPlaylist.map((p) => (
+                    {cacPlaylist
+                      .filter((p) => p.id !== trongPlaylistId)
+                      .map((p) => (
                       <button
                         key={p.id}
                         type="button"
                         disabled={dangChay}
                         onClick={() =>
                           batDau(async () => {
-                            const kq = await themVaoThuMuc(contentItemId, p.id);
+                            const kq = trongPlaylistId
+                              ? await chuyenDenThuMuc(contentItemId, trongPlaylistId, p.id)
+                              : await themVaoThuMuc(contentItemId, p.id);
                             setThongDiep(kq.thongDiep);
                             setTimeout(dong, 700);
                           })
@@ -164,7 +198,9 @@ export function MenuBaCham({ contentItemId }: { contentItemId: string }) {
                         batDau(async () => {
                           const moi = await taoThuMuc(tenMoi);
                           if (moi.ok && moi.id) {
-                            const kq = await themVaoThuMuc(contentItemId, moi.id);
+                            const kq = trongPlaylistId
+                              ? await chuyenDenThuMuc(contentItemId, trongPlaylistId, moi.id)
+                              : await themVaoThuMuc(contentItemId, moi.id);
                             setThongDiep(kq.thongDiep);
                           } else {
                             setThongDiep(moi.thongDiep);

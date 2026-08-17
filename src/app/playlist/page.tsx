@@ -121,7 +121,11 @@ export default async function TrangPlaylist() {
             cacPlaylist={cacPlaylist.map((p) => ({
               id: p.id,
               ten: p.title,
-              soMuc: p.items.length,
+              // Số THẬT trên YouTube, không phải số dòng trong bảng ý muốn
+              // của Am — hai con số khác hẳn nhau với playlist đã có video từ
+              // trước khi Am biết tới nó. Đếm nhầm khiến trang này luôn báo
+              // "0 mục" cho mọi playlist cũ, dù đọc lại từ YouTube rồi.
+              soMuc: p.youtubePlaylistId !== null ? p.itemCount : p.items.length,
               choSapXep: p.managedByAI,
               daCoThat: p.youtubePlaylistId !== null,
             }))}

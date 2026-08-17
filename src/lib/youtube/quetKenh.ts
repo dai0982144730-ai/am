@@ -382,6 +382,16 @@ async function layChiTietVaLuu(
         const kieuPhat = video.snippet?.liveBroadcastContent;
         if (kieuPhat === "upcoming" || kieuPhat === "live") return null;
 
+        // Bỏ qua YouTube Shorts. Đã vấp thật (2026-08-17): kênh nhạc "3
+        // Fingers" (contentGroupHint=music) đăng toàn Shorts thử thách nhảy
+        // 17–33 giây, không phải bài nhạc trọn vẹn — nhưng dấu hiệu "#dance"
+        // trong tiêu đề đủ mạnh để Claude vẫn xếp chúng vào nhóm nhạc. Kho
+        // sạch từ gốc rẻ hơn nhiều so với dựa vào Luật 5 phút ở Khám phá để
+        // che đi — che thì trang chủ (không áp luật đó) vẫn bày ra, và tốn cả
+        // một lượt gọi Claude phân loại một clip vô nghĩa.
+        const thoiLuong = docThoiLuong(video.contentDetails?.duration);
+        if (thoiLuong !== null && thoiLuong < 60) return null;
+
         return {
           sourceId: idNguon,
           externalId: video.id,
@@ -393,7 +403,7 @@ async function layChiTietVaLuu(
           publishedAt: video.snippet?.publishedAt
             ? new Date(video.snippet.publishedAt)
             : null,
-          durationSeconds: docThoiLuong(video.contentDetails?.duration),
+          durationSeconds: thoiLuong,
           viewOrPlayCount: docSo(video.statistics?.viewCount),
           likeCount: docSo(video.statistics?.likeCount),
           commentCount: docSo(video.statistics?.commentCount),
@@ -419,7 +429,7 @@ async function layChiTietVaLuu(
             coTheLaNhac(
               video.snippet?.title ?? "",
               video.snippet?.channelTitle,
-              docThoiLuong(video.contentDetails?.duration),
+              thoiLuong,
             ).coTheLaNhac
               ? ("pending_classification" as const)
               : ("pending_transcript" as const),

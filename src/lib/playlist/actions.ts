@@ -175,6 +175,29 @@ export async function xoaKhoiThuMuc(
   return kq;
 }
 
+/**
+ * Chuyển một nội dung từ thư mục này sang thư mục khác — làm ngay trên Am.
+ *
+ * Chỉ là thêm-rồi-bớt gộp thành một hành động cho người dùng, nhưng viết
+ * thành một lệnh riêng để giao diện gọi MỘT lần thay vì hai, và thông điệp trả
+ * về nói đúng việc vừa xảy ra ("đã chuyển") thay vì hai câu rời rạc.
+ */
+export async function chuyenDenThuMuc(
+  contentItemId: string,
+  tuPlaylistId: string,
+  denPlaylistId: string,
+): Promise<KetQua> {
+  const chan = await chanCua("chuyển playlist");
+  if (chan) return chan;
+
+  const kqThem = await themVaoThuMucLoi(contentItemId, denPlaylistId, "user");
+  if (!kqThem.ok) return kqThem;
+  await xoaKhoiThuMucLoi(contentItemId, tuPlaylistId);
+
+  revalidatePath("/playlist");
+  return { ok: true, thongDiep: kqThem.thongDiep.replace("Đã thêm vào", "Đã chuyển sang") };
+}
+
 /** Đổi tên thư mục trên Am — thật thì sinh đề xuất chờ duyệt. */
 export async function doiTenThuMuc(
   playlistId: string,
@@ -218,7 +241,11 @@ export async function dongBoLai(): Promise<KetQua> {
     revalidatePath("/playlist");
     return {
       ok: true,
-      thongDiep: `Đọc về ${kq.soDoc} playlist (${kq.themMoi} mới).`,
+      thongDiep:
+        `Đọc về ${kq.soDoc} playlist (${kq.themMoi} mới)` +
+        (kq.matBenYoutube > 0
+          ? `, gỡ ${kq.matBenYoutube} thư mục đã xoá bên YouTube.`
+          : "."),
     };
   } catch (e) {
     return {

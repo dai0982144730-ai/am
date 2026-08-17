@@ -40,6 +40,49 @@ export interface KetQuaDongBo {
   soDoc: number;
   themMoi: number;
   capNhat: number;
+  /** Playlist từng có thật trên YouTube nhưng giờ đã bị xoá bên đó */
+  matBenYoutube: number;
+}
+
+/**
+ * Đắp `PlaylistItem` (bảng "ý Am muốn") khớp với thành viên THẬT vừa đọc về.
+ *
+ * VÌ SAO CẦN: `PlaylistItem` sinh ra trống trơn cho mọi playlist đã có sẵn
+ * video từ trước khi Am biết tới nó — chỉ video thêm QUA AM mới tự có dòng ở
+ * đây. Không đắp lại thì bảng "ý muốn" mãi mãi trống với mọi playlist cũ, kéo
+ * theo ba thứ hỏng: trang Playlist báo "0 mục", trang chi tiết playlist không
+ * có gì để hiện, và nút "Bỏ khỏi playlist" bấm vào chẳng xoá được dòng nào vì
+ * dòng đó chưa từng tồn tại.
+ *
+ * Chỉ đắp cho video ĐÃ CÓ SẴN trong kho `ContentItem` — video khác chưa quét
+ * về thì Am chưa biết gì để hiện, lần quét sau khớp `externalId` sẽ tự đắp nốt.
+ */
+async function dapLaiThanhVien(
+  playlistId: string,
+  idVideo: string[],
+): Promise<void> {
+  if (idVideo.length === 0) return;
+
+  const daBiet = await prisma.contentItem.findMany({
+    where: { externalId: { in: idVideo }, source: { type: "youtube_channel" } },
+    select: { id: true },
+  });
+  if (daBiet.length === 0) return;
+
+  const dangCo = await prisma.playlistItem.findMany({
+    where: { playlistId },
+    select: { contentItemId: true, position: true },
+  });
+  const idDaCo = new Set(dangCo.map((i) => i.contentItemId));
+  let viTriKe = dangCo.reduce((max, i) => Math.max(max, i.position), -1) + 1;
+
+  for (const ci of daBiet) {
+    if (idDaCo.has(ci.id)) continue;
+    await prisma.playlistItem.create({
+      data: { playlistId, contentItemId: ci.id, position: viTriKe, addedBy: "user" },
+    });
+    viTriKe += 1;
+  }
 }
 
 /**
@@ -63,9 +106,12 @@ export async function dongBoPlaylist(): Promise<KetQuaDongBo> {
 
   let themMoi = 0;
   let capNhat = 0;
+  /** id playlist thật vừa thấy trên YouTube lần này — dùng để nhận ra playlist nào đã biến mất */
+  const idConThat = new Set<string>();
 
   for (const pl of tuYouTube) {
     if (!pl.id) continue;
+    idConThat.add(pl.id);
 
     const duLieu = {
       title: pl.snippet?.title ?? "(playlist không tên)",
@@ -107,8 +153,39 @@ export async function dongBoPlaylist(): Promise<KetQuaDongBo> {
       data: { lastSyncedVideoIds: idVideo },
     });
 
+    await dapLaiThanhVien(luu.id, idVideo);
     await soSanhVaSinhDeXuat(luu.id);
   }
 
-  return { soDoc: tuYouTube.length, themMoi, capNhat };
+  // Playlist nào ĐÃ TỪNG có thật (có youtubePlaylistId) mà lần đọc này không
+  // còn thấy trên YouTube nữa — nghĩa là chủ nhà đã xoá nó bên đó. Việc đã
+  // xảy ra thật rồi ngoài đời, ghi lại đúng sự thật lên Am không phải một
+  // hành vi ghi ra thế giới thật cần chờ duyệt — khác hẳn việc Am chủ động
+  // xoá một playlist thật (`apDungXoaPlaylist`), vẫn phải qua đề xuất → duyệt.
+  //
+  // Đã vấp thật (2026-08-17): playlist tiếng Anh xoá bên YouTube hôm trước
+  // vẫn nằm lì trên Am, vì bản cũ chỉ biết UPSERT những gì đọc VỀ, không biết
+  // tự hỏi "còn cái nào cũ mà giờ không thấy nữa không".
+  const matBen = await prisma.youTubePlaylist.findMany({
+    where: {
+      youtubePlaylistId: { not: null },
+      deletionRequestedAt: null,
+    },
+    select: { id: true, youtubePlaylistId: true },
+  });
+  const bienMat = matBen.filter(
+    (p) => p.youtubePlaylistId && !idConThat.has(p.youtubePlaylistId),
+  );
+  if (bienMat.length > 0) {
+    await prisma.youTubePlaylist.deleteMany({
+      where: { id: { in: bienMat.map((p) => p.id) } },
+    });
+  }
+
+  return {
+    soDoc: tuYouTube.length,
+    themMoi,
+    capNhat,
+    matBenYoutube: bienMat.length,
+  };
 }

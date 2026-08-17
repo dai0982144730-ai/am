@@ -9,6 +9,7 @@
  * THỨ TỰ CÁC BƯỚC — không đảo được, vì bước sau ăn kết quả bước trước:
  *
  *   1. Quét video mới từ các kênh YouTube đã đăng ký
+ *   1b. Đồng bộ Playlist từ YouTube (tên, thành viên, phát hiện playlist đã xoá)
  *   2. Quét bài mới từ blog và diễn đàn AI
  *   3. Tìm theo từ khoá đang quan tâm (chuyên mục "New")
  *   3b. Đi tìm ngoài vùng đã theo dõi, theo chủ đề rút từ thứ chấm điểm cao
@@ -54,6 +55,7 @@ import {
 } from "@/lib/tts/taoAmThanh";
 import { layLoiThoaiHangLoat } from "@/lib/youtube/loiThoai";
 import { dongBoNguonTuKenhDaDangKy, quetVideoMoi } from "@/lib/youtube/quetKenh";
+import { dongBoPlaylist } from "@/lib/playlist/dongBo";
 
 
 export interface KetQuaMotBuoc {
@@ -162,6 +164,28 @@ export async function quetDem(
         return `${kq.soKenhQuet} kênh, thêm ${kq.soVideoThemMoi} video mới${
           kq.kenhLoi.length ? `, ${kq.kenhLoi.length} kênh lỗi` : ""
         }`;
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước 1b: đồng bộ Playlist từ YouTube -----
+  //
+  // Chốt 2026-08-17: trước đây việc này CHỈ chạy khi chủ nhà tự bấm "Đọc lại
+  // từ YouTube" trên trang Playlist — nếu không ai bấm thì Am không bao giờ
+  // biết chủ nhà đã xoá/đổi tên/thêm bớt gì bên YouTube. Đã vấp thật: xoá một
+  // playlist tiếng Anh bên YouTube rồi mà bên Am vẫn còn, vì đúng lúc đó lịch
+  // quét đêm tự động cũng đang bị đứt (xem sửa lịch Task Scheduler cùng ngày).
+  // Đưa vào đây để mỗi đêm tự khớp lại, không cần nhớ bấm tay.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Đồng bộ Playlist từ YouTube",
+      async () => {
+        const kq = await dongBoPlaylist();
+        return (
+          `${kq.soDoc} playlist (${kq.themMoi} mới, ${kq.capNhat} cập nhật)` +
+          (kq.matBenYoutube > 0 ? `, gỡ ${kq.matBenYoutube} đã xoá bên YouTube` : "")
+        );
       },
       bao,
     ),

@@ -12,10 +12,17 @@
 import type { ContentGroup } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { chuaLuotQua } from "@/lib/lichSu/loc";
+import { dungDieuKien, type MaChuyenMuc } from "@/lib/nghiepVu/timVaLoc";
 import { layTronTheoTyLe } from "@/lib/nguonMoi/tron";
 
-/** Các trường cần cho một thẻ nội dung trên trang chủ. */
-const TRUONG_CAN_LAY = {
+/**
+ * Các trường cần cho một thẻ nội dung trên trang chủ.
+ *
+ * XUẤT RA NGOÀI để trang chi tiết playlist dùng lại y hệt — cùng một khuôn
+ * `TheNoiDung` thì `TheNoiDungCard` mới nhận thẳng được, không phải viết một
+ * kiểu thẻ riêng cho mỗi chỗ hiện lưới nội dung.
+ */
+export const TRUONG_CAN_LAY = {
   id: true,
   title: true,
   url: true,
@@ -98,29 +105,11 @@ async function layMotMuc(
   ten: string,
   soThe: number,
 ): Promise<MucTrangChu> {
-  const dieuKien = {
-    contentGroup: ma,
-    status: "classified" as const,
-    ...(ma === "truyen"
-      ? {
-          classification: {
-            OR: [
-              { aiGeneratedSuspicionScore: null },
-              { aiGeneratedSuspicionScore: { lt: 0.6 } },
-            ],
-          },
-        }
-      : {}),
-    // Nội dung mê tín bị đẩy ra khỏi mục triết học theo đúng bản thiết kế
-    ...(ma === "triet_hoc"
-      ? { classification: { misleadingContentFlag: false } }
-      : {}),
-  };
-
-  // Thứ đã lướt qua rồi thì không bày lại — trừ khi đã cất vào thư viện
-  // Hai lớp lọc, cả hai đều bắt buộc: đã lướt qua thì đừng bày lại, và không
-  // nghe được bằng tiếng Việt thì đừng bày ra ngay từ đầu
-  const loc = chuaLuotQua(dieuKien);
+  // Dùng CHUNG điều kiện với Khám phá (`dungDieuKien`) — bản trước tự viết
+  // điều kiện riêng ở đây, quên mất Luật 5 phút, nên trang chủ bày ra 10 video
+  // nhạc thực chất là YouTube Shorts vài chục giây mà Khám phá đã lọc sạch.
+  // Năm mã ở `CHUYEN_MUC` trùng khớp với `MaChuyenMuc` nên truyền thẳng được.
+  const loc = chuaLuotQua(dungDieuKien({ nhom: ma as MaChuyenMuc }));
 
   // Trộn nguồn quen với nguồn lạ theo tỉ lệ chủ nhà đặt cho chuyên mục này
   const [tron, tongSo] = await Promise.all([

@@ -106,7 +106,9 @@ function MotPlaylist({
             </p>
           )}
           <p className="text-xs text-neutral-400">
-            {muc.soMuc} mục
+            <Link href={`/playlist/${muc.id}`} className="hover:underline">
+              {muc.soMuc} mục
+            </Link>
             {thongDiep ? ` · ${thongDiep}` : ""}
           </p>
         </div>

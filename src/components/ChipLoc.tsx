@@ -531,7 +531,7 @@ export function ChipLoc({
       {/* --- Hàng chuyên mục --- */}
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {CHUYEN_MUC.map((m) => {
-          const so = m.ma ? demTheoNhom[m.ma] : undefined;
+          const so = m.ma ? demTheoNhom[m.ma] : demTheoNhom.tat_ca;
           const dangO = nhomHienTai === m.ma;
           return (
             <button
