@@ -1,8 +1,10 @@
 # Am — hướng dẫn cho Claude Code
 
-Đọc file này đầu mỗi phiên để nắm bối cảnh. Dự án được làm trên **hai máy**
-(PC ở nhà và máy ở văn phòng) thông qua GitHub, nên trạng thái công việc phải
-luôn được ghi lại trong repo chứ không nằm trong trí nhớ của một phiên.
+Đọc file này đầu mỗi phiên để nắm bối cảnh. Dự án làm trên **một máy duy
+nhất** (chốt lại 2026-08-17 — trước đó có giai đoạn ngắn định làm hai máy,
+không còn đúng nữa). Vẫn ghi tiến độ vào `docs/PROGRESS.md` rồi commit + push
+đều đặn — không phải để đồng bộ máy khác, mà để không mất ngữ cảnh giữa các
+phiên làm việc.
 
 ## Dự án là gì
 
@@ -42,9 +44,9 @@ từ các phiên trước. Đọc mục này rồi thì không phải dò lại 
 - **Không phải lập trình viên chuyên nghiệp.** Giải thích bằng lời thường, tránh
   thuật ngữ khi không cần. Nhưng **đừng nói trống không**: họ đọc số liệu rất
   kỹ và hay bắt được chỗ vô lý.
-- **Làm trên hai máy** (PC ở nhà, máy văn phòng) nối qua GitHub, và **rất hay
-  remote bằng điện thoại**. Câu trả lời phải đọc được trên màn hình nhỏ: bảng
-  ngắn, không đoạn văn dài, đường dẫn bấm được.
+- **Làm trên một máy duy nhất** (chốt lại 2026-08-17), và **rất hay remote
+  bằng điện thoại**. Câu trả lời phải đọc được trên màn hình nhỏ: bảng ngắn,
+  không đoạn văn dài, đường dẫn bấm được.
 - **Mảng chuyên môn thật của họ** là quản lý doanh nghiệp đầu tư, thiết kế, thi
   công và vận hành **dự án điện gió, thuỷ điện, điện mặt trời**. `am` chỉ là một
   trong các app; hướng chung là hệ thống AI và AI agent chạy trên web lẫn
@@ -175,47 +177,50 @@ scripts/chay-database.cmd
 Địa chỉ Neon vẫn nằm trong `.env` dưới dạng ghi chú — muốn quay lại chỉ việc đổi
 chỗ dấu `#`, **code không phải sửa một dòng nào**.
 
-**pgvector chưa có trên bản này.** Bản Windows không kèm sẵn, và hai cột
-`vector` cũng chưa hề tồn tại trong database dù `schema.prisma` có khai
-(`Unsupported("vector(1024)")`). `scripts/check-db.ts` biết phân biệt "chưa cài
-pgvector" với "cài rồi mà mất chỉ mục", nên đừng hoảng khi thấy nó báo chưa có.
-
-Chủ dự án chốt 2026-08-16: **cài pgvector vào bản ở máy**, không chuyển sang
-Neon. Hai bước, làm một lần:
-
-```bash
-powershell -ExecutionPolicy Bypass -File scripts/cai-pgvector.ps1
-```
-
-```bash
-npx tsx scripts/bat-pgvector.ts
-```
-
-Bước một dựng pgvector từ mã nguồn chính thức — **không có bản cài sẵn cho
-Windows**, cũng không có trong catalog StackBuilder (đã kiểm). Nó cần Visual
-Studio Build Tools khoảng 3–6 GB; script tự báo lệnh cài nếu thiếu. Bước hai tạo
-cột `vector` rồi dựng hai chỉ mục HNSW.
+**pgvector đã cài xong — 2026-08-17.** Visual Studio Build Tools 2022 (workload
+C++) cài qua winget, rồi dựng pgvector 0.8.6 từ mã nguồn chính thức — không có
+bản cài sẵn cho Windows, cũng không có trong catalog StackBuilder (đã kiểm).
+`scripts/check-db.ts` xác nhận: extension bật, đủ cột `vector` ở
+`ContentEmbedding`/`NoteEmbedding`, đủ hai chỉ mục HNSW.
 
 Hai chỉ mục HNSW **cố ý nằm ngoài migration**: Prisma không hiểu loại chỉ mục
 này nên mỗi lần `migrate dev` nó đều định xoá đi. Để trong một script chạy lại
-được bất cứ lúc nào thì không có gì để xoá nhầm.
+được bất cứ lúc nào thì không có gì để xoá nhầm — `scripts/bat-pgvector.ts`,
+chạy lại an toàn bất cứ khi nào nghi ngờ (vd. sau khi phục hồi database từ bản
+sao lưu chưa có pgvector).
+
+Còn cần: Phase 9 (personalization) phải tự sinh embedding cho nội dung/ghi chú
+(qua Voyage AI) rồi ghi vào cột `vector` — cột và chỉ mục đã sẵn sàng, nhưng
+chưa có dòng dữ liệu nào (0 embedding tính tới 2026-08-17). Việc tạo migration
+mới từ nay đã an toàn hơn: `scripts/cai-pgvector.ps1` chỉ cần chạy lại nếu cài
+lại Postgres từ đầu, không phải chạy mỗi lần.
 
 ## Cạm bẫy đã gặp — đọc trước khi chạy migration
 
-### Trên máy này, `prisma migrate dev` KHÔNG DÙNG ĐƯỢC. Viết migration bằng tay.
+### Trên máy này, `prisma migrate dev` VẪN KHÔNG DÙNG ĐƯỢC. Viết migration bằng tay.
 
 Lệnh đó dựng một **database bóng** rồi diễn lại toàn bộ migration từ đầu để dò
-sai lệch. Bản Postgres rời trên máy này không có pgvector, database bóng cũng
-vậy, nên nó chết ngay ở bản `20260813163633_them_pgvector`:
+sai lệch. Từ khi cài pgvector (2026-08-17) lỗi `extension "vector" is not
+available` đã hết — pgvector nằm ở cấp Postgres, database bóng mới tạo cũng
+dùng được luôn. Nhưng `migrate dev` **vẫn chết**, giờ chuyển sang lỗi khác khi
+diễn lại migration cũ:
 
 ```
-Error: extension "vector" is not available
+Error: column "likeRatio" of relation "ContentItem" is a generated column
+HINT: Use ALTER TABLE ... ALTER COLUMN ... DROP EXPRESSION instead.
 ```
 
-Đừng đi sửa lịch sử migration — nó vẫn sạch (14 bản, 14 file, không bản nào lỗi).
-Vấn đề nằm ở database bóng, không phải database thật.
+Nguyên nhân: một bản migration cũ viết `ALTER COLUMN ... DROP DEFAULT` cho cột
+`GENERATED ALWAYS AS ... STORED` (xem mục "Hai cột SINH TỰ ĐỘNG" bên dưới) —
+cú pháp đó không hợp lệ khi Postgres diễn lại nghiêm ngặt trên database bóng,
+dù trên database thật câu đó chưa từng chạy hỏng. Đã thử 2026-08-17: chạy
+`migrate dev --create-only` thật để kiểm, xoá migration test ngay sau đó,
+không giữ lại.
 
-Cách làm migration mới:
+Đừng đi sửa lịch sử migration — nó vẫn sạch. Vấn đề nằm ở database bóng, không
+phải database thật.
+
+Cách làm migration mới, không đổi:
 
 1. Sửa `prisma/schema.prisma`
 2. Tự tạo thư mục `prisma/migrations/<YYYYMMDDHHMMSS>_<ten>/migration.sql`
@@ -228,9 +233,12 @@ Xem hai bản gần nhất làm mẫu: `..._them_linh_vuc_khoa_hoc`,
 ### Hai chỉ mục HNSW: Prisma sẽ tự ý xoá thứ nó không hiểu
 
 `ContentEmbedding_vector_idx` và `NoteEmbedding_vector_idx` do pgvector quản lý,
-Prisma không biết chúng tồn tại nên mỗi lần sinh migration nó đều định xoá đi.
-Viết tay thì không dính, nhưng nếu có lúc nào chạy được `migrate dev` (ví dụ trên
-máy có pgvector) thì **nhớ xoá các dòng `DROP INDEX ..._vector_idx`** trước khi áp.
+Prisma không biết chúng tồn tại nên mỗi lần sinh migration nó đều định xoá đi —
+**giờ pgvector đã cài, `migrate diff`/`migrate dev` THẤY được hai chỉ mục này
+nên chắc chắn sẽ đề nghị xoá**, cần cảnh giác hơn trước chứ không phải bớt đi.
+Viết tay thì không dính. Nếu lỡ chạy `migrate dev`/`migrate diff` thì **luôn
+xoá các dòng `DROP INDEX ..._vector_idx`** trước khi áp bất cứ file nào nó sinh
+ra.
 
 Riêng cột `vector` thì đã an toàn — khai báo bằng `Unsupported("vector(1024)")`
 nên Prisma giữ lại.

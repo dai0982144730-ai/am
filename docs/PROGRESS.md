@@ -3076,3 +3076,35 @@ chi tiết playlist và việc ghi thật thứ tự lên YouTube (`apDungDoiThu
 được bấm thử trực tiếp hay chạy thật với một playlist thật (tránh tốn hạn mức
 không cần thiết trên dữ liệu thật của chủ dự án mà chưa có gì để đổi thứ tự).
 Lần đầu dùng thử, nên thử với một playlist nhỏ vài video trước.
+
+## 2026-08-17 (buổi tư) — Cài xong pgvector, sửa lại CLAUDE.md ghi sai "hai máy"
+
+**Sửa CLAUDE.md**: hỏi lại chủ dự án thì xác nhận dự án chỉ làm trên **một máy
+duy nhất** — hai chỗ ghi "hai máy" (đầu file và mục "Chủ dự án là ai") đều sai,
+sót lại từ một giai đoạn ngắn định làm hai máy rồi thôi. Đã sửa cả hai.
+
+**Cài pgvector (mục 5 trong danh sách việc còn lại)**: chủ dự án đã chốt hướng
+này từ 16/08 và chuẩn bị sẵn hai script (`cai-pgvector.ps1`,
+`bat-pgvector.ts`) — phiên này chỉ còn thiếu Visual Studio Build Tools, cài qua
+`winget` (~3-6 GB, khoảng 15 phút). Vấp một lỗi nhỏ khi chạy `cai-pgvector.ps1`
+lần đầu: PowerShell 5.1 đọc sai ký tự tiếng Việt/gạch ngang trong file vì
+thiếu BOM UTF-8, sửa bằng cách ghi lại file kèm BOM. Sau đó dựng và cài
+pgvector 0.8.6 từ mã nguồn thành công, `bat-pgvector.ts` bật extension + tạo
+cột `vector` + hai chỉ mục HNSW. `check-db.ts` xác nhận sạch.
+
+**Đo lại luôn bẫy migration cũ**: pgvector cài ở cấp Postgres nên bẫy
+`extension "vector" is not available` trên database bóng đã hết — nhưng
+`prisma migrate dev` vẫn không chạy được, giờ chết ở một lỗi khác (`likeRatio`
+là cột GENERATED, không ALTER COLUMN DROP DEFAULT được khi diễn lại nghiêm
+ngặt). Vẫn phải viết migration bằng tay như cũ, chỉ đổi lý do. Đã cập nhật
+CLAUDE.md đúng chi tiết mới, và cảnh báo thêm: giờ `migrate diff` THẤY được
+hai chỉ mục HNSW nên chắc chắn sẽ đề nghị xoá — phải cảnh giác hơn trước, không
+phải bớt đi.
+
+**Còn thiếu để thật sự dùng được tìm kiếm ngữ nghĩa**: cột và chỉ mục đã sẵn
+sàng nhưng 0 dòng embedding — cần viết bước gọi Voyage AI sinh embedding cho
+nội dung/ghi chú, thuộc Phase 9, chưa làm trong phiên này.
+
+**Mục 6 (cổng API tiendo/phaply) vẫn chưa làm** — hỏi lại điều kiện tiên quyết
+"đã kết nối trợ lý điện thoại xong" thì chủ dự án không xác nhận, nên giữ
+nguyên quyết định hoãn đã chốt trước đó.

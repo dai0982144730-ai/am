@@ -1,4 +1,4 @@
-# Dựng và cài pgvector vào bản PostgreSQL đang chạy ở máy này.
+﻿# Dựng và cài pgvector vào bản PostgreSQL đang chạy ở máy này.
 #
 # ## Vì sao phải tự dựng
 #
