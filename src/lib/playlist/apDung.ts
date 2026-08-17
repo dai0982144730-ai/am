@@ -130,6 +130,8 @@ export async function apDungDeXuat(idDeXuat: string): Promise<KetQuaApDung> {
         return await apDungXoaPlaylist(idDeXuat, deXuat);
       case "rename_playlist":
         return await apDungDoiTen(idDeXuat, deXuat);
+      case "reorder_items":
+        return await apDungDoiThuTu(idDeXuat, deXuat);
     }
   } catch (e) {
     // Giữ nguyên trạng thái `approved` để bấm lại được sau khi sửa nguyên nhân
@@ -339,4 +341,93 @@ async function apDungDoiTen(
   });
 
   return { ok: true, thongDiep: `Đã đổi tên thật thành "${deXuat.newPlaylistTitle}".` };
+}
+
+/**
+ * Ghi lại thứ tự thật trên YouTube cho khớp `desiredOrder`.
+ *
+ * CHỈ GHI NHỮNG DÒNG THẬT SỰ LỆCH CHỖ — không ghi lại cả playlist. Đọc thật
+ * trước để biết vị trí hiện tại, rồi so với vị trí Am muốn (chỉ số trong
+ * `desiredOrder`, sau khi bỏ những contentItem không phải video YouTube hoặc
+ * đã tự mất khỏi YouTube). Mỗi dòng lệch tốn 50 đơn vị hạn mức
+ * (`playlistItems.update`) — dòng nào đã đúng chỗ thì bỏ qua hẳn, không gọi.
+ */
+async function apDungDoiThuTu(
+  idDeXuat: string,
+  deXuat: DeXuatDayDu,
+): Promise<KetQuaApDung> {
+  const idPlaylistThat = deXuat.suggestedPlaylist?.youtubePlaylistId;
+  if (!idPlaylistThat) {
+    return { ok: false, thongDiep: "Playlist chưa có thật trên YouTube." };
+  }
+
+  const thuTuMongMuon = Array.isArray(deXuat.desiredOrder)
+    ? (deXuat.desiredOrder as unknown[]).filter((v): v is string => typeof v === "string")
+    : [];
+  if (thuTuMongMuon.length === 0) {
+    return { ok: false, thongDiep: "Đề xuất thiếu thứ tự mong muốn." };
+  }
+
+  const cacNoiDung = await prisma.contentItem.findMany({
+    where: { id: { in: thuTuMongMuon } },
+    select: { id: true, url: true },
+  });
+  const urlTheoId = new Map(cacNoiDung.map((c) => [c.id, c.url]));
+  const thuTuMaVideo = thuTuMongMuon
+    .map((id) => maVideoTuUrl(urlTheoId.get(id) ?? null))
+    .filter((ma): ma is string => ma !== null);
+
+  const trang = await ghiApiDoc<{
+    items?: { id?: string; snippet?: { position?: number; resourceId?: { videoId?: string } } }[];
+  }>(idPlaylistThat, "");
+  const dongTheoVideo = new Map(
+    (trang?.items ?? []).map((i) => [i.snippet?.resourceId?.videoId ?? "", i]),
+  );
+
+  let soDaGhi = 0;
+  for (let viTri = 0; viTri < thuTuMaVideo.length; viTri += 1) {
+    const ma = thuTuMaVideo[viTri];
+    const dong = dongTheoVideo.get(ma);
+    // Video này đã tự mất khỏi YouTube từ trước — không có dòng nào để sửa vị
+    // trí, bỏ qua chứ không báo lỗi.
+    if (!dong?.id) continue;
+    if (dong.snippet?.position === viTri) continue;
+
+    await ghiYouTube(
+      "playlistItems.update",
+      "playlistItems",
+      { part: "snippet" },
+      {
+        id: dong.id,
+        snippet: {
+          playlistId: idPlaylistThat,
+          resourceId: { kind: "youtube#video", videoId: ma },
+          position: viTri,
+        },
+      },
+      "PUT",
+    );
+    soDaGhi += 1;
+  }
+
+  await prisma.playlistActionLog.create({
+    data: {
+      actionType: "move_item",
+      payload: { youtubePlaylistId: idPlaylistThat, soDongDaSua: soDaGhi },
+      triggeredBy: "user_single_approval",
+    },
+  });
+
+  await prisma.playlistOrganizationSuggestion.update({
+    where: { id: idDeXuat },
+    data: { status: "applied", decidedAt: new Date() },
+  });
+
+  return {
+    ok: true,
+    thongDiep:
+      soDaGhi > 0
+        ? `Đã ghi lại thứ tự thật — sửa ${soDaGhi} video.`
+        : "Thứ tự thật hoá ra đã đúng rồi, không phải ghi gì.",
+  };
 }

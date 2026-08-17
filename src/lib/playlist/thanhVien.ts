@@ -195,6 +195,48 @@ export async function xoaKhoiThuMuc(
 }
 
 /**
+ * Đổi chỗ một nội dung với nội dung đứng ngay trước/sau nó trong thư mục —
+ * ngay lập tức trên Am, không đụng gì tới YouTube.
+ *
+ * Chỉ ĐỔI CHỖ (swap) hai `position` liền kề, không viết lại toàn bộ danh sách
+ * — rẻ, và đúng nghĩa "nhích lên một bậc" người dùng bấm.
+ *
+ * Việc GHI THẬT thứ tự mới lên YouTube không nằm ở đây: `soSanhVaSinhDeXuat`
+ * tự phát hiện thứ tự lệch và sinh đề xuất `reorder_items` chờ duyệt, đúng
+ * nguyên tắc mọi lần ghi thật đều phải qua duyệt.
+ */
+export async function doiThuTu(
+  playlistId: string,
+  contentItemId: string,
+  huong: "len" | "xuong",
+): Promise<KetQua> {
+  const cac = await prisma.playlistItem.findMany({
+    where: { playlistId },
+    orderBy: { position: "asc" },
+    select: { id: true, contentItemId: true, position: true },
+  });
+
+  const viTri = cac.findIndex((m) => m.contentItemId === contentItemId);
+  if (viTri === -1) return { ok: false, thongDiep: "Không tìm thấy trong thư mục này." };
+
+  const viTriKe = huong === "len" ? viTri - 1 : viTri + 1;
+  if (viTriKe < 0 || viTriKe >= cac.length) {
+    return { ok: false, thongDiep: huong === "len" ? "Đã ở đầu danh sách." : "Đã ở cuối danh sách." };
+  }
+
+  const a = cac[viTri];
+  const b = cac[viTriKe];
+
+  await prisma.$transaction([
+    prisma.playlistItem.update({ where: { id: a.id }, data: { position: b.position } }),
+    prisma.playlistItem.update({ where: { id: b.id }, data: { position: a.position } }),
+  ]);
+
+  await soSanhVaSinhDeXuat(playlistId);
+  return { ok: true, thongDiep: "Đã đổi chỗ." };
+}
+
+/**
  * So sánh ý Am muốn (`PlaylistItem`) với thật trên YouTube
  * (`lastSyncedVideoIds`), rồi tự dọn đề xuất cho khớp.
  *
@@ -216,6 +258,7 @@ export async function soSanhVaSinhDeXuat(playlistId: string): Promise<void> {
       lastSyncedVideoIds: true,
       deletionRequestedAt: true,
       items: {
+        orderBy: { position: "asc" },
         select: {
           contentItem: { select: { id: true, url: true, source: { select: { type: true } } } },
         },
@@ -305,6 +348,79 @@ export async function soSanhVaSinhDeXuat(playlistId: string): Promise<void> {
         reason: "Bạn đã bỏ khỏi thư mục trên Am, chờ xoá thật khỏi YouTube.",
         type: "remove_item",
         status: "pending",
+      },
+    });
+  }
+
+  // --- Việc 4: thứ tự — chỉ xét khi thành viên đã khớp hệt nhau. So thứ tự
+  // lúc còn thiếu/thừa video thì vô nghĩa, đợi add/remove xong đã.
+  if (canThem.length === 0 && canBot.length === 0) {
+    await xetLechThuTu(playlistId, pl.items, pl.lastSyncedVideoIds);
+  }
+}
+
+/**
+ * So thứ tự Am muốn với thứ tự thật trên YouTube, tự sinh/tự đóng đề xuất
+ * `reorder_items`. Mỗi playlist tối đa MỘT đề xuất thứ tự đang chờ — đổi ý
+ * nhiều lần trước khi ghi thì chỉ cập nhật `desiredOrder`, không đẻ thêm đề
+ * xuất mới.
+ */
+async function xetLechThuTu(
+  playlistId: string,
+  items: { contentItem: { id: string; url: string | null; source: { type: string } } }[],
+  lastSyncedVideoIds: string[],
+): Promise<void> {
+  const thuTuVideoYouTube = items
+    .filter((it) => it.contentItem.source.type === "youtube_channel")
+    .map((it) => maVideoTuUrl(it.contentItem.url))
+    .filter((ma): ma is string => ma !== null);
+
+  const khopThuTu =
+    thuTuVideoYouTube.length === lastSyncedVideoIds.length &&
+    thuTuVideoYouTube.every((ma, i) => ma === lastSyncedVideoIds[i]);
+
+  const dangCho = await prisma.playlistOrganizationSuggestion.findFirst({
+    where: { suggestedPlaylistId: playlistId, status: { in: ["pending", "approved"] }, type: "reorder_items" },
+    select: { id: true },
+  });
+
+  if (khopThuTu) {
+    if (dangCho) {
+      await prisma.playlistOrganizationSuggestion.update({
+        where: { id: dangCho.id },
+        data: {
+          status: "rejected",
+          decidedAt: new Date(),
+          reason: "Thứ tự đã khớp thật trên YouTube, không cần ghi nữa.",
+        },
+      });
+    }
+    return;
+  }
+
+  // Chỉ có nghĩa khi có từ hai video YouTube trở lên — một video thì không
+  // có "thứ tự" nào để lệch.
+  if (thuTuVideoYouTube.length < 2) return;
+
+  const thuTuMongMuon = items.map((it) => it.contentItem.id);
+  const lyDo =
+    `Thứ tự trên Am khác thứ tự thật trên YouTube (${thuTuVideoYouTube.length} video). ` +
+    `Ghi lại tốn tối đa ${thuTuVideoYouTube.length * 50} đơn vị hạn mức — mỗi video lệch chỗ ` +
+    `tốn 50 đơn vị (playlistItems.update), video nào đã đúng chỗ thì bỏ qua.`;
+
+  if (dangCho) {
+    await prisma.playlistOrganizationSuggestion.update({
+      where: { id: dangCho.id },
+      data: { desiredOrder: thuTuMongMuon, reason: lyDo },
+    });
+  } else {
+    await prisma.playlistOrganizationSuggestion.create({
+      data: {
+        suggestedPlaylistId: playlistId,
+        type: "reorder_items",
+        status: "pending",
+        desiredOrder: thuTuMongMuon,
+        reason: lyDo,
       },
     });
   }

@@ -15,7 +15,7 @@
 | **4c** — Ngẫu hứng (trước gọi "New") | ✅ gộp vào chip Khám phá, gỡ trang /quan-tam riêng — 2026-08-17 |
 | **7a** — Thư viện cá nhân | ✅ xong, thư mục tự đặt tên + trạng thái đọc |
 | **8** — Ghi chú khi xem | ✅ xong, gõ hoặc nói, Claude tự xếp ngăn |
-| **7b** — Playlist YouTube | ✅ đồng bộ hai chiều + xoá/đổi tên qua đề xuất, menu Thêm vào Playlist — 2026-08-17 |
+| **7b** — Playlist YouTube | ✅ đồng bộ hai chiều + xoá/đổi tên/**đổi thứ tự** qua đề xuất, menu Thêm vào Playlist, trang chi tiết `/playlist/[id]` — 2026-08-17 |
 | **Theo dõi bộ nhiều tập** | ✅ dò tập 1 trước khi theo, thả dần theo tốc độ xem, loại nếu 3 ngày không xem — 2026-08-17 |
 | **Khoa học** | ✅ chuyên mục thứ 5 + 7 nguồn báo/diễn đàn khoa học |
 | **Lịch sử xem** | ✅ mở ra là rời luồng chính, không bày lại |
@@ -2914,10 +2914,10 @@ Chạy như một bước mới trong quét đêm, ngay sau chấm điểm vòng
 
 ### Giới hạn đã biết, chưa làm
 
-- Playlist: chưa đồng bộ thứ tự (reorder) trong playlist, chỉ thêm/bớt.
-- Bộ tập: trần 2 tập/ngày chỉ chắc với phần Am chủ động ưu tiên phân loại;
-  suất chuyên mục thường vẫn có thể vô tình phân loại một tập mà không qua
-  trần này.
+- ~~Playlist: chưa đồng bộ thứ tự (reorder)~~ — vá xong buổi ba cùng ngày, xem
+  mục bên dưới.
+- ~~Bộ tập: trần 2 tập/ngày có thể bị suất phân loại thường lách qua~~ — vá
+  xong buổi ba cùng ngày.
 - pgvector vẫn chưa cài — mục tìm kiếm ngữ nghĩa chưa bật được (xem mục
   2026-08-16 phía trên).
 
@@ -2997,6 +2997,82 @@ trống trơn.
 Trang chi tiết playlist mới và hai lựa chọn menu mới (Xoá khỏi playlist,
 Chuyển đến playlist) mới được xác nhận bằng `tsc`, đọc HTML render ở máy chủ,
 và một kịch bản chạy thẳng vào database thật — **chưa bấm thử trực tiếp**
-trên trình duyệt, vì khung xem trước trong phiên này báo `document.hidden`,
-không dựng được khung hình để bấm. Chủ dự án nên tự thử tay luồng
-thêm/xoá/chuyển playlist một lần khi rảnh.
+trên trình duyệt.
+
+**Đính chính lý do** (buổi ba cùng ngày mới rõ): không phải do khung xem
+trước không dựng được hình như ghi ở buổi hai — thử lại thì `/playlist` luôn
+hiện "Cần đăng nhập" vì **trình duyệt của công cụ chưa từng đăng nhập tài
+khoản Google của chủ dự án**. Việc đăng nhập cần chính chủ dự án làm — không
+được phép thay (nhập thông tin đăng nhập hộ người dùng là việc bị cấm). Nên
+mọi trang cần đăng nhập (Playlist, Thư viện…) từ trước tới nay luôn cần chủ
+dự án tự bấm thử, không phải giới hạn kỹ thuật có thể vá được.
+
+## 2026-08-17 (buổi ba) — Bịt lỗ trần 2 tập/ngày, thêm nguồn nhạc dài thật, đồng bộ thứ tự Playlist
+
+Ba việc theo đúng thứ tự ưu tiên chủ dự án chốt (mục 2, 3, 4 trong danh sách
+việc còn lại).
+
+### Bịt lỗ trần 2 tập/ngày
+
+Lỗ hổng đã ghi nhận từ trước (xem "Giới hạn đã biết" cũ): một tập của bộ đang
+theo có thể lọt qua suất phân loại chuyên mục bình thường — lúc đó nó đã
+`status: "classified"` và có điểm, hiện ra Khám phá ngay bất kể trần 2
+tập/ngày cho phép thả hay chưa. Bản trước chấp nhận đây là giới hạn không sửa
+được nếu không viết lại cả đường ống phân loại.
+
+Hoá ra sửa được rẻ hơn nhiều bằng cách chặn ở **đầu ra** thay vì đầu vào:
+`dungDieuKien` (dùng chung cho Khám phá và trang chủ) giờ tự hỏi thêm "tập này
+đã tới lượt thả chưa" — so `TapCuaBo.soTap` với `TheoDoiBoTap.tapCaoNhatDaTha`
+của đúng bộ đó, tập nào vượt (`soTap > tapCaoNhatDaTha`) thì ẩn khỏi mọi danh
+sách, kể cả khi nó đã phân loại và chấm điểm xong. Tập đã thả thì không đụng
+tới, vẫn hiện và sắp xếp theo điểm như bình thường.
+
+Kiểm bằng kịch bản thật: dựng bộ ba tập, tập 1–2 đã thả, tập 3 phân loại+chấm
+điểm xong nhưng chưa tới lượt thả — Khám phá đúng là ẩn tập 3, vẫn hiện tập 1
+và 2, chip đếm đúng số đã trừ tập bị ẩn.
+
+### Thêm nguồn nhạc dài thật
+
+Nhánh Music gần trống nhiều đêm liền — script mới `scripts/them-nguon-nhac.ts`
+tìm kênh (không phải video) qua `search.list(type=channel)` theo đúng năm mục
+"Thể loại nhạc" đã có sẵn ở Khám phá (tập BPM, dance, piano, guitar rock, nhạc
+vàng), lấy vài video gần nhất mỗi kênh ứng viên để xác nhận THẬT SỰ dài (trên
+5 phút trung bình) trước khi thêm — tránh lặp lại đúng lỗi kênh "3 Fingers"
+(Shorts đội lốt nhạc). Chạy thật: thêm 10 kênh (2 mỗi thể loại), tiêu 1.027
+đơn vị hạn mức, một ứng viên ("Guitar Instrumentals - Topic") bị loại đúng vì
+video mẫu không đủ dài. Từ đêm sau `quetVideoMoi` tự quét các kênh này như
+mọi kênh nhạc khác.
+
+### Đồng bộ thứ tự Playlist
+
+Thêm loại đề xuất mới `reorder_items` (migration tay
+`20260817120000_thu_tu_playlist`, theo đúng cách né bẫy pgvector đã ghi ở đầu
+file này) và trường `desiredOrder` (mảng contentItemId theo đúng thứ tự Am
+muốn).
+
+- **Sửa trên Am**: hai nút lên/xuống trên mỗi thẻ ở trang chi tiết playlist
+  (`NutDoiViTri`) — đổi chỗ `position` với thẻ liền kề ngay lập tức, không
+  đụng YouTube.
+- **Phát hiện lệch**: `soSanhVaSinhDeXuat` giờ có thêm việc thứ tư — CHỈ xét
+  khi thành viên hai bên đã khớp hệt nhau (không còn gì phải thêm/bớt), so
+  thứ tự Am muốn với `lastSyncedVideoIds`, lệch thì tự sinh (hoặc cập nhật)
+  một đề xuất `reorder_items` duy nhất cho cả playlist — không đẻ thêm đề xuất
+  mỗi lần đổi ý trước khi ghi.
+- **Ghi thật**: `apDungDoiThuTu` chỉ ghi những dòng THẬT SỰ lệch chỗ (so vị trí
+  thật đọc lại từ YouTube với vị trí mong muốn), video nào đã đúng chỗ thì bỏ
+  qua hẳn — không ghi lại nguyên playlist. Đề xuất nói rõ chi phí ước tính
+  (50 đơn vị/video lệch) ngay trong lý do, trước khi chủ dự án bấm duyệt.
+
+Kiểm bằng kịch bản thật: dựng playlist 3 video thứ tự thật A-B-C, Am muốn
+C-A-B → sinh đúng đề xuất với `desiredOrder` khớp; đổi ý hai lần bằng nút
+lên/xuống → `desiredOrder` cập nhật đúng theo, không đẻ đề xuất mới; đặt lại
+đúng thứ tự thật → đề xuất tự đóng (`rejected`).
+
+### Chưa kiểm bằng cách bấm thật
+
+Cả ba việc trên đều xác nhận bằng `tsc`, `eslint`, và kịch bản chạy thẳng vào
+database thật (không phải chỉ đọc code) — nhưng hai nút lên/xuống trên trang
+chi tiết playlist và việc ghi thật thứ tự lên YouTube (`apDungDoiThuTu`) chưa
+được bấm thử trực tiếp hay chạy thật với một playlist thật (tránh tốn hạn mức
+không cần thiết trên dữ liệu thật của chủ dự án mà chưa có gì để đổi thứ tự).
+Lần đầu dùng thử, nên thử với một playlist nhỏ vài video trước.

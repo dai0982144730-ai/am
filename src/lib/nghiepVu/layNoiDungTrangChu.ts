@@ -109,7 +109,7 @@ async function layMotMuc(
   // điều kiện riêng ở đây, quên mất Luật 5 phút, nên trang chủ bày ra 10 video
   // nhạc thực chất là YouTube Shorts vài chục giây mà Khám phá đã lọc sạch.
   // Năm mã ở `CHUYEN_MUC` trùng khớp với `MaChuyenMuc` nên truyền thẳng được.
-  const loc = chuaLuotQua(dungDieuKien({ nhom: ma as MaChuyenMuc }));
+  const loc = chuaLuotQua(await dungDieuKien({ nhom: ma as MaChuyenMuc }));
 
   // Trộn nguồn quen với nguồn lạ theo tỉ lệ chủ nhà đặt cho chuyên mục này
   const [tron, tongSo] = await Promise.all([

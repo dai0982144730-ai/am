@@ -89,6 +89,8 @@ export default async function TrangPlaylist() {
         return `Xoá hẳn thư mục "${d.currentPlaylistTitle ?? ten}"`;
       case "rename_playlist":
         return `Đổi tên "${d.currentPlaylistTitle ?? ""}" thành "${d.newPlaylistTitle ?? ""}"`;
+      case "reorder_items":
+        return `Ghi lại thứ tự bài trong "${ten}"`;
     }
   }
 

@@ -183,6 +183,37 @@ const KHOANG_THOI_GIAN: Record<MaThoiGian, { tu?: number; den?: number }> = {
 };
 
 /**
+ * Tập nào đã phân loại xong nhưng CHƯA TỚI LƯỢT THẢ theo trần 2 tập/ngày —
+ * ẩn khỏi mọi danh sách, kể cả khi nó lọt qua suất phân loại chuyên mục
+ * thường (`chiaSuatPhanLoai`) chứ không qua đúng đường thả của
+ * `quanLyBoTap.ts`.
+ *
+ * VÌ SAO CẦN: đã vấp thật (2026-08-17) — `xuLyTapMoiPhanLoai` chạy SAU bước
+ * phân loại chính, nên lúc nó xét tới thì `ContentItem` đã `status:
+ * "classified"` và có điểm rồi, hiện ra Khám phá ngay bất kể trần 2 tập/ngày
+ * cho phép thả hay chưa. Bản thiết kế trước chấp nhận đây là giới hạn không
+ * sửa được nếu không viết lại cả đường ống phân loại — nhưng thật ra sửa được
+ * rẻ hơn nhiều bằng cách chặn ở ĐẦU RA (danh sách hiện) thay vì đầu vào (lúc
+ * phân loại): so `TapCuaBo.soTap` với `TheoDoiBoTap.tapCaoNhatDaTha` của
+ * đúng bộ đó, tập nào vượt thì giấu.
+ *
+ * Tập ĐÃ thả (`soTap <= tapCaoNhatDaTha`) không bị đụng tới — vẫn hiện, sắp
+ * xếp theo điểm như bình thường.
+ */
+async function idNoiDungChuaThaTheoBo(): Promise<string[]> {
+  const cacTap = await prisma.tapCuaBo.findMany({
+    select: {
+      contentItemId: true,
+      soTap: true,
+      bo: { select: { tapCaoNhatDaTha: true } },
+    },
+  });
+  return cacTap
+    .filter((t) => t.soTap > t.bo.tapCaoNhatDaTha)
+    .map((t) => t.contentItemId);
+}
+
+/**
  * Dựng điều kiện lọc từ những gì người dùng chọn.
  *
  * XUẤT RA NGOÀI để trang chủ dùng lại y hệt — xem `layNoiDungTrangChu.ts`. Bản
@@ -191,12 +222,15 @@ const KHOANG_THOI_GIAN: Record<MaThoiGian, { tu?: number; den?: number }> = {
  * giây, Khám phá đúng luật nên không hiện cái nào. Dùng chung một hàm thì hai
  * trang không thể lệch nhau được nữa, vì chúng CÙNG một điều kiện.
  */
-export function dungDieuKien(loc: BoLoc): Prisma.ContentItemWhereInput {
+export async function dungDieuKien(loc: BoLoc): Promise<Prisma.ContentItemWhereInput> {
   const laNgauHung = loc.nhom === "ngau_hung";
   const dieuKien: Prisma.ContentItemWhereInput = laNgauHung
     ? // Ngẫu hứng lấy CẢ thứ đã bị loại — đó là điểm khác biệt của nó.
       { status: { in: ["classified", "rejected"] } }
     : { status: "classified" };
+
+  const anTheoTran = await idNoiDungChuaThaTheoBo();
+  if (anTheoTran.length > 0) dieuKien.id = { notIn: anTheoTran };
   const va: Prisma.ContentItemWhereInput[] = [];
   const phanLoai: Prisma.ContentClassificationWhereInput = {};
 
@@ -418,9 +452,8 @@ export async function timNoiDung(loc: BoLoc): Promise<KetQuaTim> {
   // tìm kiếm thường là để lần lại đúng cái vừa xem hôm qua. Chỉ lúc lướt không
   // mục đích mới cần giấu.
   const dangTimCuThe = Boolean(loc.tuKhoa?.trim());
-  const dieuKien = dangTimCuThe
-    ? dungDieuKien(loc)
-    : chuaLuotQua(dungDieuKien(loc));
+  const dieuKienGoc = await dungDieuKien(loc);
+  const dieuKien = dangTimCuThe ? dieuKienGoc : chuaLuotQua(dieuKienGoc);
 
   const [cacThe, tongSo] = await Promise.all([
     prisma.contentItem.findMany({
@@ -495,7 +528,7 @@ export async function danhSachTacGia(
   // Cùng một lỗi đã xảy ra ở chip chuyên mục và đã phải sửa một lần. Con số nào
   // hiện cạnh một nút lọc cũng là một lời hứa về thứ sẽ thấy khi bấm vào.
   const cacBai = await prisma.contentItem.findMany({
-    where: chuaLuotQua(dungDieuKien({ nhom })),
+    where: chuaLuotQua(await dungDieuKien({ nhom })),
     select: { classification: { select: { authorId: true } } },
   });
 
@@ -542,8 +575,8 @@ export async function demTheoNhom(): Promise<Record<string, number>> {
 
   const [so, tatCa] = await Promise.all([
     Promise.all(
-      cac.map((nhom) =>
-        prisma.contentItem.count({ where: chuaLuotQua(dungDieuKien({ nhom })) }),
+      cac.map(async (nhom) =>
+        prisma.contentItem.count({ where: chuaLuotQua(await dungDieuKien({ nhom })) }),
       ),
     ),
     // "Tất cả" không phải tổng của sáu con số trên — không truyền `nhom` thì
@@ -551,7 +584,7 @@ export async function demTheoNhom(): Promise<Record<string, number>> {
     // mảng cố định (thứ Ngẫu hứng cũng bày ra). Đúng nghĩa "tất cả những gì
     // đang có thể bấm vào xem", khớp với con số Khám phá hiện khi không chọn
     // chip nào.
-    prisma.contentItem.count({ where: chuaLuotQua(dungDieuKien({})) }),
+    prisma.contentItem.count({ where: chuaLuotQua(await dungDieuKien({})) }),
   ]);
 
   return Object.fromEntries([

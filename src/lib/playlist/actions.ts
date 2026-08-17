@@ -17,6 +17,7 @@ import { apDungDeXuat } from "./apDung";
 import { dongBoPlaylist } from "./dongBo";
 import {
   doiTenThuMuc as doiTenThuMucLoi,
+  doiThuTu as doiThuTuLoi,
   huyXoaThuMuc as huyXoaThuMucLoi,
   taoThuMucMoi as taoThuMucMoiLoi,
   themVaoThuMuc as themVaoThuMucLoi,
@@ -196,6 +197,21 @@ export async function chuyenDenThuMuc(
 
   revalidatePath("/playlist");
   return { ok: true, thongDiep: kqThem.thongDiep.replace("Đã thêm vào", "Đã chuyển sang") };
+}
+
+/** Đổi chỗ một nội dung với nội dung liền kề trong thư mục — làm ngay trên Am. */
+export async function doiThuTu(
+  playlistId: string,
+  contentItemId: string,
+  huong: "len" | "xuong",
+): Promise<KetQua> {
+  const chan = await chanCua("đổi thứ tự playlist");
+  if (chan) return chan;
+
+  const kq = await doiThuTuLoi(playlistId, contentItemId, huong);
+  revalidatePath(`/playlist/${playlistId}`);
+  revalidatePath("/playlist");
+  return kq;
 }
 
 /** Đổi tên thư mục trên Am — thật thì sinh đề xuất chờ duyệt. */

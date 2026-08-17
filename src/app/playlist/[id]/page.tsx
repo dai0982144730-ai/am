@@ -109,11 +109,12 @@ export default async function TrangChiTietPlaylist({
           </div>
         ) : (
           <div className="mt-6 grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
-            {cacThe.map((the) => (
+            {cacThe.map((the, idx) => (
               <TheNoiDungCard
                 key={the.id}
                 muc={the}
                 trongPlaylistId={laChu ? playlist.id : undefined}
+                viTri={laChu ? { laDau: idx === 0, laCuoi: idx === cacThe.length - 1 } : undefined}
               />
             ))}
           </div>

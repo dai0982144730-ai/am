@@ -232,6 +232,7 @@ enum SuggestionType {
   remove_item /// Am không còn muốn video này trong playlist nữa
   delete_playlist /// Xoá hẳn cả thư mục — việc duy nhất không cứu lại được
   rename_playlist /// Đổi tên playlist thật cho khớp tên trên Am
+  reorder_items /// Thứ tự bài trên Am khác thứ tự thật trên YouTube
 }
 
 enum SuggestionStatus {
@@ -1052,6 +1053,9 @@ model PlaylistOrganizationSuggestion {
   newPlaylistTitle    String?
   /// Playlist hiện tại, khi phát hiện video đặt sai chỗ
   currentPlaylistTitle String?
+  /// Chỉ dùng cho `reorder_items` — mảng contentItemId theo đúng thứ tự Am
+  /// muốn, để `apDung.ts` biết ghi `position` nào cho video nào.
+  desiredOrder Json?
 
   reason String  @db.Text
   type   SuggestionType

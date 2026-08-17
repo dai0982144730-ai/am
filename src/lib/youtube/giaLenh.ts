@@ -26,6 +26,7 @@ export const GIA_LENH = {
   "playlists.insert": 50,
   "playlistItems.insert": 50,
   "playlistItems.delete": 50,
+  "playlistItems.update": 50,
   "playlists.delete": 50,
   "playlists.update": 50,
 } as const;
