@@ -8,7 +8,7 @@
 |---|---|
 | **0** — Nền tảng | ✅ xong |
 | **1** — Quét YouTube (6/6 bước) | ✅ xong, đã chạy thật |
-| **2** — Blog & diễn đàn AI | ✅ xong phần chữ; phần giọng đọc chờ khoá TTS |
+| **2** — Blog & diễn đàn AI | ✅ xong trọn, kể cả giọng đọc — TTS chạy thật từ 2026-08-16 |
 | **3** — Nhánh nhạc | ✅ xong, chạy hoàn toàn bằng luật |
 | **4** — Chấm chất lượng | ✅ xong trọn: hai vòng chấm + màn hình chỉnh trọng số |
 | **4b** — Tìm kiếm & bộ lọc | ✅ xong, tìm được cả trong nhận xét của Claude |
@@ -1581,24 +1581,18 @@ biến mới có hiệu lực.
 | Khoá Anthropic API | ⚪ **không cần nữa** | Đã chuyển sang gọi Claude qua CLI dùng gói Claude Pro trả theo tháng |
 | Khoá YouTube Data API v3 | ✅ xong | Đã điền, đã gọi thật thành công |
 | Google OAuth (đăng nhập) | ✅ xong | Đã điền `GOOGLE_CLIENT_ID`/`SECRET`, `AUTH_SECRET`, `EMAIL_CHU_DU_AN` |
-| **Đăng nhập Google một lần** | ⬜ **chưa** | Mở http://localhost:3000 bấm "Đăng nhập bằng Google". Không có bước này thì bước 1c trở đi không chạy được |
-| Whitelist tác giả/nguồn ban đầu | ⬜ chưa | Tác giả truyện, giảng sư, blog AI uy tín bạn đã biết |
+| **Đăng nhập Google một lần** | ✅ xong | Đã đăng nhập thật, `GoogleAccount` có 1 dòng, đang quét đêm đều đặn |
+| Whitelist tác giả/nguồn ban đầu | ✅ đủ dùng | Không còn cần làm một lần cho xong — có "hàng đợi duyệt tác giả" chạy liên tục (2026-08-16), 77 tác giả đã vào kho |
 | Chạy `npx prisma migrate deploy` để tạo bảng `AssistantApiLog` | ✅ xong | Đã chạy trên máy văn phòng 2026-08-14 |
 | Sinh `TOKEN_TRO_LY` điền vào `.env` | ✅ xong | Đã có trên máy văn phòng. **Máy ở nhà phải tự sinh riêng** (`.env` không lên Git) |
-| Gửi repo `tiendo` / `phaply` khi có | ⬜ chưa | Để chép bộ `troLyChung` sang và đồng bộ chuẩn API |
+| Gửi repo `tiendo` / `phaply` khi có | ⬜ **vẫn chưa** | Để chép bộ `troLyChung` sang và đồng bộ chuẩn API — mục còn tồn đọng thật sự duy nhất trong bảng này |
 
 ## Chỗ để dữ liệu — hiện tại và về sau
 
-**Hiện tại**: database đặt trên [Neon](https://neon.tech) (đám mây), code chạy
-trên máy. Lý do: chủ dự án làm trên **hai máy ở hai nơi** (PC ở nhà và máy văn
-phòng), nên database phải nằm trên mạng thì hai máy mới thấy chung dữ liệu.
-
-**Về sau, khi chạy thật**: đưa **cả dữ liệu lẫn code về chung một nơi**. Chưa
-chốt là nơi nào — quyết định sau, khi tới lúc triển khai thật.
-
-Điều này ảnh hưởng tới việc gì: `DATABASE_URL` và địa chỉ máy chủ trong
-`docs/API-TRO-LY.md` sẽ đổi khi triển khai. Không ảnh hưởng gì tới code, vì mọi
-địa chỉ đều đọc từ biến môi trường chứ không viết cứng.
+**Đã lỗi thời — xem mục "Database chuyển từ Neon về máy (2026-08-15)" bên dưới
+để biết trạng thái đúng hiện nay.** Giữ lại đoạn cũ này chỉ để nhớ lý do ban đầu
+từng chọn Neon (lúc đó còn định làm hai máy); từ 2026-08-15 database đã chuyển
+hẳn về máy này, không còn trên Neon nữa.
 
 ## Chạy trên máy mới
 
