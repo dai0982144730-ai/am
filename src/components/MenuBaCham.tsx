@@ -149,8 +149,16 @@ export function MenuBaCham({
           e.preventDefault();
           e.stopPropagation();
           setTimeout(() => datONut(nutRef.current?.getBoundingClientRect() ?? null));
-          if (!mo) napDuLieu();
-          datMo((cu) => !cu);
+          if (mo) {
+            // Đóng bằng chính nút này cũng phải dọn sạch như đóng bằng cách
+            // bấm ra ngoài. Bản trước chỉ tắt cờ `mo`, để lại `mucPlaylist`
+            // đang bật — mở lần sau là rơi thẳng vào danh sách playlist, không
+            // thấy "Thêm vào thư viện" đâu nữa.
+            dong();
+          } else {
+            napDuLieu();
+            datMo(true);
+          }
         }}
         aria-label={nhanPlaylist ? `Đã lưu vào ${nhanPlaylist}` : "Thêm vào"}
         className={
@@ -268,8 +276,17 @@ export function MenuBaCham({
                         });
                       }}
                     >
+                      {/* KHÔNG dùng `autoFocus`. Ô này nằm CUỐI danh sách 26
+                          playlist; tự lấy tiêu điểm là trình duyệt cuộn hộp
+                          xuống đáy để lộ nó ra — đo được 577/978 pixel — nên
+                          mở menu ra chỉ thấy mỗi ô nhập, toàn bộ tên playlist
+                          bị đẩy khuất lên trên. Trông y như "danh sách không
+                          hiện ra", đúng lỗi chủ dự án báo 2026-08-18.
+
+                          Mà tiêu điểm ở đây vốn cũng sai chỗ: mở menu này là
+                          để CHỌN một playlist có sẵn, tạo mới chỉ là lối thoát
+                          hiếm khi dùng. */}
                       <input
-                        autoFocus
                         value={tenMoi}
                         onChange={(e) => setTenMoi(e.target.value)}
                         placeholder="+ Playlist mới"
