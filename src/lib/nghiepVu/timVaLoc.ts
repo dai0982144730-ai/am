@@ -146,6 +146,9 @@ const TRUONG_THE = {
   },
   originalLanguage: true,
   narrationAsset: { select: { id: true, ttsAudioUrl: true } },
+  playlistItems: {
+    select: { playlist: { select: { id: true, title: true } } },
+  },
   classification: {
     select: {
       titleVi: true,

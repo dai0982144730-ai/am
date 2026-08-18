@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 
+import { MenuBaCham } from "@/components/MenuBaCham";
 import {
   doiThuMuc,
   doiTrangThaiDoc,
@@ -153,11 +154,14 @@ export function MucThuVien({
       </Link>
 
       <div className="min-w-0 flex-1">
-        <Link href={`/xem/${muc.id}`} className="hover:underline">
-          <h3 className="line-clamp-2 text-sm font-medium leading-snug">
-            {muc.tieuDe}
-          </h3>
-        </Link>
+        <div className="flex items-start justify-between gap-2">
+          <Link href={`/xem/${muc.id}`} className="min-w-0 hover:underline">
+            <h3 className="line-clamp-2 text-sm font-medium leading-snug">
+              {muc.tieuDe}
+            </h3>
+          </Link>
+          <MenuBaCham contentItemId={muc.id} luonHien />
+        </div>
         <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
           {muc.nguon}
           {muc.diem != null ? ` · ${muc.diem.toFixed(1)}/10` : ""} · cất{" "}

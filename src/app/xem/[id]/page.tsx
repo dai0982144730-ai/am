@@ -13,6 +13,7 @@ import { TrinhPhatAmThanh } from "@/components/TrinhPhatAmThanh";
 import { TrinhPhatPodcast } from "@/components/TrinhPhatPodcast";
 import { TrinhPhatYouTube } from "@/components/TrinhPhatYouTube";
 import { prisma } from "@/lib/db/prisma";
+import { TRUONG_CAN_LAY } from "@/lib/nghiepVu/layNoiDungTrangChu";
 import { docTinhTrangXem } from "@/lib/tieuThu/docTienDo";
 
 export const dynamic = "force-dynamic";
@@ -107,48 +108,7 @@ export default async function TrangXem({
       status: "classified",
       id: { not: muc.id },
     },
-    select: {
-      id: true,
-      title: true,
-      url: true,
-      thumbnailUrl: true,
-      publishedAt: true,
-      durationSeconds: true,
-      viewOrPlayCount: true,
-      contentGroup: true,
-      narrationType: true,
-      score: { select: { compositeScore: true } },
-      source: {
-        select: {
-          id: true,
-          type: true,
-          title: true,
-          reputationTier: true,
-          subscriptionStatus: true,
-        },
-      },
-      originalLanguage: true,
-      narrationAsset: { select: { id: true, ttsAudioUrl: true } },
-      classification: {
-        select: {
-          titleVi: true,
-          contentQualityNotes: true,
-          extractedTopics: true,
-          extractedAuthorNameRaw: true,
-          aiSubtopic: true,
-          philosophySchool: true,
-          philosophyContentForm: true,
-          listenerLevel: true,
-          misleadingContentFlag: true,
-          storyGenre: true,
-          storyIntensity: true,
-          aiGeneratedSuspicionScore: true,
-          musicGenre: true,
-          bpm: true,
-          bpmBucket: true,
-        },
-      },
-    },
+    select: TRUONG_CAN_LAY,
     orderBy: [
       { score: { compositeScore: { sort: "desc", nulls: "last" } } },
       { viewOrPlayCount: "desc" },

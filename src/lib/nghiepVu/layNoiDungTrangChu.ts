@@ -46,6 +46,11 @@ export const TRUONG_CAN_LAY = {
   // CHO LONG TIENG. Xem `nhanGoc` trong components/TheNoiDung.tsx.
   originalLanguage: true,
   narrationAsset: { select: { id: true, ttsAudioUrl: true } },
+  // Đã lưu vào (những) playlist nào — để thẻ hiện thẳng tên playlist thay vì
+  // chỉ có ba chấm. Xem `nhanPlaylist` trong components/TheNoiDung.tsx.
+  playlistItems: {
+    select: { playlist: { select: { id: true, title: true } } },
+  },
   classification: {
     select: {
       titleVi: true,

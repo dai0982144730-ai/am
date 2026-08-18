@@ -12,6 +12,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 
+import { MenuBaCham } from "@/components/MenuBaCham";
 import { boKhoiLichSu, xoaSachLichSu } from "@/lib/lichSu/actions";
 
 function docLuc(luc: Date): string {
@@ -61,11 +62,14 @@ export function MucLichSu({
       </Link>
 
       <div className="min-w-0 flex-1">
-        <Link href={`/xem/${id}`} className="hover:underline">
-          <h3 className="line-clamp-2 text-sm font-medium leading-snug">
-            {tieuDe}
-          </h3>
-        </Link>
+        <div className="flex items-start justify-between gap-2">
+          <Link href={`/xem/${id}`} className="min-w-0 hover:underline">
+            <h3 className="line-clamp-2 text-sm font-medium leading-snug">
+              {tieuDe}
+            </h3>
+          </Link>
+          <MenuBaCham contentItemId={id} luonHien />
+        </div>
         <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
           {[
             nguon,

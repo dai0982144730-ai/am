@@ -237,6 +237,55 @@ export async function doiThuTu(
 }
 
 /**
+ * Ghi lại toàn bộ thứ tự sau khi kéo-thả — nhận nguyên danh sách id đã sắp
+ * lại (kiểu YouTube), khác `doiThuTu` chỉ đổi chỗ hai cái liền kề.
+ *
+ * Cũng chỉ sửa trên Am, chưa đụng YouTube — `soSanhVaSinhDeXuat` phát hiện
+ * chỗ lệch rồi tự sinh đề xuất `reorder_items` chờ duyệt như cũ.
+ */
+export async function datLaiThuTu(
+  playlistId: string,
+  thuTuMoi: string[],
+): Promise<KetQua> {
+  const cac = await prisma.playlistItem.findMany({
+    where: { playlistId },
+    select: { id: true, contentItemId: true },
+  });
+
+  if (
+    cac.length !== thuTuMoi.length ||
+    new Set(thuTuMoi).size !== thuTuMoi.length
+  ) {
+    return {
+      ok: false,
+      thongDiep: "Danh sách không khớp — tải lại trang rồi thử lại.",
+    };
+  }
+
+  const idTheoNoiDung = new Map(cac.map((m) => [m.contentItemId, m.id]));
+  const capNhat: { id: string; position: number }[] = [];
+  for (let i = 0; i < thuTuMoi.length; i++) {
+    const id = idTheoNoiDung.get(thuTuMoi[i]);
+    if (!id) {
+      return {
+        ok: false,
+        thongDiep: "Danh sách không khớp — tải lại trang rồi thử lại.",
+      };
+    }
+    capNhat.push({ id, position: i });
+  }
+
+  await prisma.$transaction(
+    capNhat.map((m) =>
+      prisma.playlistItem.update({ where: { id: m.id }, data: { position: m.position } }),
+    ),
+  );
+
+  await soSanhVaSinhDeXuat(playlistId);
+  return { ok: true, thongDiep: "Đã lưu thứ tự mới." };
+}
+
+/**
  * So sánh ý Am muốn (`PlaylistItem`) với thật trên YouTube
  * (`lastSyncedVideoIds`), rồi tự dọn đề xuất cho khớp.
  *

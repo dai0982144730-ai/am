@@ -43,8 +43,13 @@ export default async function TrangPlaylist() {
         itemCount: true,
         managedByAI: true,
         youtubePlaylistId: true,
+        _count: { select: { items: true } },
+        // Ảnh bìa = ảnh của video ĐẦU DANH SÁCH, giống cách YouTube tự chọn
+        // ảnh bìa playlist.
         items: {
-          select: { id: true },
+          orderBy: { position: "asc" },
+          take: 1,
+          select: { contentItem: { select: { thumbnailUrl: true } } },
         },
       },
     }),
@@ -127,9 +132,10 @@ export default async function TrangPlaylist() {
               // của Am — hai con số khác hẳn nhau với playlist đã có video từ
               // trước khi Am biết tới nó. Đếm nhầm khiến trang này luôn báo
               // "0 mục" cho mọi playlist cũ, dù đọc lại từ YouTube rồi.
-              soMuc: p.youtubePlaylistId !== null ? p.itemCount : p.items.length,
+              soMuc: p.youtubePlaylistId !== null ? p.itemCount : p._count.items,
               choSapXep: p.managedByAI,
               daCoThat: p.youtubePlaylistId !== null,
+              anhBia: p.items[0]?.contentItem.thumbnailUrl ?? null,
             }))}
             cacThuMucChoXoa={cacThuMucChoXoa}
             cacDeXuat={cacDeXuat}

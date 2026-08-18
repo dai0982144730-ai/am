@@ -16,8 +16,10 @@
  * hàng thêm/bớt video bình thường.
  */
 
+import { MoreVertical } from "lucide-react";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 
 import {
   dongBoLai,
@@ -38,6 +40,8 @@ export interface PlaylistGon {
   choSapXep: boolean;
   /** false = mới có trên Am, chưa từng ghi thật lên YouTube */
   daCoThat: boolean;
+  /** Ảnh của video đầu danh sách, làm ảnh bìa — null nếu playlist rỗng */
+  anhBia: string | null;
 }
 
 export interface ThuMucChoXoaGon {
@@ -70,90 +74,167 @@ function MotPlaylist({
   const [thongDiep, setThongDiep] = useState<string | null>(null);
   const [dangChay, batDau] = useTransition();
 
+  // Menu ba chấm: Đổi tên / Xoá — gộp lại thay vì bày chữ "Xoá" trần cạnh
+  // tên, giống cách YouTube gói hai việc này vào một nút trên mỗi thẻ.
+  const [moMenu, setMoMenu] = useState(false);
+  const [oNut, setONut] = useState<DOMRect | null>(null);
+  const nutRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!moMenu) return;
+    const dong = () => setMoMenu(false);
+    window.addEventListener("scroll", dong, true);
+    window.addEventListener("resize", dong);
+    return () => {
+      window.removeEventListener("scroll", dong, true);
+      window.removeEventListener("resize", dong);
+    };
+  }, [moMenu]);
+
   return (
-    <li className="rounded-xl border border-neutral-200 px-3 py-2.5 dark:border-neutral-800">
-      <div className="flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          {dangSuaTen ? (
-            <input
-              autoFocus
-              value={ten}
-              onChange={(e) => setTen(e.target.value)}
-              onBlur={() => {
-                setDangSuaTen(false);
-                if (ten.trim() && ten.trim() !== muc.ten) {
-                  batDau(async () => {
-                    const kq = await doiTenThuMuc(muc.id, ten);
-                    setThongDiep(kq.thongDiep);
-                  });
-                }
-              }}
-              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-              className="w-full rounded-md border border-cam-500 bg-transparent px-1.5 py-0.5 text-sm outline-none"
-            />
-          ) : (
-            <p
-              className={`truncate text-sm font-medium ${laChu ? "cursor-text hover:underline" : ""}`}
-              onClick={() => laChu && setDangSuaTen(true)}
-              title={laChu ? "Bấm để đổi tên" : undefined}
-            >
-              {muc.ten}
-              {!muc.daCoThat ? (
-                <span className="ml-1.5 rounded bg-neutral-100 px-1 py-0.5 text-[10px] font-normal text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
-                  chưa có trên YouTube
-                </span>
-              ) : null}
-            </p>
-          )}
-          <p className="text-xs text-neutral-400">
-            <Link href={`/playlist/${muc.id}`} className="hover:underline">
-              {muc.soMuc} mục
-            </Link>
-            {thongDiep ? ` · ${thongDiep}` : ""}
-          </p>
+    <li className="flex flex-col overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
+      <Link
+        href={`/playlist/${muc.id}`}
+        className="relative block aspect-video bg-neutral-100 dark:bg-neutral-800"
+      >
+        {muc.anhBia ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={muc.anhBia} alt="" className="size-full object-cover" />
+        ) : (
+          <div className="flex size-full items-center justify-center text-xs text-neutral-400">
+            Chưa có ảnh
+          </div>
+        )}
+        <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/80 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
+          {muc.soMuc} mục
+        </span>
+      </Link>
+
+      <div className="flex flex-1 flex-col p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            {dangSuaTen ? (
+              <input
+                autoFocus
+                value={ten}
+                onChange={(e) => setTen(e.target.value)}
+                onBlur={() => {
+                  setDangSuaTen(false);
+                  if (ten.trim() && ten.trim() !== muc.ten) {
+                    batDau(async () => {
+                      const kq = await doiTenThuMuc(muc.id, ten);
+                      setThongDiep(kq.thongDiep);
+                    });
+                  }
+                }}
+                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                className="w-full rounded-md border border-cam-500 bg-transparent px-1.5 py-0.5 text-sm outline-none"
+              />
+            ) : (
+              <p className="truncate text-sm font-medium">
+                {muc.ten}
+                {!muc.daCoThat ? (
+                  <span className="ml-1.5 rounded bg-neutral-100 px-1 py-0.5 text-[10px] font-normal text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+                    chưa có trên YouTube
+                  </span>
+                ) : null}
+              </p>
+            )}
+            {thongDiep ? (
+              <p className="mt-0.5 truncate text-xs text-neutral-400">{thongDiep}</p>
+            ) : null}
+          </div>
+
+          {laChu ? (
+            <>
+              <button
+                ref={nutRef}
+                type="button"
+                aria-label="Tuỳ chọn playlist"
+                onClick={() => {
+                  setONut(nutRef.current?.getBoundingClientRect() ?? null);
+                  setMoMenu((m) => !m);
+                }}
+                className="shrink-0 rounded-md border border-neutral-300 p-1 text-neutral-500 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+              >
+                <MoreVertical size={16} />
+              </button>
+
+              {moMenu && oNut
+                ? createPortal(
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setMoMenu(false)}
+                        aria-hidden
+                      />
+                      <div
+                        className="fixed z-50 w-40 overflow-hidden rounded-xl border border-neutral-300 bg-background p-1.5 shadow-2xl dark:border-neutral-700"
+                        style={{
+                          top: oNut.bottom + 6,
+                          left: Math.max(12, Math.min(oNut.right - 160, window.innerWidth - 172)),
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDangSuaTen(true);
+                            setMoMenu(false);
+                          }}
+                          className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                        >
+                          Đổi tên
+                        </button>
+                        <button
+                          type="button"
+                          disabled={dangChay}
+                          title="Yêu cầu xoá — chưa xoá gì thật, chỉ ẩn đi và tạo đề xuất chờ bạn duyệt"
+                          onClick={() => {
+                            setMoMenu(false);
+                            batDau(async () => {
+                              const kq = await xoaThuMuc(muc.id);
+                              setThongDiep(kq.thongDiep);
+                            });
+                          }}
+                          className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-950/40"
+                        >
+                          Xoá
+                        </button>
+                      </div>
+                    </>,
+                    document.body,
+                  )
+                : null}
+            </>
+          ) : null}
         </div>
+
         {laChu ? (
-          <>
-            <button
-              type="button"
-              disabled={dangChay}
-              title={
-                choSapXep
-                  ? "Trợ lý được phép đề xuất thêm video vào playlist này. Bấm để tắt."
-                  : "Trợ lý bỏ qua playlist này. Bấm để cho phép đề xuất."
-              }
-              onClick={() => {
-                const moi = !choSapXep;
-                setChoSapXep(moi);
-                batDau(async () => {
-                  const kq = await batTatChoSapXep(muc.id, moi);
-                  if (!kq.ok) setChoSapXep(!moi);
-                  setThongDiep(kq.thongDiep);
-                });
-              }}
-              className={`shrink-0 rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40 ${
-                choSapXep
-                  ? "border-cam-600 bg-cam-600 text-white dark:border-cam-500 dark:bg-cam-500"
-                  : "border-neutral-300 text-neutral-500 dark:border-neutral-700"
-              }`}
-            >
-              {choSapXep ? "Cho sắp xếp" : "Không đụng tới"}
-            </button>
-            <button
-              type="button"
-              disabled={dangChay}
-              title="Yêu cầu xoá — chưa xoá gì thật, chỉ ẩn đi và tạo đề xuất chờ bạn duyệt"
-              onClick={() =>
-                batDau(async () => {
-                  const kq = await xoaThuMuc(muc.id);
-                  setThongDiep(kq.thongDiep);
-                })
-              }
-              className="shrink-0 text-xs text-neutral-400 underline hover:text-red-600 disabled:opacity-40 dark:hover:text-red-400"
-            >
-              Xoá
-            </button>
-          </>
+          <button
+            type="button"
+            disabled={dangChay}
+            title={
+              choSapXep
+                ? "Trợ lý được phép đề xuất thêm video vào playlist này. Bấm để tắt."
+                : "Trợ lý bỏ qua playlist này. Bấm để cho phép đề xuất."
+            }
+            onClick={() => {
+              const moi = !choSapXep;
+              setChoSapXep(moi);
+              batDau(async () => {
+                const kq = await batTatChoSapXep(muc.id, moi);
+                if (!kq.ok) setChoSapXep(!moi);
+                setThongDiep(kq.thongDiep);
+              });
+            }}
+            className={`mt-2 self-start rounded-full border px-2.5 py-1 text-[11px] transition-colors disabled:opacity-40 ${
+              choSapXep
+                ? "border-cam-600 bg-cam-600 text-white dark:border-cam-500 dark:bg-cam-500"
+                : "border-neutral-300 text-neutral-500 dark:border-neutral-700"
+            }`}
+          >
+            {choSapXep ? "Trợ lý được gợi ý thêm bài" : "Trợ lý không đụng tới"}
+          </button>
         ) : null}
       </div>
     </li>

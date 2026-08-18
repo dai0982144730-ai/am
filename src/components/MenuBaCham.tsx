@@ -35,10 +35,24 @@ import {
 export function MenuBaCham({
   contentItemId,
   trongPlaylistId,
+  luonHien,
+  nhanPlaylist,
 }: {
   contentItemId: string;
   /** Có giá trị khi thẻ này đang hiện trong trang chi tiết một playlist */
   trongPlaylistId?: string;
+  /**
+   * Dùng cho danh sách dạng DÒNG (Thư viện, Lịch sử) thay vì thẻ ảnh.
+   * Không có ảnh để bấm-lộ-ra lúc di chuột, và trên điện thoại thì làm gì có
+   * chuột — nên hiện thẳng luôn, kiểu nút phẳng như các nút khác trong dòng.
+   */
+  luonHien?: boolean;
+  /**
+   * Tên playlist đã biết trước (server đã nạp sẵn) — hiện thẳng tên này thay
+   * cho ba chấm, để liếc qua là biết bài đã nằm trong playlist nào, không
+   * phải bấm mở menu ra mới thấy. `undefined`/rỗng thì hiện ba chấm như cũ.
+   */
+  nhanPlaylist?: string | null;
 }) {
   const [mo, datMo] = useState(false);
   const [mucPlaylist, setMucPlaylist] = useState(false);
@@ -84,6 +98,18 @@ export function MenuBaCham({
     setTenMoi("");
   }
 
+  /**
+   * Xong một việc: báo kết quả, và CHỈ tự đóng khi thành công.
+   *
+   * Thất bại mà vẫn tự đóng thì thông điệp lỗi biến mất trước khi đọc kịp —
+   * người dùng chỉ thấy menu đóng lại, không thấy gì đổi, và kết luận là nút
+   * hỏng. Đúng chuyện đã xảy ra 2026-08-18.
+   */
+  function xong(kq: { ok: boolean; thongDiep: string }) {
+    setThongDiep(kq.thongDiep);
+    if (kq.ok) setTimeout(dong, 700);
+  }
+
   return (
     <>
       <button
@@ -96,10 +122,20 @@ export function MenuBaCham({
           setTimeout(() => datONut(nutRef.current?.getBoundingClientRect() ?? null));
           datMo((cu) => !cu);
         }}
-        aria-label="Thêm vào"
-        className="absolute right-1.5 top-1.5 z-10 rounded-full bg-black/60 p-1 text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 hover:bg-black/80 focus:opacity-100"
+        aria-label={nhanPlaylist ? `Đã lưu vào ${nhanPlaylist}` : "Thêm vào"}
+        className={
+          luonHien
+            ? "flex shrink-0 items-center gap-1 rounded-md border border-neutral-300 px-1.5 py-1 text-neutral-500 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            : "absolute bottom-1.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full bg-white px-2 py-1 text-neutral-900 shadow-sm hover:bg-neutral-100"
+        }
       >
-        <MoreVertical size={16} />
+        {nhanPlaylist ? (
+          <span className="max-w-28 truncate text-[11px] font-medium">
+            {nhanPlaylist}
+          </span>
+        ) : (
+          <MoreVertical size={luonHien ? 16 : 14} />
+        )}
       </button>
 
       {mo && oNut
@@ -130,9 +166,7 @@ export function MenuBaCham({
                       disabled={dangChay}
                       onClick={() =>
                         batDau(async () => {
-                          const kq = await batTatLuu(contentItemId);
-                          setThongDiep(kq.thongDiep);
-                          setTimeout(dong, 700);
+                          xong(await batTatLuu(contentItemId));
                         })
                       }
                       className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100 disabled:opacity-40 dark:hover:bg-neutral-800"
@@ -152,9 +186,7 @@ export function MenuBaCham({
                         disabled={dangChay}
                         onClick={() =>
                           batDau(async () => {
-                            const kq = await xoaKhoiThuMuc(contentItemId, trongPlaylistId);
-                            setThongDiep(kq.thongDiep);
-                            setTimeout(dong, 700);
+                            xong(await xoaKhoiThuMuc(contentItemId, trongPlaylistId));
                           })
                         }
                         className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-950/40"
@@ -177,11 +209,11 @@ export function MenuBaCham({
                         disabled={dangChay}
                         onClick={() =>
                           batDau(async () => {
-                            const kq = trongPlaylistId
-                              ? await chuyenDenThuMuc(contentItemId, trongPlaylistId, p.id)
-                              : await themVaoThuMuc(contentItemId, p.id);
-                            setThongDiep(kq.thongDiep);
-                            setTimeout(dong, 700);
+                            xong(
+                              trongPlaylistId
+                                ? await chuyenDenThuMuc(contentItemId, trongPlaylistId, p.id)
+                                : await themVaoThuMuc(contentItemId, p.id),
+                            );
                           })
                         }
                         className="w-full truncate rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100 disabled:opacity-40 dark:hover:bg-neutral-800"
@@ -197,15 +229,15 @@ export function MenuBaCham({
                         if (!tenMoi.trim()) return;
                         batDau(async () => {
                           const moi = await taoThuMuc(tenMoi);
-                          if (moi.ok && moi.id) {
-                            const kq = trongPlaylistId
-                              ? await chuyenDenThuMuc(contentItemId, trongPlaylistId, moi.id)
-                              : await themVaoThuMuc(contentItemId, moi.id);
-                            setThongDiep(kq.thongDiep);
-                          } else {
-                            setThongDiep(moi.thongDiep);
+                          if (!moi.ok || !moi.id) {
+                            xong(moi);
+                            return;
                           }
-                          setTimeout(dong, 700);
+                          xong(
+                            trongPlaylistId
+                              ? await chuyenDenThuMuc(contentItemId, trongPlaylistId, moi.id)
+                              : await themVaoThuMuc(contentItemId, moi.id),
+                          );
                         });
                       }}
                     >

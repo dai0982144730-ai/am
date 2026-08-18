@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
 import { KhungTrang } from "@/components/KhungTrang";
-import { TheNoiDungCard } from "@/components/TheNoiDung";
+import { LuoiPlaylistKeoTha } from "@/components/LuoiPlaylistKeoTha";
 import { prisma } from "@/lib/db/prisma";
 import { TRUONG_CAN_LAY } from "@/lib/nghiepVu/layNoiDungTrangChu";
 
@@ -103,21 +103,25 @@ export default async function TrangChiTietPlaylist({
               Playlist này chưa có nội dung nào.
             </p>
             <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">
-              Vào Khám phá, bấm nút ba chấm trên một thẻ rồi chọn "Thêm vào
-              Playlist" để bỏ vào đây.
+              Vào Khám phá, bấm nút ba chấm trên một thẻ rồi chọn &ldquo;Thêm
+              vào Playlist&rdquo; để bỏ vào đây.
             </p>
           </div>
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
-            {cacThe.map((the, idx) => (
-              <TheNoiDungCard
-                key={the.id}
-                muc={the}
-                trongPlaylistId={laChu ? playlist.id : undefined}
-                viTri={laChu ? { laDau: idx === 0, laCuoi: idx === cacThe.length - 1 } : undefined}
-              />
-            ))}
-          </div>
+          <>
+            {laChu ? (
+              <p className="mt-4 text-xs text-neutral-400 dark:text-neutral-500">
+                Kéo thẻ sang chỗ khác để đổi thứ tự, hoặc dùng hai nút ▲▼ dưới
+                mỗi thẻ. Thứ tự lưu ngay trên Am; ghi thật lên YouTube vẫn chờ
+                bạn duyệt ở trang Playlist.
+              </p>
+            ) : null}
+            <LuoiPlaylistKeoTha
+              playlistId={playlist.id}
+              cacThe={cacThe}
+              choKeo={laChu}
+            />
+          </>
         )}
       </div>
     </KhungTrang>

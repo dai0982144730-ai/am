@@ -175,6 +175,18 @@ export function TheNoiDungCard({
   const nhanNguon = NHAN_NGUON[muc.source.type];
   const phu = thongTinPhu(muc);
 
+  // Đã lưu vào playlist nào chưa — bỏ qua playlist đang xem dở (trang chi
+  // tiết playlist), vì tự nói lại tên chính nó thì thừa. Còn nhiều hơn một
+  // cái thì thêm "+N", không liệt kê hết cho chật nút.
+  const cacPlaylistKhac = muc.playlistItems
+    .map((p) => p.playlist)
+    .filter((p) => p.id !== trongPlaylistId);
+  const nhanPlaylist =
+    cacPlaylistKhac.length > 0
+      ? cacPlaylistKhac[0].title +
+        (cacPlaylistKhac.length > 1 ? ` +${cacPlaylistKhac.length - 1}` : "")
+      : null;
+
   return (
     <Link href={`/xem/${muc.id}`} className="group flex flex-col gap-2">
       <div className="relative aspect-video overflow-hidden rounded-xl bg-neutral-200 dark:bg-neutral-800">
@@ -211,7 +223,11 @@ export function TheNoiDungCard({
           </span>
         ) : null}
 
-        <MenuBaCham contentItemId={muc.id} trongPlaylistId={trongPlaylistId} />
+        <MenuBaCham
+          contentItemId={muc.id}
+          trongPlaylistId={trongPlaylistId}
+          nhanPlaylist={nhanPlaylist}
+        />
 
         {/* Điểm chất lượng — bốn trụ tín hiệu đã chuẩn hoá trong cùng loại nguồn */}
         {muc.score?.compositeScore != null ? (

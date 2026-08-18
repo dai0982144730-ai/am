@@ -16,6 +16,7 @@ import { doiHoiChuDuAn } from "@/lib/quyen";
 import { apDungDeXuat } from "./apDung";
 import { dongBoPlaylist } from "./dongBo";
 import {
+  datLaiThuTu as datLaiThuTuLoi,
   doiTenThuMuc as doiTenThuMucLoi,
   doiThuTu as doiThuTuLoi,
   huyXoaThuMuc as huyXoaThuMucLoi,
@@ -28,6 +29,18 @@ import {
 export interface KetQua {
   ok: boolean;
   thongDiep: string;
+}
+
+/**
+ * Làm mới MỌI trang, không riêng `/playlist`.
+ *
+ * Thêm/bớt một bài khỏi playlist đổi nhãn playlist trên chính thẻ nội dung đó,
+ * mà thẻ ấy có mặt ở khắp nơi: trang chủ, Khám phá, trang xem, Thư viện, Lịch
+ * sử. Chỉ làm mới `/playlist` thì bấm xong quay ra vẫn thấy như cũ — trông y
+ * như nút không chạy, dù dưới database đã ghi đúng.
+ */
+function lamMoiMoiTrangCoThe(): void {
+  revalidatePath("/", "layout");
 }
 
 async function chanCua(viec: string): Promise<KetQua | null> {
@@ -159,7 +172,7 @@ export async function themVaoThuMuc(
   if (chan) return chan;
 
   const kq = await themVaoThuMucLoi(contentItemId, playlistId, "user");
-  revalidatePath("/playlist");
+  lamMoiMoiTrangCoThe();
   return kq;
 }
 
@@ -172,7 +185,7 @@ export async function xoaKhoiThuMuc(
   if (chan) return chan;
 
   const kq = await xoaKhoiThuMucLoi(contentItemId, playlistId);
-  revalidatePath("/playlist");
+  lamMoiMoiTrangCoThe();
   return kq;
 }
 
@@ -195,7 +208,7 @@ export async function chuyenDenThuMuc(
   if (!kqThem.ok) return kqThem;
   await xoaKhoiThuMucLoi(contentItemId, tuPlaylistId);
 
-  revalidatePath("/playlist");
+  lamMoiMoiTrangCoThe();
   return { ok: true, thongDiep: kqThem.thongDiep.replace("Đã thêm vào", "Đã chuyển sang") };
 }
 
@@ -209,6 +222,20 @@ export async function doiThuTu(
   if (chan) return chan;
 
   const kq = await doiThuTuLoi(playlistId, contentItemId, huong);
+  revalidatePath(`/playlist/${playlistId}`);
+  revalidatePath("/playlist");
+  return kq;
+}
+
+/** Ghi lại thứ tự sau khi kéo-thả — làm ngay trên Am, chưa đụng YouTube. */
+export async function datLaiThuTu(
+  playlistId: string,
+  thuTuMoi: string[],
+): Promise<KetQua> {
+  const chan = await chanCua("đổi thứ tự playlist");
+  if (chan) return chan;
+
+  const kq = await datLaiThuTuLoi(playlistId, thuTuMoi);
   revalidatePath(`/playlist/${playlistId}`);
   revalidatePath("/playlist");
   return kq;
