@@ -3102,3 +3102,99 @@ nội dung/ghi chú, thuộc Phase 9, chưa làm trong phiên này.
 **Mục 6 (cổng API tiendo/phaply) vẫn chưa làm** — hỏi lại điều kiện tiên quyết
 "đã kết nối trợ lý điện thoại xong" thì chủ dự án không xác nhận, nên giữ
 nguyên quyết định hoãn đã chốt trước đó.
+
+---
+
+## 2026-08-18 — Playlist dùng được thật: nạp video ngoài, menu ba chấm khắp nơi
+
+### Menu ba chấm: bấm vào không thấy gì (đã sửa)
+
+Chủ dự án báo "bấm thêm vào playlist không hiện ra gì". Nó **có hiện**, chỉ là
+hiện ở chỗ không nhìn thấy: danh sách 26 playlist cao 504px, menu luôn mở
+xuống dưới nút, mà nút ba chấm vừa dời từ góc trên ảnh xuống giữa-dưới ảnh nên
+mốc neo tụt thêm cả trăm pixel — menu đổ 224px ra ngoài đáy màn hình (đo trên
+màn 720px).
+
+Giờ menu tự chọn mở lên hay xuống theo bên nào rộng hơn, và cao tối đa đúng
+bằng khoảng trống ấy. Đo lại: nằm gọn trong màn hình, cuộn được.
+
+Bài học: **"không hiện gì" và "hiện ngoài màn hình" nhìn giống hệt nhau.** Đo
+`getBoundingClientRect()` rồi so với `window.innerHeight` là ra ngay, đoán thì
+không bao giờ ra.
+
+### Nút ba chấm theo yêu cầu mới
+
+- **Luôn hiện**, không phải rê chuột mới ra (điện thoại làm gì có chuột)
+- Nằm **giữa-dưới ảnh**, nền trắng chấm đen
+- Bài đã nằm trong playlist thì hiện thẳng **tên playlist** thay cho ba chấm,
+  nhiều playlist thì thêm "+N"
+- Thêm vào cả **Thư viện** và **Lịch sử xem** — trước đó hai trang này không có
+  nút ba chấm ở bất kỳ bài nào
+
+### Nạp video trong playlist: 586 video, Am biết đúng 0 cái
+
+Đo trước khi làm, và con số lớn hơn tưởng nhiều:
+
+| | |
+|---|---|
+| Playlist | 26 |
+| Tổng video trong đó | 586 |
+| Am biết được | **0** |
+
+Không phải "một playlist có vài video lạ" — **không một video nào** trong toàn
+bộ 26 playlist có hồ sơ trong Am, nên mọi trang chi tiết playlist đều trống.
+Lý do: Am chỉ tạo hồ sơ cho video từ kênh nó theo dõi, còn playlist thật gom
+video khắp nơi (BlackPink, Xây nhà, MUA BÁN, Chụp ảnh…).
+
+Chủ dự án chốt hướng: *"tôi chỉ cần xem/chuyển/xoá trong playlist như YouTube
+vì không muốn vào youtube để xắp xếp dữ liệu này"* — nạp đủ để nhìn thấy và
+sắp xếp, **không cho Claude đọc, không nhập vào hệ thống tuyển chọn**.
+
+### Hai chốt chặn, và vì sao cần cả hai
+
+1. **Cờ `ContentItem.chiTrongPlaylist`** chặn khỏi năm đường: Trang chủ, Khám
+   phá, tìm kiếm, lượt phân loại của Claude (`suatPhanLoai.ts`), bước lấy lời
+   thoại (`loiThoai.ts`).
+2. **Kênh dựng ra KHÔNG kèm `uploadsPlaylistId`.** Máy quét đêm chỉ lấy kênh
+   có trường này (`quetKenh.ts`), nên kênh tạo ở đây vĩnh viễn nằm ngoài tầm.
+   Thiếu chốt này thì nhập 1 video BlackPink là đêm sau Am tự kéo về cả kênh —
+   đúng thứ chủ dự án bảo đừng làm.
+
+Chốt 2 dễ quên nhất, vì nó không nằm trong file nào liên quan tới playlist.
+
+### Chạy thật
+
+| | |
+|---|---|
+| Video nạp được | **523** |
+| Hạn mức tiêu | **66 đơn vị** / 10.000 mỗi ngày |
+| Video không nạp được | 63 — chính YouTube cũng không trả về |
+
+63 video kia đã bị xoá hoặc để riêng tư; YouTube cũng chỉ hiện chúng là
+"[Video đã xoá]". Kiểm riêng playlist "Nhạc việt": hỏi thẳng 12 mã còn thiếu
+thì YouTube trả về đúng 0.
+
+Kiểm đủ 5 đường sau khi nạp, tất cả đều đúng: không lọt Trang chủ, không lọt
+Khám phá, không lọt tìm kiếm, không vào hàng chờ Claude, không vào hàng chờ
+lời thoại. Khám phá vẫn 49 nội dung tuyển chọn như trước.
+
+### Bỏ hai nhãn nói dối
+
+Thẻ video trong playlist từng dán "CHỜ LỒNG TIẾNG" — nhưng 246/523 video là
+tiếng nước ngoài **không hề xếp hàng lồng tiếng gì cả**, chúng chỉ có mặt để
+sắp xếp. Nhãn đó hứa một việc sẽ không bao giờ xảy ra. Bỏ luôn cả nhãn "nguồn
+mới" vì cùng lý do: nó nói về việc đánh giá nguồn, mà video này không thuộc
+diện được đánh giá.
+
+### Trang Playlist theo kiểu YouTube
+
+Tìm hiểu cách YouTube quản lý danh sách phát rồi làm theo: thẻ có **ảnh bìa**
+(ảnh video đầu danh sách), số mục nổi góc ảnh, và **gộp Đổi tên/Xoá vào một
+nút ba chấm** thay vì bày chữ "Xoá" trần cạnh tên. Đổi tên nút "Cho sắp xếp"
+thành "Trợ lý được gợi ý thêm bài" — tên cũ dễ nhầm với sắp xếp thứ tự.
+
+### Còn lại
+
+- **Kéo-thả đổi thứ tự** (như YouTube) chưa làm — hiện vẫn là hai nút ▲▼.
+- Đã có `datLaiThuTu()` nhận nguyên danh sách đã sắp lại, sẵn cho kéo-thả sau.
+- **Chưa thử ghi thật** `apDungDoiThuTu` lên một playlist thật trên YouTube.
