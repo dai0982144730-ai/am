@@ -95,6 +95,12 @@ const NHAN_NGUON: Record<string, { ten: string; mau: string }> = {
 
 /** Nhãn nổi ở góc trái ảnh — mỗi chuyên mục một kiểu thông tin. */
 function nhanGoc(muc: NonNullable<TheNoiDung>): string | null {
+  // Video chỉ có mặt để sắp xếp trong playlist thì mọi nhãn dưới đây đều sai:
+  // nó không nằm trong hàng chờ lồng tiếng, không được Claude đọc, không thuộc
+  // chuyên mục nào. Dán "CHỜ LỒNG TIẾNG" lên 246 video ngoại ngữ trong playlist
+  // là hứa một việc sẽ không bao giờ xảy ra.
+  if (muc.chiTrongPlaylist) return null;
+
   // NGHE ĐƯỢC hay CHƯA là thông tin quan trọng nhất với chủ nhà, nên nó đứng
   // trước mọi nhãn khác.
   //
@@ -261,7 +267,8 @@ export function TheNoiDungCard({
           {/* Nói rõ đây là nguồn chưa theo dõi, để liếc một cái là biết nên
               soi kỹ hay tin ngay — đúng thứ chủ nhà cần khi bật tỉ lệ nguồn
               mới lên cao */}
-          {muc.source.subscriptionStatus !== "subscribed" ? (
+          {muc.source.subscriptionStatus !== "subscribed" &&
+          !muc.chiTrongPlaylist ? (
             <span className="mr-1.5 rounded bg-cam-100 px-1.5 py-0.5 text-[10px] font-medium text-cam-700 dark:bg-cam-700/30 dark:text-cam-300">
               nguồn mới
             </span>

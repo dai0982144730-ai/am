@@ -51,6 +51,9 @@ export const TRUONG_CAN_LAY = {
   playlistItems: {
     select: { playlist: { select: { id: true, title: true } } },
   },
+  // Để thẻ biết mà bỏ các nhãn của luồng tuyển chọn — video chỉ có mặt trong
+  // playlist thì không chờ lồng tiếng, không phải "nguồn mới" gì cả.
+  chiTrongPlaylist: true,
   classification: {
     select: {
       titleVi: true,

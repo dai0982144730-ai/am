@@ -363,6 +363,22 @@ model ContentItem {
   ingestSource  IngestSource
   status        ContentStatus @default(pending_transcript)
 
+  /// Video CHỈ có mặt để xem được bên trong playlist, KHÔNG thuộc kho tuyển
+  /// chọn của Am.
+  ///
+  /// Playlist thật của chủ nhà gom video từ khắp nơi — nhạc, xây nhà, mua
+  /// bán, chụp ảnh — phần lớn đến từ kênh Am không theo dõi. Muốn xem/chuyển/
+  /// xoá chúng ngay trong Am (thay vì phải mở YouTube) thì phải có hồ sơ để
+  /// `PlaylistItem` trỏ vào. Nhưng chúng KHÔNG phải thứ Am tuyển chọn, nên cờ
+  /// này chặn chúng khỏi ba đường tốn tiền và gây nhiễu:
+  ///   - `dungDieuKien` (timVaLoc.ts) — không hiện ở Trang chủ, Khám phá, tìm kiếm
+  ///   - `chiaSuatPhanLoai` (suatPhanLoai.ts) — Claude không đọc, không tốn tiền
+  ///   - `layLoiThoaiHangLoat` (loiThoai.ts) — không lấy lời thoại
+  ///
+  /// Nếu về sau chính video đó được quét về theo đường kênh-đang-theo-dõi bình
+  /// thường thì cờ tự tắt, nó thành nội dung đầy đủ như mọi thứ khác.
+  chiTrongPlaylist Boolean @default(false)
+
   /// Chỉ có giá trị khi contentGroup = new_search
   adHocInterestId String?
   adHocInterest   AdHocInterest? @relation(fields: [adHocInterestId], references: [id], onDelete: SetNull)

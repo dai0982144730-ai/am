@@ -121,6 +121,10 @@ export async function chiaSuatPhanLoai(
     where: {
       status: { in: ["pending_classification", "transcript_unavailable"] },
       classification: null,
+      // Video chỉ có mặt để xem trong playlist thì Claude không đọc — chủ dự
+      // án chốt 2026-08-18: nhập vào chỉ để sắp xếp playlist ngay trong Am,
+      // không tốn tiền hỏi nội dung là gì, thuộc chuyên mục nào.
+      chiTrongPlaylist: false,
     },
     select: CHON_CHO,
     orderBy: { publishedAt: { sort: "desc", nulls: "last" } },

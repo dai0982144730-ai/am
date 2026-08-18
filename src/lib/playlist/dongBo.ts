@@ -17,6 +17,7 @@
  */
 
 import { prisma } from "@/lib/db/prisma";
+import { napVideoConThieu } from "@/lib/playlist/napVideoNgoai";
 import { soSanhVaSinhDeXuat } from "@/lib/playlist/thanhVien";
 import { goiHetTrang } from "@/lib/youtube/goiApi";
 
@@ -54,8 +55,14 @@ export interface KetQuaDongBo {
  * có gì để hiện, và nút "Bỏ khỏi playlist" bấm vào chẳng xoá được dòng nào vì
  * dòng đó chưa từng tồn tại.
  *
- * Chỉ đắp cho video ĐÃ CÓ SẴN trong kho `ContentItem` — video khác chưa quét
- * về thì Am chưa biết gì để hiện, lần quét sau khớp `externalId` sẽ tự đắp nốt.
+ * TỪ 2026-08-18 CÒN NẠP CẢ VIDEO AM CHƯA BIẾT. Bản trước chỉ đắp cho video đã
+ * có sẵn trong kho, mà đo ra thì **586 video trong 26 playlist không có lấy
+ * một cái nào trong kho** — nên mọi trang playlist đều trống, đúng thứ bản
+ * trước tưởng là đã sửa xong. Xem `napVideoNgoai.ts` để biết vì sao nạp về mà
+ * vẫn không lọt vào kho tuyển chọn.
+ *
+ * Đắp ĐÚNG THỨ TỰ THẬT trên YouTube, không phải nối đuôi vào cuối — thứ tự là
+ * thông tin có ý nghĩa với playlist, và đây là ảnh chụp trung thực từ YouTube.
  */
 async function dapLaiThanhVien(
   playlistId: string,
@@ -63,11 +70,8 @@ async function dapLaiThanhVien(
 ): Promise<void> {
   if (idVideo.length === 0) return;
 
-  const daBiet = await prisma.contentItem.findMany({
-    where: { externalId: { in: idVideo }, source: { type: "youtube_channel" } },
-    select: { id: true },
-  });
-  if (daBiet.length === 0) return;
+  const { theoMaVideo } = await napVideoConThieu(idVideo);
+  if (theoMaVideo.size === 0) return;
 
   const dangCo = await prisma.playlistItem.findMany({
     where: { playlistId },
@@ -76,10 +80,13 @@ async function dapLaiThanhVien(
   const idDaCo = new Set(dangCo.map((i) => i.contentItemId));
   let viTriKe = dangCo.reduce((max, i) => Math.max(max, i.position), -1) + 1;
 
-  for (const ci of daBiet) {
-    if (idDaCo.has(ci.id)) continue;
+  // Duyệt theo thứ tự YouTube trả về, không theo thứ tự database trả về
+  for (const ma of idVideo) {
+    const idNoiDung = theoMaVideo.get(ma);
+    if (!idNoiDung || idDaCo.has(idNoiDung)) continue;
+    idDaCo.add(idNoiDung);
     await prisma.playlistItem.create({
-      data: { playlistId, contentItemId: ci.id, position: viTriKe, addedBy: "user" },
+      data: { playlistId, contentItemId: idNoiDung, position: viTriKe, addedBy: "user" },
     });
     viTriKe += 1;
   }

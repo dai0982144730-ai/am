@@ -149,6 +149,7 @@ const TRUONG_THE = {
   playlistItems: {
     select: { playlist: { select: { id: true, title: true } } },
   },
+  chiTrongPlaylist: true,
   classification: {
     select: {
       titleVi: true,
@@ -231,6 +232,11 @@ export async function dungDieuKien(loc: BoLoc): Promise<Prisma.ContentItemWhereI
     ? // Ngẫu hứng lấy CẢ thứ đã bị loại — đó là điểm khác biệt của nó.
       { status: { in: ["classified", "rejected"] } }
     : { status: "classified" };
+
+  // Video chỉ có mặt để xem được trong playlist thì KHÔNG thuộc kho tuyển
+  // chọn — không hiện ở Trang chủ, Khám phá hay tìm kiếm. Xem giải thích dài
+  // ở `ContentItem.chiTrongPlaylist` trong schema.
+  dieuKien.chiTrongPlaylist = false;
 
   const anTheoTran = await idNoiDungChuaThaTheoBo();
   if (anTheoTran.length > 0) dieuKien.id = { notIn: anTheoTran };

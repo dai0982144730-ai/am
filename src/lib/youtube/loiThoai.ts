@@ -146,6 +146,9 @@ export async function layLoiThoaiHangLoat(
       type: "video",
       transcript: null,
       status: "pending_transcript",
+      // Video chỉ có mặt để xem trong playlist thì không lấy lời thoại —
+      // không ai đọc tới, lấy về chỉ tốn công và phình database.
+      chiTrongPlaylist: false,
       // Nhạc đi nhánh riêng, không lấy lời thoại — đánh giá nhạc bằng chữ là
       // vô nghĩa. Ở bước này chưa phân loại nên chưa lọc được nhóm nhạc, nhưng
       // giữ điều kiện sẵn để khi Claude phân loại xong là tự đúng.

@@ -101,9 +101,16 @@ export function MenuBaCham({
     };
   }, [mo]);
 
-  // Nạp một lần lúc mở menu — không nạp sẵn cho mọi thẻ trên trang
-  useEffect(() => {
-    if (!mo) return;
+  /**
+   * Nạp danh sách playlist — gọi ngay lúc bấm mở, KHÔNG qua `useEffect`.
+   *
+   * Đặt trong effect thì React phải dựng hình một lần chỉ để rồi bật cờ "đang
+   * tải" lên và dựng lại — đúng thứ quy tắc `set-state-in-effect` cảnh báo.
+   * Việc này vốn do một cú bấm gây ra, nên cứ để cú bấm gọi thẳng.
+   *
+   * Chỉ nạp lúc mở, không nạp sẵn cho mọi thẻ trên trang.
+   */
+  function napDuLieu() {
     setDangNap(true);
     layDuLieuMenuBaCham(contentItemId)
       .then((d) => {
@@ -111,7 +118,7 @@ export function MenuBaCham({
         setDangTrongThuVien(d.dangTrongThuVien);
       })
       .finally(() => setDangNap(false));
-  }, [mo, contentItemId]);
+  }
 
   function dong() {
     datMo(false);
@@ -142,6 +149,7 @@ export function MenuBaCham({
           e.preventDefault();
           e.stopPropagation();
           setTimeout(() => datONut(nutRef.current?.getBoundingClientRect() ?? null));
+          if (!mo) napDuLieu();
           datMo((cu) => !cu);
         }}
         aria-label={nhanPlaylist ? `Đã lưu vào ${nhanPlaylist}` : "Thêm vào"}
