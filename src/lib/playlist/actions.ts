@@ -16,6 +16,13 @@ import { doiHoiChuDuAn } from "@/lib/quyen";
 import { apDungDeXuat } from "./apDung";
 import { dongBoPlaylist } from "./dongBo";
 import {
+  doiTenTrenYouTube,
+  ghiThuTuLenYouTube,
+  themLenYouTube,
+  xoaKhoiYouTube,
+  xoaPlaylistTrenYouTube,
+} from "./ghiThang";
+import {
   datLaiThuTu as datLaiThuTuLoi,
   doiTenThuMuc as doiTenThuMucLoi,
   doiThuTu as doiThuTuLoi,
@@ -23,7 +30,6 @@ import {
   taoThuMucMoi as taoThuMucMoiLoi,
   themVaoThuMuc as themVaoThuMucLoi,
   xoaKhoiThuMuc as xoaKhoiThuMucLoi,
-  xoaThuMuc as xoaThuMucLoi,
 } from "./thanhVien";
 
 export interface KetQua {
@@ -55,9 +61,17 @@ async function chanCua(viec: string): Promise<KetQua | null> {
   }
 }
 
-/** Duyệt một đề xuất — mới chỉ là ghi nhận ý định, chưa đụng tới YouTube. */
-export async function duyet(id: string): Promise<KetQua> {
-  const chan = await chanCua("duyệt đề xuất playlist");
+/**
+ * Đồng ý một gợi ý của trợ lý VÀ ghi luôn lên YouTube — một cú bấm.
+ *
+ * Bản cũ tách "Duyệt" và "Ghi lên YouTube" thành hai nút ở hai khu vực khác
+ * nhau, cốt để một cú bấm nhầm không đổi được tài khoản thật. Nhưng từ khi
+ * thao tác của chính chủ nhà ghi thẳng lên YouTube, giữ hai bước cho riêng
+ * phần gợi ý của trợ lý chỉ còn gây rối: cùng một trang mà hai kiểu hành xử.
+ * Cái phanh thật sự vẫn còn — trợ lý không tự bấm được, phải chủ nhà bấm.
+ */
+export async function dongYVaGhi(id: string): Promise<KetQua> {
+  const chan = await chanCua("đồng ý gợi ý playlist");
   if (chan) return chan;
 
   await prisma.playlistOrganizationSuggestion.update({
@@ -65,11 +79,9 @@ export async function duyet(id: string): Promise<KetQua> {
     data: { status: "approved", decidedAt: new Date() },
   });
 
-  revalidatePath("/playlist");
-  return {
-    ok: true,
-    thongDiep: "Đã duyệt. Bấm 'Ghi lên YouTube' để thực hiện.",
-  };
+  const kq = await apDungDeXuat(id);
+  lamMoiMoiTrangCoThe();
+  return kq;
 }
 
 /** Từ chối một đề xuất. */
@@ -84,21 +96,6 @@ export async function tuChoi(id: string): Promise<KetQua> {
 
   revalidatePath("/playlist");
   return { ok: true, thongDiep: "Đã bỏ." };
-}
-
-/**
- * Ghi thật lên YouTube.
- *
- * Đây là lời gọi duy nhất từ giao diện đi tới chỗ ghi thật. `apDungDeXuat` còn
- * kiểm lại lần nữa rằng đề xuất đang ở trạng thái đã duyệt.
- */
-export async function ghiLenYouTube(id: string): Promise<KetQua> {
-  const chan = await chanCua("ghi lên YouTube");
-  if (chan) return chan;
-
-  const kq = await apDungDeXuat(id);
-  revalidatePath("/playlist");
-  return { ok: kq.ok, thongDiep: kq.thongDiep };
 }
 
 /** Bật/tắt việc cho trợ lý sắp xếp một playlist. */
@@ -163,7 +160,18 @@ export async function taoThuMuc(ten: string): Promise<KetQua & { id?: string }> 
   return { ok: true, thongDiep: `Đã tạo "${sach}" trên Am.`, id };
 }
 
-/** Thêm một nội dung vào thư mục — làm ngay trên Am, không cần duyệt. */
+/**
+ * Ghép lời nhắn phần YouTube vào kết quả.
+ *
+ * YouTube hỏng KHÔNG làm hỏng thao tác — việc trên Am đã ghi xong từ trước,
+ * đây chỉ là nói thêm cho biết phần ghi thật chưa tới nơi.
+ */
+function kemLoiYouTube(kq: KetQua, ghi: { ok: boolean; thongDiep: string }): KetQua {
+  if (ghi.ok) return kq;
+  return { ...kq, thongDiep: `${kq.thongDiep} (YouTube chưa nhận: ${ghi.thongDiep})` };
+}
+
+/** Thêm một nội dung vào thư mục — ghi thẳng lên YouTube luôn, không cần duyệt. */
 export async function themVaoThuMuc(
   contentItemId: string,
   playlistId: string,
@@ -172,11 +180,14 @@ export async function themVaoThuMuc(
   if (chan) return chan;
 
   const kq = await themVaoThuMucLoi(contentItemId, playlistId, "user");
+  if (!kq.ok) return kq;
+
+  const ghi = await themLenYouTube(playlistId, contentItemId);
   lamMoiMoiTrangCoThe();
-  return kq;
+  return kemLoiYouTube(kq, ghi);
 }
 
-/** Bỏ một nội dung khỏi thư mục — làm ngay trên Am, không cần duyệt. */
+/** Bỏ một nội dung khỏi thư mục — ghi thẳng lên YouTube luôn, không cần duyệt. */
 export async function xoaKhoiThuMuc(
   contentItemId: string,
   playlistId: string,
@@ -185,8 +196,11 @@ export async function xoaKhoiThuMuc(
   if (chan) return chan;
 
   const kq = await xoaKhoiThuMucLoi(contentItemId, playlistId);
+  if (!kq.ok) return kq;
+
+  const ghi = await xoaKhoiYouTube(playlistId, contentItemId);
   lamMoiMoiTrangCoThe();
-  return kq;
+  return kemLoiYouTube(kq, ghi);
 }
 
 /**
@@ -208,8 +222,17 @@ export async function chuyenDenThuMuc(
   if (!kqThem.ok) return kqThem;
   await xoaKhoiThuMucLoi(contentItemId, tuPlaylistId);
 
+  // Ghi thật cả hai đầu. Thêm trước, bớt sau — hỏng giữa chừng thì video nằm
+  // ở cả hai chỗ, khó chịu nhưng không mất; làm ngược lại thì nó biến mất hẳn.
+  const ghiThem = await themLenYouTube(denPlaylistId, contentItemId);
+  const ghiBot = await xoaKhoiYouTube(tuPlaylistId, contentItemId);
+
   lamMoiMoiTrangCoThe();
-  return { ok: true, thongDiep: kqThem.thongDiep.replace("Đã thêm vào", "Đã chuyển sang") };
+  const kq = {
+    ok: true,
+    thongDiep: kqThem.thongDiep.replace("Đã thêm vào", "Đã chuyển sang"),
+  };
+  return kemLoiYouTube(kq, ghiThem.ok ? ghiBot : ghiThem);
 }
 
 /** Đổi chỗ một nội dung với nội dung liền kề trong thư mục — làm ngay trên Am. */
@@ -222,12 +245,15 @@ export async function doiThuTu(
   if (chan) return chan;
 
   const kq = await doiThuTuLoi(playlistId, contentItemId, huong);
+  if (!kq.ok) return kq;
+
+  const ghi = await ghiThuTuLenYouTube(playlistId);
   revalidatePath(`/playlist/${playlistId}`);
   revalidatePath("/playlist");
-  return kq;
+  return kemLoiYouTube(kq, ghi);
 }
 
-/** Ghi lại thứ tự sau khi kéo-thả — làm ngay trên Am, chưa đụng YouTube. */
+/** Ghi lại thứ tự sau khi kéo-thả — ghi thẳng lên YouTube luôn. */
 export async function datLaiThuTu(
   playlistId: string,
   thuTuMoi: string[],
@@ -236,12 +262,15 @@ export async function datLaiThuTu(
   if (chan) return chan;
 
   const kq = await datLaiThuTuLoi(playlistId, thuTuMoi);
+  if (!kq.ok) return kq;
+
+  const ghi = await ghiThuTuLenYouTube(playlistId);
   revalidatePath(`/playlist/${playlistId}`);
   revalidatePath("/playlist");
-  return kq;
+  return kemLoiYouTube(kq, ghi);
 }
 
-/** Đổi tên thư mục trên Am — thật thì sinh đề xuất chờ duyệt. */
+/** Đổi tên thư mục — đổi luôn cả trên YouTube, không cần duyệt. */
 export async function doiTenThuMuc(
   playlistId: string,
   tenMoi: string,
@@ -250,18 +279,34 @@ export async function doiTenThuMuc(
   if (chan) return chan;
 
   const kq = await doiTenThuMucLoi(playlistId, tenMoi);
+  if (!kq.ok) return kq;
+
+  const ghi = await doiTenTrenYouTube(playlistId, tenMoi.trim());
   revalidatePath("/playlist");
-  return kq;
+  return kemLoiYouTube(kq, ghi);
 }
 
-/** Yêu cầu xoá thư mục — CHƯA xoá gì thật, chỉ ẩn đi và chờ duyệt. */
+/**
+ * Xoá thư mục — xoá luôn cả trên YouTube.
+ *
+ * VIỆC KHÔNG LÙI ĐƯỢC. Giao diện đã hỏi lại một lần trước khi gọi tới đây;
+ * xoá xong thì YouTube không có thùng rác để lấy lại.
+ *
+ * Xoá bên YouTube TRƯỚC rồi mới xoá trên Am: làm ngược lại thì hỏng giữa chừng
+ * là mất dấu hoàn toàn — Am không còn biết playlist nào cần xoá nữa.
+ */
 export async function xoaThuMuc(playlistId: string): Promise<KetQua> {
   const chan = await chanCua("xoá thư mục playlist");
   if (chan) return chan;
 
-  const kq = await xoaThuMucLoi(playlistId);
+  const ghi = await xoaPlaylistTrenYouTube(playlistId);
+  if (!ghi.ok) {
+    return { ok: false, thongDiep: `Chưa xoá được trên YouTube: ${ghi.thongDiep}` };
+  }
+
+  await prisma.youTubePlaylist.delete({ where: { id: playlistId } });
   revalidatePath("/playlist");
-  return kq;
+  return { ok: true, thongDiep: "Đã xoá hẳn, cả trên YouTube." };
 }
 
 /** Huỷ yêu cầu xoá — thư mục hiện lại bình thường. */

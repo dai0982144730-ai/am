@@ -150,6 +150,7 @@ const TRUONG_THE = {
     select: { playlist: { select: { id: true, title: true } } },
   },
   chiTrongPlaylist: true,
+  khongXemDuoc: true,
   classification: {
     select: {
       titleVi: true,
@@ -237,6 +238,10 @@ export async function dungDieuKien(loc: BoLoc): Promise<Prisma.ContentItemWhereI
   // chọn — không hiện ở Trang chủ, Khám phá hay tìm kiếm. Xem giải thích dài
   // ở `ContentItem.chiTrongPlaylist` trong schema.
   dieuKien.chiTrongPlaylist = false;
+
+  // Video YouTube đã xoá hoặc chuyển sang riêng tư: bày ra chỉ để người xem
+  // bấm vào rồi gặp "Video không có sẵn". Xem `soatVideoConSong.ts`.
+  dieuKien.khongXemDuoc = false;
 
   const anTheoTran = await idNoiDungChuaThaTheoBo();
   if (anTheoTran.length > 0) dieuKien.id = { notIn: anTheoTran };

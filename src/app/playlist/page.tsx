@@ -114,11 +114,11 @@ export default async function TrangPlaylist() {
     <KhungTrang emailNguoiDung={phien?.user?.email}>
       <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="text-xl font-semibold tracking-tight">Playlist</h1>
-        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-          Mỗi thư mục trên Am ánh xạ đúng một playlist thật trên YouTube. Sửa gì
-          trên Am (thêm, bớt, đổi tên, xoá) đều làm ngay — nhưng phần <strong>ghi
-          thật lên YouTube</strong> luôn dừng lại chờ bạn duyệt rồi mới ghi, kể
-          cả xoá.
+        <p className="mt-1 max-w-3xl text-sm text-neutral-500 dark:text-neutral-400">
+          Mỗi thư mục ở đây là một playlist thật trên YouTube. Bạn thêm, bớt,
+          đổi tên, đổi thứ tự hay xoá thì <strong>Am ghi thẳng lên YouTube
+          ngay</strong> — không cần duyệt lại, không phải mở YouTube. Chỉ khi
+          trợ lý tự nghĩ ra một việc thì nó mới hỏi bạn trước.
         </p>
 
         <div className="mt-6">

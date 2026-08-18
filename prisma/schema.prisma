@@ -379,6 +379,15 @@ model ContentItem {
   /// thường thì cờ tự tắt, nó thành nội dung đầy đủ như mọi thứ khác.
   chiTrongPlaylist Boolean @default(false)
 
+  /// YouTube không còn cho xem video này — chủ kênh đã xoá, hoặc chuyển sang
+  /// riêng tư sau khi Am đã quét về.
+  ///
+  /// Bày một video bấm vào chỉ hiện "Video không có sẵn" là làm mất thời gian
+  /// của người xem, nên nó bị loại khỏi Trang chủ, Khám phá và tìm kiếm. Nhưng
+  /// TRONG PLAYLIST thì vẫn hiện, có đánh dấu — đó chính là chỗ cần nhìn thấy
+  /// nó để mà bỏ đi, giống cách YouTube vẫn để lại dòng "[Video đã xoá]".
+  khongXemDuoc Boolean @default(false)
+
   /// Chỉ có giá trị khi contentGroup = new_search
   adHocInterestId String?
   adHocInterest   AdHocInterest? @relation(fields: [adHocInterestId], references: [id], onDelete: SetNull)

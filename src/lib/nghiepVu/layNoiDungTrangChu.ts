@@ -54,6 +54,7 @@ export const TRUONG_CAN_LAY = {
   // Để thẻ biết mà bỏ các nhãn của luồng tuyển chọn — video chỉ có mặt trong
   // playlist thì không chờ lồng tiếng, không phải "nguồn mới" gì cả.
   chiTrongPlaylist: true,
+  khongXemDuoc: true,
   classification: {
     select: {
       titleVi: true,
@@ -151,12 +152,26 @@ export interface TinhHinhKho {
   quetGanNhat: Date | null;
 }
 
-/** Vài con số để hiện ở đầu trang, cho biết kho đang có gì. */
+/**
+ * Vài con số để hiện ở đầu trang, cho biết kho đang có gì.
+ *
+ * ĐẾM ĐÚNG PHẦN TUYỂN CHỌN, không đếm video nạp về chỉ để sắp xếp playlist.
+ * Bản trước đếm tất: sau khi nạp 523 video playlist thì đầu trang báo "589
+ * kênh, 774 video, 681 đang chờ" — nghe như Am đang theo dõi 589 kênh và sắp
+ * cho Claude đọc 681 video, cả hai đều sai. Kênh của video playlist không bao
+ * giờ bị quét, và video ấy không bao giờ được đọc.
+ */
 export async function layTinhHinhKho(): Promise<TinhHinhKho> {
   const [tongNoiDung, daPhanLoai, soNguon, nguonMoiNhat] = await Promise.all([
-    prisma.contentItem.count(),
-    prisma.contentItem.count({ where: { status: "classified" } }),
-    prisma.source.count({ where: { type: "youtube_channel" } }),
+    prisma.contentItem.count({ where: { chiTrongPlaylist: false } }),
+    prisma.contentItem.count({
+      where: { chiTrongPlaylist: false, status: "classified" },
+    }),
+    // Kênh thật sự được quét = kênh có mã danh sách tải lên. Kênh dựng ra cho
+    // video playlist không có trường đó, xem `napVideoNgoai.ts`.
+    prisma.source.count({
+      where: { type: "youtube_channel", uploadsPlaylistId: { not: null } },
+    }),
     prisma.source.findFirst({
       where: { lastCrawledAt: { not: null } },
       orderBy: { lastCrawledAt: "desc" },

@@ -95,6 +95,10 @@ const NHAN_NGUON: Record<string, { ten: string; mau: string }> = {
 
 /** Nhãn nổi ở góc trái ảnh — mỗi chuyên mục một kiểu thông tin. */
 function nhanGoc(muc: NonNullable<TheNoiDung>): string | null {
+  // Video YouTube đã chặn cửa: nói thẳng ra, vì đây là thứ duy nhất đáng biết
+  // về nó. Nó chỉ còn hiện trong playlist, đúng chỗ cần thấy để mà bỏ đi.
+  if (muc.khongXemDuoc) return "KHÔNG XEM ĐƯỢC";
+
   // Video chỉ có mặt để sắp xếp trong playlist thì mọi nhãn dưới đây đều sai:
   // nó không nằm trong hàng chờ lồng tiếng, không được Claude đọc, không thuộc
   // chuyên mục nào. Dán "CHỜ LỒNG TIẾNG" lên 246 video ngoại ngữ trong playlist

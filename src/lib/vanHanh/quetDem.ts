@@ -55,6 +55,7 @@ import {
 } from "@/lib/tts/taoAmThanh";
 import { layLoiThoaiHangLoat } from "@/lib/youtube/loiThoai";
 import { dongBoNguonTuKenhDaDangKy, quetVideoMoi } from "@/lib/youtube/quetKenh";
+import { soatVideoConSong } from "@/lib/youtube/soatVideoConSong";
 import { dongBoPlaylist } from "@/lib/playlist/dongBo";
 
 
@@ -185,6 +186,26 @@ export async function quetDem(
         return (
           `${kq.soDoc} playlist (${kq.themMoi} mới, ${kq.capNhat} cập nhật)` +
           (kq.matBenYoutube > 0 ? `, gỡ ${kq.matBenYoutube} đã xoá bên YouTube` : "")
+        );
+      },
+      bao,
+    ),
+  );
+
+  // ----- Bước 1c: soát video đã chết trên YouTube -----
+  //
+  // Chủ kênh xoá video hoặc chuyển sang riêng tư bất cứ lúc nào, mà Am đã quét
+  // về từ trước thì vẫn bày lên như thường — bấm vào mới hiện "Video không có
+  // sẵn". Chủ dự án bắt gặp đúng chuyện đó 2026-08-18. Rẻ (4 đơn vị hạn mức
+  // cho cả kho) nên soát hằng đêm, không đợi ai báo.
+  cacBuoc.push(
+    await chayMotBuoc(
+      "Soát video đã xoá hoặc chuyển riêng tư",
+      async () => {
+        const kq = await soatVideoConSong();
+        return (
+          `soi ${kq.daSoat} video, ẩn ${kq.moiChet} cái không xem được` +
+          (kq.songLai > 0 ? `, ${kq.songLai} cái hiện lại` : "")
         );
       },
       bao,

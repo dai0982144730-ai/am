@@ -23,9 +23,8 @@ import { createPortal } from "react-dom";
 
 import {
   dongBoLai,
+  dongYVaGhi,
   doiTenThuMuc,
-  duyet,
-  ghiLenYouTube,
   huyXoaThuMuc,
   batTatChoSapXep,
   taoThuMuc,
@@ -345,9 +344,12 @@ export function BangPlaylist({
     });
   }
 
-  const choDuyet = cacDeXuat.filter((d) => d.trangThai === "pending");
-  const daDuyet = cacDeXuat.filter((d) => d.trangThai === "approved");
-  const daGhi = cacDeXuat.filter((d) => d.trangThai === "applied");
+  // Gộp "đã duyệt nhưng chưa ghi" vào cùng danh sách chờ: từ khi bỏ bước
+  // duyệt, trạng thái đó chỉ còn là tồn đọng cũ, không sinh thêm nữa. Để riêng
+  // một mục cho nó chỉ tổ thêm một khu vực người dùng phải hiểu.
+  const choDuyet = cacDeXuat.filter(
+    (d) => d.trangThai === "pending" || d.trangThai === "approved",
+  );
 
   return (
     <div>
@@ -358,9 +360,9 @@ export function BangPlaylist({
             Tài khoản mới chỉ cấp quyền <strong>đọc</strong> YouTube.
           </p>
           <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
-            Vẫn xem được playlist và đọc đề xuất, nhưng bấm &ldquo;Ghi lên
-            YouTube&rdquo; sẽ báo lỗi. Ứng dụng <strong>đã xin</strong> quyền
-            sửa playlist rồi, còn thiếu hai bước bạn phải tự làm:
+            Vẫn xem được playlist, nhưng mọi thay đổi chỉ nằm trên Am chứ không
+            sang được YouTube. Ứng dụng <strong>đã xin</strong> quyền sửa
+            playlist rồi, còn thiếu hai bước bạn phải tự làm:
           </p>
           <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-amber-700 dark:text-amber-400">
             <li>
@@ -385,47 +387,19 @@ export function BangPlaylist({
         </p>
       ) : null}
 
-      {/* Trang này làm gì — chủ dự án hỏi thẳng, nên trả lời ngay tại chỗ */}
-      <div className="mt-5 grid gap-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-xs leading-relaxed sm:grid-cols-3 dark:border-neutral-800 dark:bg-neutral-900">
-        <div>
-          <p className="font-semibold text-neutral-700 dark:text-neutral-200">
-            1 · Sửa trên Am ngay
+      {/* Đề xuất đang chờ — CHỈ còn thứ trợ lý tự nghĩ ra. Việc chính chủ nhà
+          bấm thì ghi thẳng lên YouTube ngay, không đẻ ra dòng nào ở đây. */}
+      {choDuyet.length > 0 ? (
+        <section className="mt-6">
+          <h2 className="text-base font-semibold">
+            Việc còn treo ({choDuyet.length})
+          </h2>
+          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+            Hai loại nằm chung ở đây: việc <strong>trợ lý tự nghĩ ra</strong>{" "}
+            (luôn phải hỏi bạn trước), và việc <strong>bạn từng bấm hồi còn cơ
+            chế duyệt</strong> nên chưa kịp ghi lên YouTube. Bấm một lần là
+            xong hẳn, không còn bước thứ hai.
           </p>
-          <p className="mt-1 text-neutral-600 dark:text-neutral-300">
-            Thêm/bớt/đổi tên/xoá thư mục — bạn hoặc trợ lý làm ngay trên Am,
-            không cần duyệt. Đây chỉ là ý định, chưa đụng gì tới YouTube.
-          </p>
-        </div>
-        <div>
-          <p className="font-semibold text-neutral-700 dark:text-neutral-200">
-            2 · Bạn duyệt việc ghi thật
-          </p>
-          <p className="mt-1 text-neutral-600 dark:text-neutral-300">
-            Am tự so ý muốn với thật trên YouTube, sinh đề xuất cho chỗ lệch.
-            Bấm <strong>Duyệt</strong> = đồng ý, YouTube vẫn chưa đổi gì.
-          </p>
-        </div>
-        <div>
-          <p className="font-semibold text-neutral-700 dark:text-neutral-200">
-            3 · Ghi lên YouTube
-          </p>
-          <p className="mt-1 text-neutral-600 dark:text-neutral-300">
-            Đây mới là lúc thay đổi thật trên tài khoản của bạn. Kể cả xoá thư
-            mục cũng đi đúng ba bước này, không có ngoại lệ tự động.
-          </p>
-        </div>
-      </div>
-
-      {/* Đề xuất đang chờ */}
-      <section className="mt-6">
-        <h2 className="text-base font-semibold">
-          Chờ bạn quyết ({choDuyet.length})
-        </h2>
-        {choDuyet.length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-400">
-            Không có đề xuất nào đang chờ.
-          </p>
-        ) : (
           <ul className="mt-3 space-y-3">
             {choDuyet.map((d) => (
               <li
@@ -460,14 +434,14 @@ export function BangPlaylist({
                     <button
                       type="button"
                       disabled={dangChay}
-                      onClick={() => chay(() => duyet(d.id))}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-40 ${
+                      onClick={() => chay(() => dongYVaGhi(d.id))}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40 ${
                         d.nguyHiem
-                          ? "border-red-600 text-red-700 dark:border-red-500 dark:text-red-400"
-                          : "border-cam-600 dark:border-cam-500"
+                          ? "bg-red-600 dark:bg-red-500"
+                          : "bg-cam-600 dark:bg-cam-500"
                       }`}
                     >
-                      Duyệt
+                      Đồng ý, làm luôn
                     </button>
                     <button
                       type="button"
@@ -482,78 +456,10 @@ export function BangPlaylist({
               </li>
             ))}
           </ul>
-        )}
-      </section>
-
-      {/* Đã duyệt, chờ ghi thật */}
-      {daDuyet.length > 0 ? (
-        <section className="mt-8">
-          <h2 className="text-base font-semibold">
-            Đã duyệt, chưa ghi ({daDuyet.length})
-          </h2>
-          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            Duyệt rồi vẫn chưa có gì thay đổi trên YouTube. Bấm nút dưới mới ghi
-            thật.
-          </p>
-          <ul className="mt-3 space-y-2">
-            {daDuyet.map((d) => (
-              <li
-                key={d.id}
-                className={`flex flex-wrap items-center gap-3 rounded-xl border p-3 ${
-                  d.nguyHiem
-                    ? "border-red-300 dark:border-red-900"
-                    : "border-neutral-300 dark:border-neutral-700"
-                }`}
-              >
-                <div className="min-w-0 flex-1">
-                  {d.tieuDeVideo ? (
-                    <p className="line-clamp-1 text-sm">{d.tieuDeVideo}</p>
-                  ) : null}
-                  <p
-                    className={`text-xs ${
-                      d.nguyHiem ? "text-red-600 dark:text-red-400" : "text-neutral-500 dark:text-neutral-400"
-                    }`}
-                  >
-                    {d.moTaViec}
-                  </p>
-                </div>
-                {laChu ? (
-                  <button
-                    type="button"
-                    disabled={dangChay}
-                    onClick={() => chay(() => ghiLenYouTube(d.id))}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40 ${
-                      d.nguyHiem ? "bg-red-600 dark:bg-red-500" : "bg-cam-600 dark:bg-cam-500"
-                    }`}
-                  >
-                    Ghi lên YouTube
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
         </section>
       ) : null}
 
-      {/* Đã ghi rồi */}
-      {daGhi.length > 0 ? (
-        <section className="mt-8">
-          <h2 className="text-base font-semibold">Đã ghi ({daGhi.length})</h2>
-          <ul className="mt-3 space-y-1">
-            {daGhi.map((d) => (
-              <li
-                key={d.id}
-                className="flex items-baseline justify-between gap-3 text-sm text-neutral-500 dark:text-neutral-400"
-              >
-                <span className="line-clamp-1">{d.tieuDeVideo ?? d.moTaViec}</span>
-                <span className="shrink-0 text-xs">{d.moTaViec}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {/* Thư mục đang chờ xoá */}
+      {/* Thư mục đang chờ xoá — chỉ còn sót lại từ trước khi bỏ bước duyệt */}
       {cacThuMucChoXoa.length > 0 ? (
         <section className="mt-8">
           <h2 className="text-base font-semibold">
@@ -585,9 +491,12 @@ export function BangPlaylist({
           ) : null}
         </div>
         <p className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-          Bấm vào tên để đổi. <strong className="text-cam-700 dark:text-cam-300">Cho
-          sắp xếp</strong> = trợ lý được phép đề xuất thêm video vào playlist
-          này · <strong>Không đụng tới</strong> = nó bỏ qua hẳn.
+          Bấm vào ảnh để xem bên trong. Nút ba chấm để đổi tên hoặc xoá.{" "}
+          <strong className="text-cam-700 dark:text-cam-300">
+            Trợ lý được gợi ý thêm bài
+          </strong>{" "}
+          = cho trợ lý đề nghị bỏ thêm video vào playlist này (đề nghị thôi, vẫn
+          chờ bạn đồng ý) · <strong>Trợ lý không đụng tới</strong> = bỏ qua hẳn.
         </p>
 
         <KhoiTaoThuMuc laChu={laChu} />
@@ -598,7 +507,7 @@ export function BangPlaylist({
             YouTube&rdquo;.
           </p>
         ) : (
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {cacPlaylist.map((p) => (
               <MotPlaylist key={p.id} muc={p} laChu={laChu} />
             ))}
