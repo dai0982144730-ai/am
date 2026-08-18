@@ -32,6 +32,28 @@ import {
   xoaKhoiThuMuc,
 } from "@/lib/playlist/actions";
 
+/** Bề ngang menu, khai một chỗ vì cả `w-64` lẫn phép tính lề đều cần con số này. */
+const RONG = 256;
+
+/**
+ * Đặt menu vào chỗ còn thấy được, và cao tối đa bằng đúng khoảng trống ấy.
+ *
+ * VÌ SAO PHẢI TỰ TÍNH: danh sách playlist dài tới 26 dòng, cao hơn 500px. Bản
+ * trước luôn mở XUỐNG DƯỚI nút, mà từ lúc nút ba chấm dời từ góc trên ảnh
+ * xuống giữa-dưới ảnh thì mốc neo tụt thêm cả trăm pixel nữa — menu đổ hẳn ra
+ * ngoài đáy màn hình. Bấm vào thấy y như không có gì hiện ra, dù nó có hiện.
+ */
+function viTriMenu(o: DOMRect): React.CSSProperties {
+  const choDuoi = window.innerHeight - o.bottom - 12;
+  const choTren = o.top - 12;
+  const trai = Math.max(12, Math.min(o.right - RONG, window.innerWidth - RONG - 12));
+
+  // Mở lên trên khi phía trên rộng rãi hơn, thay vì cố nhét xuống dưới
+  return choTren > choDuoi
+    ? { bottom: window.innerHeight - o.top + 6, left: trai, maxHeight: choTren }
+    : { top: o.bottom + 6, left: trai, maxHeight: choDuoi };
+}
+
 export function MenuBaCham({
   contentItemId,
   trongPlaylistId,
@@ -151,11 +173,8 @@ export function MenuBaCham({
               />
               <div
                 onClick={(e) => e.preventDefault()}
-                className="fixed z-50 max-h-[70vh] w-64 overflow-y-auto rounded-xl border border-neutral-300 bg-background p-1.5 shadow-2xl dark:border-neutral-700"
-                style={{
-                  top: oNut.bottom + 6,
-                  left: Math.max(12, Math.min(oNut.right - 256, window.innerWidth - 268)),
-                }}
+                className="fixed z-50 w-64 overflow-y-auto rounded-xl border border-neutral-300 bg-background p-1.5 shadow-2xl dark:border-neutral-700"
+                style={viTriMenu(oNut)}
               >
                 {dangNap ? (
                   <p className="px-3 py-2 text-sm text-neutral-400">Đang tải…</p>

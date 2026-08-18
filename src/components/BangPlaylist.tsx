@@ -61,6 +61,20 @@ export interface DeXuatGon {
   nguyHiem: boolean;
 }
 
+/**
+ * Đặt menu vào chỗ còn thấy được — mở lên trên khi phía dưới hết chỗ. Cùng
+ * cách tính với `MenuBaCham`, xem giải thích dài ở đó.
+ */
+function viTriMenu(o: DOMRect, rong: number): React.CSSProperties {
+  const choDuoi = window.innerHeight - o.bottom - 12;
+  const choTren = o.top - 12;
+  const trai = Math.max(12, Math.min(o.right - rong, window.innerWidth - rong - 12));
+
+  return choTren > choDuoi
+    ? { bottom: window.innerHeight - o.top + 6, left: trai, maxHeight: choTren }
+    : { top: o.bottom + 6, left: trai, maxHeight: choDuoi };
+}
+
 function MotPlaylist({
   muc,
   laChu,
@@ -169,11 +183,8 @@ function MotPlaylist({
                         aria-hidden
                       />
                       <div
-                        className="fixed z-50 w-40 overflow-hidden rounded-xl border border-neutral-300 bg-background p-1.5 shadow-2xl dark:border-neutral-700"
-                        style={{
-                          top: oNut.bottom + 6,
-                          left: Math.max(12, Math.min(oNut.right - 160, window.innerWidth - 172)),
-                        }}
+                        className="fixed z-50 w-40 overflow-y-auto rounded-xl border border-neutral-300 bg-background p-1.5 shadow-2xl dark:border-neutral-700"
+                        style={viTriMenu(oNut, 160)}
                       >
                         <button
                           type="button"
