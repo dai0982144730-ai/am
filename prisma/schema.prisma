@@ -1031,6 +1031,14 @@ model YouTubePlaylist {
   lastSyncedAt DateTime?
   createdAt    DateTime  @default(now())
 
+  /// Thứ tự chủ nhà tự kéo-thả trên trang Playlist của Am.
+  ///
+  /// CHỈ SỐNG TRÊN AM. YouTube không có API nào cho phép sắp xếp thứ tự giữa
+  /// các playlist với nhau (chỉ sắp được video BÊN TRONG một playlist), nên
+  /// đây là thứ duy nhất trong bộ playlist không đồng bộ ra ngoài được.
+  /// `null` = chưa từng kéo, rơi xuống dưới và xếp theo tên.
+  viTri Int?
+
   suggestions PlaylistOrganizationSuggestion[]
   items       PlaylistItem[]
 }

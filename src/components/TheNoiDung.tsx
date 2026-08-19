@@ -10,7 +10,6 @@
 import Link from "next/link";
 
 import { MenuBaCham } from "@/components/MenuBaCham";
-import { NutDoiViTri } from "@/components/NutDoiViTri";
 import type { TheNoiDung } from "@/lib/nghiepVu/layNoiDungTrangChu";
 import { ngheDuocBangTiengViet } from "@/lib/tiengViet/loc";
 
@@ -170,13 +169,10 @@ function thongTinPhu(muc: NonNullable<TheNoiDung>): string[] {
 export function TheNoiDungCard({
   muc,
   trongPlaylistId,
-  viTri,
 }: {
   muc: NonNullable<TheNoiDung>;
   /** Có giá trị khi thẻ này hiện trong trang chi tiết một playlist */
   trongPlaylistId?: string;
-  /** Vị trí trong danh sách playlist — để biết có phải đầu/cuối, ẩn nút tương ứng */
-  viTri?: { laDau: boolean; laCuoi: boolean };
 }) {
   const thoiLuong = docThoiLuong(muc.durationSeconds);
   const luotXem = docLuotXem(muc.viewOrPlayCount);
@@ -251,16 +247,6 @@ export function TheNoiDungCard({
       </div>
 
       <div>
-        {trongPlaylistId && viTri ? (
-          <div className="mb-1">
-            <NutDoiViTri
-              playlistId={trongPlaylistId}
-              contentItemId={muc.id}
-              laDau={viTri.laDau}
-              laCuoi={viTri.laCuoi}
-            />
-          </div>
-        ) : null}
         <h3 className="line-clamp-2 text-sm font-medium leading-snug text-neutral-900 group-hover:text-neutral-600 dark:text-neutral-100 dark:group-hover:text-neutral-300">
           {/* Tiêu đề tiếng Việt nếu Claude đã dịch, không thì dùng gốc.
               Phần lớn nguồn khoa học và AI hay là báo tiếng Anh — lướt trang

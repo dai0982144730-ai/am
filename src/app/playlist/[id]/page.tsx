@@ -111,9 +111,8 @@ export default async function TrangChiTietPlaylist({
           <>
             {laChu ? (
               <p className="mt-4 text-xs text-neutral-400 dark:text-neutral-500">
-                Kéo thẻ sang chỗ khác để đổi thứ tự, hoặc dùng hai nút ▲▼ dưới
-                mỗi thẻ. Thứ tự lưu ngay trên Am; ghi thật lên YouTube vẫn chờ
-                bạn duyệt ở trang Playlist.
+                Kéo thẻ sang chỗ khác để đổi thứ tự. Thứ tự mới ghi thẳng lên
+                YouTube luôn, không phải duyệt lại.
               </p>
             ) : null}
             <LuoiPlaylistKeoTha

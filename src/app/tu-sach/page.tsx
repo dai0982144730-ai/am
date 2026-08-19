@@ -52,7 +52,7 @@ export default async function TrangTuSach() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-cam-600 dark:text-cam-300">
               Đang theo dõi · {trongTu.length}
             </h2>
-            <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {trongTu.map((t) => (
                 <TheTacGia key={t.id} tacGia={t} />
               ))}
@@ -74,7 +74,7 @@ export default async function TrangTuSach() {
                 Bấm <strong>Không phải tác giả</strong> để dẹp hẳn khỏi đây.
               </p>
             ) : null}
-            <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {chuaTrongTu.map((t) => (
                 <TheTacGia key={t.id} tacGia={t} />
               ))}
@@ -91,7 +91,7 @@ export default async function TrangTuSach() {
               nên lượt phân loại sau sẽ rút đúng cái tên đó lần nữa. Đánh dấu thì
               không phải bác lại mỗi tuần.
             </p>
-            <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {daBac.map((t) => (
                 <TheTacGia key={t.id} tacGia={t} />
               ))}

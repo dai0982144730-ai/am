@@ -36,7 +36,9 @@ export default async function TrangPlaylist() {
   const [cacPlaylist, cacThuMucChoXoa, cacDeXuatTho, taiKhoan] = await Promise.all([
     prisma.youTubePlaylist.findMany({
       where: { deletionRequestedAt: null },
-      orderBy: [{ managedByAI: "desc" }, { title: "asc" }],
+      // Thứ tự chủ nhà tự kéo-thả đứng trước; cái chưa từng kéo (`viTri` rỗng)
+      // rơi xuống dưới và xếp theo tên như cũ.
+      orderBy: [{ viTri: { sort: "asc", nulls: "last" } }, { title: "asc" }],
       select: {
         id: true,
         title: true,

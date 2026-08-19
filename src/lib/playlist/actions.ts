@@ -25,10 +25,10 @@ import {
 import {
   datLaiThuTu as datLaiThuTuLoi,
   doiTenThuMuc as doiTenThuMucLoi,
-  doiThuTu as doiThuTuLoi,
   huyXoaThuMuc as huyXoaThuMucLoi,
   taoThuMucMoi as taoThuMucMoiLoi,
   themVaoThuMuc as themVaoThuMucLoi,
+  soSanhVaSinhDeXuat,
   xoaKhoiThuMuc as xoaKhoiThuMucLoi,
 } from "./thanhVien";
 
@@ -171,6 +171,24 @@ function kemLoiYouTube(kq: KetQua, ghi: { ok: boolean; thongDiep: string }): Ket
   return { ...kq, thongDiep: `${kq.thongDiep} (YouTube chưa nhận: ${ghi.thongDiep})` };
 }
 
+/**
+ * So lại Am với YouTube SAU KHI đã ghi xong.
+ *
+ * THỨ TỰ Ở ĐÂY LÀ TẤT CẢ. Bản trước để `themVaoThuMuc` tự so ngay lúc sửa
+ * database, tức là TRƯỚC khi ghi lên YouTube — bộ so sánh nhìn thấy Am có mà
+ * YouTube chưa có, liền đẻ ra một đề xuất chờ duyệt. Ghi xong thì đề xuất ấy
+ * vẫn nằm lại, bắt chủ nhà đi duyệt đúng cái việc mình vừa tự tay làm. Đúng
+ * chuyện chủ dự án gặp khi chuyển bài từ "Chụp ảnh" sang "0 AI".
+ *
+ * Gọi ở đây thì ảnh chụp đã được cập nhật, không còn lệch để mà đẻ đề xuất —
+ * và nó còn tự đóng những đề xuất cũ đã hết lý do tồn tại.
+ */
+async function soLaiSauKhiGhi(...cacPlaylistId: string[]): Promise<void> {
+  for (const id of new Set(cacPlaylistId)) {
+    await soSanhVaSinhDeXuat(id);
+  }
+}
+
 /** Thêm một nội dung vào thư mục — ghi thẳng lên YouTube luôn, không cần duyệt. */
 export async function themVaoThuMuc(
   contentItemId: string,
@@ -179,10 +197,11 @@ export async function themVaoThuMuc(
   const chan = await chanCua("thêm vào playlist");
   if (chan) return chan;
 
-  const kq = await themVaoThuMucLoi(contentItemId, playlistId, "user");
+  const kq = await themVaoThuMucLoi(contentItemId, playlistId, "user", false);
   if (!kq.ok) return kq;
 
   const ghi = await themLenYouTube(playlistId, contentItemId);
+  await soLaiSauKhiGhi(playlistId);
   lamMoiMoiTrangCoThe();
   return kemLoiYouTube(kq, ghi);
 }
@@ -195,10 +214,11 @@ export async function xoaKhoiThuMuc(
   const chan = await chanCua("bỏ khỏi playlist");
   if (chan) return chan;
 
-  const kq = await xoaKhoiThuMucLoi(contentItemId, playlistId);
+  const kq = await xoaKhoiThuMucLoi(contentItemId, playlistId, false);
   if (!kq.ok) return kq;
 
   const ghi = await xoaKhoiYouTube(playlistId, contentItemId);
+  await soLaiSauKhiGhi(playlistId);
   lamMoiMoiTrangCoThe();
   return kemLoiYouTube(kq, ghi);
 }
@@ -218,39 +238,22 @@ export async function chuyenDenThuMuc(
   const chan = await chanCua("chuyển playlist");
   if (chan) return chan;
 
-  const kqThem = await themVaoThuMucLoi(contentItemId, denPlaylistId, "user");
+  const kqThem = await themVaoThuMucLoi(contentItemId, denPlaylistId, "user", false);
   if (!kqThem.ok) return kqThem;
-  await xoaKhoiThuMucLoi(contentItemId, tuPlaylistId);
+  await xoaKhoiThuMucLoi(contentItemId, tuPlaylistId, false);
 
   // Ghi thật cả hai đầu. Thêm trước, bớt sau — hỏng giữa chừng thì video nằm
   // ở cả hai chỗ, khó chịu nhưng không mất; làm ngược lại thì nó biến mất hẳn.
   const ghiThem = await themLenYouTube(denPlaylistId, contentItemId);
   const ghiBot = await xoaKhoiYouTube(tuPlaylistId, contentItemId);
 
+  await soLaiSauKhiGhi(denPlaylistId, tuPlaylistId);
   lamMoiMoiTrangCoThe();
   const kq = {
     ok: true,
     thongDiep: kqThem.thongDiep.replace("Đã thêm vào", "Đã chuyển sang"),
   };
   return kemLoiYouTube(kq, ghiThem.ok ? ghiBot : ghiThem);
-}
-
-/** Đổi chỗ một nội dung với nội dung liền kề trong thư mục — làm ngay trên Am. */
-export async function doiThuTu(
-  playlistId: string,
-  contentItemId: string,
-  huong: "len" | "xuong",
-): Promise<KetQua> {
-  const chan = await chanCua("đổi thứ tự playlist");
-  if (chan) return chan;
-
-  const kq = await doiThuTuLoi(playlistId, contentItemId, huong);
-  if (!kq.ok) return kq;
-
-  const ghi = await ghiThuTuLenYouTube(playlistId);
-  revalidatePath(`/playlist/${playlistId}`);
-  revalidatePath("/playlist");
-  return kemLoiYouTube(kq, ghi);
 }
 
 /** Ghi lại thứ tự sau khi kéo-thả — ghi thẳng lên YouTube luôn. */
@@ -261,13 +264,45 @@ export async function datLaiThuTu(
   const chan = await chanCua("đổi thứ tự playlist");
   if (chan) return chan;
 
-  const kq = await datLaiThuTuLoi(playlistId, thuTuMoi);
+  const kq = await datLaiThuTuLoi(playlistId, thuTuMoi, false);
   if (!kq.ok) return kq;
 
   const ghi = await ghiThuTuLenYouTube(playlistId);
+  await soLaiSauKhiGhi(playlistId);
   revalidatePath(`/playlist/${playlistId}`);
   revalidatePath("/playlist");
   return kemLoiYouTube(kq, ghi);
+}
+
+/**
+ * Sắp xếp lại thứ tự GIỮA các playlist sau khi kéo-thả trên trang Playlist.
+ *
+ * CHỈ ĐỔI TRÊN AM. YouTube không có API sắp xếp thứ tự giữa các playlist —
+ * chỉ sắp được video bên trong một playlist. Nên đây là thứ duy nhất trong bộ
+ * playlist không ghi ra ngoài được, và cũng không cần: nó chỉ đổi cách trang
+ * này bày ra cho dễ tìm.
+ */
+export async function sapXepPlaylist(thuTuMoi: string[]): Promise<KetQua> {
+  const chan = await chanCua("sắp xếp playlist");
+  if (chan) return chan;
+
+  const dangCo = await prisma.youTubePlaylist.findMany({
+    where: { deletionRequestedAt: null },
+    select: { id: true },
+  });
+  const hopLe = new Set(dangCo.map((p) => p.id));
+  if (thuTuMoi.some((id) => !hopLe.has(id))) {
+    return { ok: false, thongDiep: "Danh sách không khớp — tải lại trang rồi thử lại." };
+  }
+
+  await prisma.$transaction(
+    thuTuMoi.map((id, i) =>
+      prisma.youTubePlaylist.update({ where: { id }, data: { viTri: i } }),
+    ),
+  );
+
+  revalidatePath("/playlist");
+  return { ok: true, thongDiep: "Đã lưu thứ tự." };
 }
 
 /** Đổi tên thư mục — đổi luôn cả trên YouTube, không cần duyệt. */
@@ -278,7 +313,7 @@ export async function doiTenThuMuc(
   const chan = await chanCua("đổi tên playlist");
   if (chan) return chan;
 
-  const kq = await doiTenThuMucLoi(playlistId, tenMoi);
+  const kq = await doiTenThuMucLoi(playlistId, tenMoi, false);
   if (!kq.ok) return kq;
 
   const ghi = await doiTenTrenYouTube(playlistId, tenMoi.trim());

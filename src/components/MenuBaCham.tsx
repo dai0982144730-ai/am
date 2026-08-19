@@ -85,19 +85,36 @@ export function MenuBaCham({
   const [dangTrongThuVien, setDangTrongThuVien] = useState(false);
   const [dangNap, setDangNap] = useState(false);
   const nutRef = useRef<HTMLButtonElement>(null);
+  /** Chính cái hộp menu — để phân biệt cuộn TRONG nó với cuộn cả trang */
+  const hopRef = useRef<HTMLDivElement>(null);
   const [dangChay, batDau] = useTransition();
 
+  /**
+   * Đóng menu khi trang cuộn hoặc đổi cỡ — vì menu neo theo toạ độ chụp lúc
+   * bấm, trang trượt đi là nó lạc chỗ.
+   *
+   * NHƯNG PHẢI BỎ QUA CUỘN BÊN TRONG CHÍNH NÓ. Danh sách 26 playlist cao hơn
+   * màn hình nên có thanh cuộn riêng; bắt cả sự kiện đó (`capture = true` nghe
+   * được mọi thứ, kể cả cuộn của phần tử con) thì lăn chuột một cái là menu tự
+   * đóng — đúng lỗi chủ dự án báo 2026-08-19: cuộn xuống tìm nút "+ Playlist
+   * mới" thì hộp biến mất.
+   */
   useEffect(() => {
     if (!mo) return;
-    const dong = () => {
+    const dong = (e: Event) => {
+      if (e.target instanceof Node && hopRef.current?.contains(e.target)) return;
+      datMo(false);
+      setMucPlaylist(false);
+    };
+    const doiCo = () => {
       datMo(false);
       setMucPlaylist(false);
     };
     window.addEventListener("scroll", dong, true);
-    window.addEventListener("resize", dong);
+    window.addEventListener("resize", doiCo);
     return () => {
       window.removeEventListener("scroll", dong, true);
-      window.removeEventListener("resize", dong);
+      window.removeEventListener("resize", doiCo);
     };
   }, [mo]);
 
@@ -188,6 +205,7 @@ export function MenuBaCham({
                 aria-hidden
               />
               <div
+                ref={hopRef}
                 onClick={(e) => e.preventDefault()}
                 className="fixed z-50 w-64 overflow-y-auto rounded-xl border border-neutral-300 bg-background p-1.5 shadow-2xl dark:border-neutral-700"
                 style={viTriMenu(oNut)}

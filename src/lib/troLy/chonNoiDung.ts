@@ -29,8 +29,14 @@ const CHUYEN_MUC_VAO_BAN_TIN: { ma: ContentGroup; ten: string }[] = [
   { ma: "music", ten: "Music" },
 ];
 
-/** Số mục nổi bật mỗi chuyên mục. */
-const SO_NOI_BAT_MOI_MUC = 2;
+/**
+ * Số mục nổi bật mỗi chuyên mục.
+ *
+ * Chủ dự án nâng từ 2 lên 3 ngày 2026-08-19: hàng hai thẻ để trống hẳn một
+ * phần ba bên phải màn hình, mà chọn ra bài thứ ba thì không tốn thêm gì —
+ * chúng đã được chấm điểm sẵn, chỉ là lấy thêm một dòng.
+ */
+const SO_NOI_BAT_MOI_MUC = 3;
 
 /** Số mục gấp gọn vào phần "xem thêm nếu rảnh". */
 const SO_XEM_THEM = 4;

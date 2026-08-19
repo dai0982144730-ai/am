@@ -9,12 +9,12 @@
  * viện chuyên dụng về cho một màn hình duy nhất là đổi vài trăm KB lấy thứ vài
  * chục dòng làm được.
  *
- * VẪN GIỮ HAI NÚT ▲▼ bên dưới mỗi thẻ. Không phải để dự phòng cho vui: kéo-thả
- * bằng chuột không dùng được bằng bàn phím, và trên điện thoại thì HTML drag
- * gần như không chạy. Hai nút đó là đường duy nhất còn lại ở hai chỗ ấy.
+ * ĐÃ BỎ HAI NÚT ▲▼ bên dưới mỗi thẻ (2026-08-19, chủ dự án yêu cầu). Chúng
+ * từng được giữ lại làm đường dự phòng cho bàn phím và điện thoại, nhưng chủ
+ * dự án dùng chuột trên máy tính và thấy chúng chỉ làm rối thẻ.
  *
- * Thứ tự mới ghi ngay trên Am (`datLaiThuTu`), CHƯA đụng YouTube — phần ghi
- * thật vẫn phải qua đề xuất `reorder_items` chờ duyệt như mọi việc khác.
+ * Thứ tự mới ghi ngay trên Am VÀ ghi thẳng lên YouTube luôn — việc chủ nhà tự
+ * tay làm thì không phải xin duyệt lại (xem `ghiThang.ts`).
  */
 
 import { useState, useTransition } from "react";
@@ -96,11 +96,6 @@ export function LuoiPlaylistKeoTha({
             <TheNoiDungCard
               muc={the}
               trongPlaylistId={choKeo ? playlistId : undefined}
-              viTri={
-                choKeo
-                  ? { laDau: idx === 0, laCuoi: idx === thuTu.length - 1 }
-                  : undefined
-              }
             />
           </div>
         ))}

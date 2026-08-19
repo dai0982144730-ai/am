@@ -50,6 +50,7 @@ export async function taoThuMucMoi(ten: string): Promise<{ id: string }> {
 export async function doiTenThuMuc(
   playlistId: string,
   tenMoi: string,
+  tuSoSanh = true,
 ): Promise<KetQua> {
   const sach = tenMoi.trim().slice(0, 150);
   if (!sach) return { ok: false, thongDiep: "Tên không được để trống." };
@@ -66,7 +67,9 @@ export async function doiTenThuMuc(
     data: { title: sach },
   });
 
-  if (pl.youtubePlaylistId) {
+  // `tuSoSanh = false` khi bên gọi tự ghi tên mới lên YouTube ngay sau đó —
+  // lúc ấy chẳng có gì lệch để mà xin duyệt.
+  if (tuSoSanh && pl.youtubePlaylistId) {
     await prisma.playlistOrganizationSuggestion.create({
       data: {
         suggestedPlaylistId: playlistId,
@@ -152,6 +155,7 @@ export async function themVaoThuMuc(
   contentItemId: string,
   playlistId: string,
   nguoiThem: "user" | "ai" = "user",
+  tuSoSanh = true,
 ): Promise<KetQua> {
   const [pl, noiDung] = await Promise.all([
     prisma.youTubePlaylist.findUnique({
@@ -174,7 +178,7 @@ export async function themVaoThuMuc(
     update: {},
   });
 
-  await soSanhVaSinhDeXuat(playlistId);
+  if (tuSoSanh) await soSanhVaSinhDeXuat(playlistId);
 
   return { ok: true, thongDiep: `Đã thêm vào "${pl.title}".` };
 }
@@ -182,15 +186,18 @@ export async function themVaoThuMuc(
 /**
  * Bỏ một nội dung khỏi thư mục — ngay lập tức trên Am.
  *
- * Nếu nội dung đó đã thật sự có trên YouTube, `soSanhVaSinhDeXuat` bên dưới sẽ
- * tự phát hiện chỗ lệch và sinh đề xuất `remove_item` chờ duyệt.
+ * `tuSoSanh = false` khi bên gọi sẽ tự ghi thẳng lên YouTube ngay sau đó. Đã
+ * vấp thật 2026-08-18: bộ so sánh chạy TRƯỚC lúc ghi nên nó thấy Am và YouTube
+ * lệch nhau, đẻ ra một đề xuất chờ duyệt — rồi ghi xong, đề xuất ấy vẫn nằm
+ * lại, bắt chủ nhà duyệt đúng cái việc chính mình vừa tự tay làm.
  */
 export async function xoaKhoiThuMuc(
   contentItemId: string,
   playlistId: string,
+  tuSoSanh = true,
 ): Promise<KetQua> {
   await prisma.playlistItem.deleteMany({ where: { playlistId, contentItemId } });
-  await soSanhVaSinhDeXuat(playlistId);
+  if (tuSoSanh) await soSanhVaSinhDeXuat(playlistId);
   return { ok: true, thongDiep: "Đã bỏ khỏi thư mục." };
 }
 
@@ -246,6 +253,7 @@ export async function doiThuTu(
 export async function datLaiThuTu(
   playlistId: string,
   thuTuMoi: string[],
+  tuSoSanh = true,
 ): Promise<KetQua> {
   const cac = await prisma.playlistItem.findMany({
     where: { playlistId },
@@ -281,7 +289,7 @@ export async function datLaiThuTu(
     ),
   );
 
-  await soSanhVaSinhDeXuat(playlistId);
+  if (tuSoSanh) await soSanhVaSinhDeXuat(playlistId);
   return { ok: true, thongDiep: "Đã lưu thứ tự mới." };
 }
 

@@ -177,7 +177,7 @@ export default async function TrangBanTin() {
                 <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                   {muc.tenChuyenMuc}
                 </h2>
-                <div className="grid items-stretch gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                <div className="grid items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {muc.cacMuc.map((m) => (
                     <TheBanTin
                       key={m.id}
@@ -194,7 +194,7 @@ export default async function TrangBanTin() {
                 <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                   Xem thêm nếu rảnh
                 </h2>
-                <div className="grid items-stretch gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                <div className="grid items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {noiDung.moreIfInterested.map((m) => (
                     <TheBanTin
                       key={m.id}

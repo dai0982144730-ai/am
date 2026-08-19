@@ -21,12 +21,14 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 
+import { LuoiKeoTha } from "@/components/LuoiKeoTha";
 import {
   dongBoLai,
   dongYVaGhi,
   doiTenThuMuc,
   huyXoaThuMuc,
   batTatChoSapXep,
+  sapXepPlaylist,
   taoThuMuc,
   tuChoi,
   xoaThuMuc,
@@ -105,16 +107,26 @@ function MotPlaylist({
   }, [moMenu]);
 
   return (
-    <li className="flex flex-col overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
+      {/* Khung ảnh CỐ ĐỊNH tỉ lệ 16:9, ảnh đặt tuyệt đối bên trong.
+          Ảnh YouTube không cùng cỡ: bản `maxres` là 1280×720 (16:9) nhưng
+          video cũ chỉ có bản `default` 120×90 (4:3). Để ảnh chảy theo dòng thì
+          thẻ nào gặp ảnh 4:3 sẽ cao hơn hẳn — đúng chỗ chủ dự án thấy lệch ở
+          thẻ "3 THỂ THAO". Đặt tuyệt đối thì khung quyết định, không phải ảnh. */}
       <Link
         href={`/playlist/${muc.id}`}
-        className="relative block aspect-video bg-neutral-100 dark:bg-neutral-800"
+        className="relative block aspect-video w-full shrink-0 overflow-hidden bg-neutral-100 dark:bg-neutral-800"
       >
         {muc.anhBia ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={muc.anhBia} alt="" className="size-full object-cover" />
+          <img
+            src={muc.anhBia}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 size-full object-cover"
+          />
         ) : (
-          <div className="flex size-full items-center justify-center text-xs text-neutral-400">
+          <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-400">
             Chưa có ảnh
           </div>
         )}
@@ -247,7 +259,7 @@ function MotPlaylist({
           </button>
         ) : null}
       </div>
-    </li>
+    </div>
   );
 }
 
@@ -350,6 +362,8 @@ export function BangPlaylist({
   const choDuyet = cacDeXuat.filter(
     (d) => d.trangThai === "pending" || d.trangThai === "approved",
   );
+
+  const theoId = new Map(cacPlaylist.map((p) => [p.id, p]));
 
   return (
     <div>
@@ -492,6 +506,8 @@ export function BangPlaylist({
         </div>
         <p className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
           Bấm vào ảnh để xem bên trong. Nút ba chấm để đổi tên hoặc xoá.{" "}
+          <strong>Kéo-thả</strong> để sắp lại thứ tự — thứ tự này chỉ dùng cho
+          trang Am, YouTube không có chỗ nào để ghi nó lên.{" "}
           <strong className="text-cam-700 dark:text-cam-300">
             Trợ lý được gợi ý thêm bài
           </strong>{" "}
@@ -507,11 +523,18 @@ export function BangPlaylist({
             YouTube&rdquo;.
           </p>
         ) : (
-          <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {cacPlaylist.map((p) => (
-              <MotPlaylist key={p.id} muc={p} laChu={laChu} />
-            ))}
-          </ul>
+          <div className="mt-3">
+            <LuoiKeoTha
+              cacId={cacPlaylist.map((p) => p.id)}
+              batKeo={laChu}
+              lop="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+              luu={sapXepPlaylist}
+              ve={(id) => {
+                const p = theoId.get(id);
+                return p ? <MotPlaylist muc={p} laChu={laChu} /> : null;
+              }}
+            />
+          </div>
         )}
       </section>
     </div>
