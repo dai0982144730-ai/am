@@ -138,19 +138,22 @@ const DAI_BPM: LuaChon[] = [
   "175-180",
 ].map((d) => ({ ma: d, ten: d.replace("-", "–") }));
 
+/**
+ * Tên tham số URL cho nhóm chủ đề con của từng chuyên mục.
+ *
+ * Giữ đúng tên cũ (`ai_chu_de`, `th_truong_phai`…) để đường dẫn ai đã lưu lại
+ * vẫn mở đúng bộ lọc, dù danh sách bên trong giờ do chủ nhà tự đặt.
+ */
+const KHOA_CHU_DE: Record<string, string> = {
+  ai: "ai_chu_de",
+  triet_hoc: "th_truong_phai",
+  truyen: "tr_the_loai",
+  music: "ms_the_loai",
+  khoa_hoc: "kh_linh_vuc",
+};
+
 const RIENG: Record<string, NhomLoc[]> = {
   ai: [
-    {
-      khoa: "ai_chu_de",
-      ten: "Chủ đề con",
-      cac: [
-        { ma: "claude_news", ten: "Tin Claude" },
-        { ma: "ai_news_general", ten: "Tin AI chung" },
-        { ma: "ai_agent_enterprise", ten: "AI doanh nghiệp" },
-        { ma: "coding_experience_howto", ten: "Kinh nghiệm viết code" },
-        { ma: "claude_usage_guide", ten: "Hướng dẫn dùng Claude" },
-      ],
-    },
     {
       khoa: "ai_hang",
       ten: "Hạng nguồn",
@@ -168,16 +171,6 @@ const RIENG: Record<string, NhomLoc[]> = {
 
   triet_hoc: [
     {
-      khoa: "th_truong_phai",
-      ten: "Trường phái",
-      cac: [
-        { ma: "stoic", ten: "Khắc kỷ" },
-        { ma: "hien_sinh", ten: "Hiện sinh" },
-        { ma: "tam_ly_hoc_hien_dai", ten: "Tâm lý học hiện đại" },
-        { ma: "phat_giao_nguyen_thuy", ten: "Phật giáo Nguyên thuỷ" },
-      ],
-    },
-    {
       khoa: "th_dang",
       ten: "Dạng trình bày",
       cac: [
@@ -189,15 +182,6 @@ const RIENG: Record<string, NhomLoc[]> = {
   ],
 
   truyen: [
-    {
-      khoa: "tr_the_loai",
-      ten: "Thể loại",
-      cac: [
-        { ma: "kinh_di", ten: "Kinh dị" },
-        { ma: "vien_tuong", ten: "Viễn tưởng" },
-        { ma: "phieu_luu_mao_hiem", ten: "Phiêu lưu mạo hiểm" },
-      ],
-    },
     {
       khoa: "tr_xuat_xu",
       ten: "Xuất xứ",
@@ -221,17 +205,6 @@ const RIENG: Record<string, NhomLoc[]> = {
 
   music: [
     {
-      khoa: "ms_the_loai",
-      ten: "Thể loại nhạc",
-      cac: [
-        { ma: "workout_bpm", ten: "Tập thể thao (BPM)" },
-        { ma: "dance", ten: "Dance" },
-        { ma: "piano", ten: "Piano" },
-        { ma: "guitar_rock", ten: "Guitar rock" },
-        { ma: "nhac_vang", ten: "Nhạc vàng" },
-      ],
-    },
-    {
       khoa: "ms_do_dai",
       ten: "Độ dài mix",
       cac: [
@@ -242,16 +215,21 @@ const RIENG: Record<string, NhomLoc[]> = {
     },
   ],
 
+  // Khoa học có thêm "Hạng nguồn" giống AI (chủ dự án yêu cầu 2026-08-19):
+  // một kết quả nghiên cứu do chính viện công bố khác hẳn cùng chuyện ấy kể
+  // lại trên diễn đàn, mà trước đây không có cách nào tách hai thứ đó ra.
   khoa_hoc: [
     {
-      khoa: "kh_linh_vuc",
-      ten: "Lĩnh vực",
+      khoa: "kh_hang",
+      ten: "Hạng nguồn",
       cac: [
-        { ma: "y_hoc_suc_khoe", ten: "Y học & sức khoẻ" },
-        { ma: "vat_ly_vu_tru", ten: "Vật lý & vũ trụ" },
-        { ma: "sinh_hoc", ten: "Sinh học" },
-        { ma: "vat_lieu_nang_luong", ten: "Vật liệu & năng lượng" },
-        { ma: "ky_thuat", ten: "Kỹ thuật" },
+        {
+          ma: "official_vendor",
+          ten: "Hãng chính thức",
+          ghi: "Viện nghiên cứu, tạp chí, cơ quan tự công bố.",
+        },
+        { ma: "expert_individual", ten: "Chuyên gia cá nhân" },
+        { ma: "community_forum", ten: "Diễn đàn cộng đồng" },
       ],
     },
   ],
@@ -436,6 +414,8 @@ export function ChipLoc({
   demTheoNhom,
   cacTacGia,
   cacTuKhoaNgauHung,
+  chuDeCon,
+  tenHangChuDe,
   laChu,
   nganSachNgay,
 }: {
@@ -444,6 +424,10 @@ export function ChipLoc({
   cacTacGia: { id: string; ten: string; soBai: number; choDuyet: boolean }[];
   /** Mọi chủ đề Ngẫu hứng đang có — chỉ dùng khi đang mở đúng mục này */
   cacTuKhoaNgauHung: TuKhoaGon[];
+  /** Chủ đề con của chuyên mục đang mở, lấy từ cấu hình của chủ nhà */
+  chuDeCon: LuaChon[];
+  /** Tên hàng nút chủ đề con — "Chủ đề con", "Trường phái", "Thể loại"… */
+  tenHangChuDe: string;
   laChu: boolean;
   nganSachNgay: number;
 }) {
@@ -502,7 +486,21 @@ export function ChipLoc({
     );
   }
 
-  const cacRieng = RIENG[nhomHienTai] ?? [];
+  /**
+   * Hàng lọc riêng của chuyên mục đang mở.
+   *
+   * Nhóm chủ đề con dựng từ CẤU HÌNH của chủ nhà (`chuDeCon`, đưa xuống từ máy
+   * chủ) chứ không viết cứng ở file này nữa — chủ dự án chốt 2026-08-19 rằng
+   * danh sách phải sửa được theo từng thời điểm. Nó đứng ĐẦU hàng vì đó là thứ
+   * hay dùng nhất; các trường đặc trưng còn lại (dạng trình bày, xuất xứ, độ
+   * dài mix…) vẫn khoá cứng vì chúng gắn với bản chất nội dung, không phải
+   * theo mối quan tâm từng lúc.
+   */
+  const nhomChuDe: NhomLoc[] =
+    chuDeCon.length > 0
+      ? [{ khoa: KHOA_CHU_DE[nhomHienTai] ?? "chu_de", ten: tenHangChuDe, cac: chuDeCon }]
+      : [];
+  const cacRieng = [...nhomChuDe, ...(RIENG[nhomHienTai] ?? [])];
   const tenOTacGia = TEN_O_TAC_GIA[nhomHienTai];
   /**
    * Ô lọc tác giả dựng từ dữ liệu thật, không phải danh sách viết cứng.

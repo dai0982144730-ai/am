@@ -7,17 +7,12 @@
  */
 
 import type {
-  AiSubtopic,
   BpmConfidence,
   ContentGroup,
   ContentItemType,
   ListenerLevel,
-  MusicGenre,
   NarrationType,
   PhilosophyContentForm,
-  PhilosophySchool,
-  ScienceField,
-  StoryGenre,
   StoryIntensity,
   StoryOrigin,
 } from "@/generated/prisma/enums";
@@ -82,23 +77,23 @@ function dichSangDatabase(kq: KetQuaPhanLoai, thoiLuongGiay: number | null) {
     contentQualityNotes: kq.nhanXetChatLuong,
     contentQualityScore: kq.diemChatLuong,
 
-    aiSubtopic: (kq.aiChuDeCon as AiSubtopic | null) ?? null,
+    aiSubtopic: kq.aiChuDeCon ?? null,
 
-    scienceField: (kq.linhVucKhoaHoc as ScienceField | null) ?? null,
+    scienceField: kq.linhVucKhoaHoc ?? null,
 
-    philosophySchool: (kq.truongPhai as PhilosophySchool | null) ?? null,
+    philosophySchool: kq.truongPhai ?? null,
     philosophyContentForm:
       (kq.dangTrinhBay as PhilosophyContentForm | null) ?? null,
     listenerLevel: (kq.mucDoNguoiNghe as ListenerLevel | null) ?? null,
     misleadingContentFlag: kq.coDauHieuMeTin,
 
-    storyGenre: (kq.theLoaiTruyen as StoryGenre | null) ?? null,
+    storyGenre: kq.theLoaiTruyen ?? null,
     storyOrigin: (kq.xuatXuTruyen as StoryOrigin | null) ?? null,
     storyIntensity: (kq.doCangThang as StoryIntensity | null) ?? null,
     basedOnTrueStory: kq.duaTrenChuyenThat,
     aiGeneratedSuspicionScore: kq.nghiNgoDoAiViet,
 
-    musicGenre: (kq.theLoaiNhac as MusicGenre | null) ?? null,
+    musicGenre: kq.theLoaiNhac ?? null,
     bpm: kq.bpm,
     bpmBucket: xepDaiBpm(kq.bpm),
     bpmConfidence: (kq.doTinCayBpm as BpmConfidence | null) ?? null,

@@ -540,22 +540,33 @@ model ContentClassification {
   author   Author? @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   // --- AI ---
-  aiSubtopic AiSubtopic?
+  /// Chủ đề con — CHỮ TỰ DO, không phải enum khoá cứng.
+  ///
+  /// Chủ dự án chốt 2026-08-19: danh sách chủ đề con phải sửa được theo từng
+  /// thời điểm, vì thứ đáng quan tâm trong mảng AI tháng này khác hẳn tháng
+  /// sau. Enum thì mỗi lần thêm một chủ đề là một lần chạy migration.
+  ///
+  /// Giá trị hợp lệ nằm ở bảng `ChuDeCon`, và chính bảng đó cũng là thứ được
+  /// đưa vào lời dặn cho Claude lúc phân loại. Xem `chuDeCon.ts`.
+  aiSubtopic String?
 
   // --- Khoa học ---
   /// Lĩnh vực khoa học. Trường DUY NHẤT phải thêm mới cho bộ lọc theo chuyên
   /// mục — mọi trường riêng khác đều đã có sẵn từ đầu và đã điền đủ.
-  scienceField ScienceField?
+  /// Lĩnh vực khoa học — chữ tự do, cấu hình ở bảng `ChuDeCon`.
+  scienceField String?
 
   // --- Triết học ---
-  philosophySchool      PhilosophySchool?
+  /// Trường phái — chữ tự do, cấu hình ở bảng `ChuDeCon`.
+  philosophySchool      String?
   philosophyContentForm PhilosophyContentForm?
   listenerLevel         ListenerLevel?
   /// Cờ mê tín dị đoan / thương mại hoá tâm linh — lọc loại trừ mặc định
   misleadingContentFlag Boolean                @default(false)
 
   // --- Truyện ---
-  storyGenre       StoryGenre?
+  /// Thể loại truyện — chữ tự do, cấu hình ở bảng `ChuDeCon`.
+  storyGenre       String?
   storyOrigin      StoryOrigin?
   storyIntensity   StoryIntensity?
   basedOnTrueStory Boolean?
@@ -564,7 +575,8 @@ model ContentClassification {
   aiGeneratedSuspicionScore Float?
 
   // --- Music (điền bằng rule + Haiku, không cần đọc transcript) ---
-  musicGenre       MusicGenre?
+  /// Thể loại nhạc — chữ tự do, cấu hình ở bảng `ChuDeCon`.
+  musicGenre       String?
   bpm              Int?
   bpmBucket        String? /// "155-160"
   bpmConfidence    BpmConfidence?
@@ -1352,4 +1364,48 @@ model NoteEmbedding {
   createdAt      DateTime @default(now())
 
   vector Unsupported("vector(1024)")?
+}
+
+/// Chủ đề con của một chuyên mục — chủ nhà tự cấu hình, sửa bất cứ lúc nào.
+///
+/// ## Vì sao không dùng enum
+///
+/// Bản đầu năm trường này là enum khoá cứng trong schema: chủ đề con của AI,
+/// trường phái triết học, thể loại truyện, thể loại nhạc, lĩnh vực khoa học.
+/// Chủ dự án chốt 2026-08-19 rằng chúng phải sửa được **theo từng thời điểm**
+/// — thứ đáng quan tâm trong mảng AI tháng này khác hẳn tháng sau, mà enum thì
+/// mỗi lần thêm một chủ đề là một lần chạy migration.
+///
+/// ## Bảng này vừa là bộ lọc, vừa là lời dặn cho Claude
+///
+/// Đây là chỗ dễ hiểu nhầm nhất: nó KHÔNG chỉ là danh sách nút bấm. Chính danh
+/// sách này được nhét vào lời dặn lúc Claude phân loại, nên thêm một chủ đề
+/// vào đây là dạy Claude nhận ra nó từ lượt quét sau. Ngược lại, xoá một chủ
+/// đề đi thì nội dung cũ vẫn giữ nguyên chữ đã gắn — chỉ là không còn nút để
+/// lọc theo nó nữa.
+///
+/// `moTa` không phải ghi chú cho vui: nó đi thẳng vào lời dặn để Claude biết
+/// ranh giới. "Tin Claude" mà không nói rõ thì Claude xếp cả tin OpenAI vào.
+model ChuDeCon {
+  id        String       @id @default(cuid())
+  /// Chuyên mục sở hữu. Chỉ dùng năm mảng chính; `music` có thêm nhánh BPM
+  /// riêng không đi qua đây (xem `bpmBucket`).
+  chuyenMuc ContentGroup
+  /// Mã lưu vào `ContentClassification` — chữ thường, gạch dưới, không dấu
+  ma        String
+  /// Tên hiện trên nút lọc
+  ten       String
+  /// Ranh giới của chủ đề, nói cho Claude biết cái gì thuộc vào đây
+  moTa      String?
+
+  /// Thứ tự hiện trên hàng nút lọc
+  viTri Int     @default(0)
+  /// Tắt thì không hiện nút lọc và Claude cũng không xếp vào nữa, nhưng nội
+  /// dung cũ đã gắn thì vẫn giữ nguyên
+  bat   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@unique([chuyenMuc, ma])
+  @@index([chuyenMuc, bat, viTri])
 }

@@ -21,6 +21,25 @@ import { doiHoiChuDuAn } from "@/lib/quyen";
 import { CAC_GIONG } from "@/lib/tts/giong";
 import { TOC_DO_MAX, TOC_DO_MIN } from "@/components/TrinhPhatAmThanh";
 import type { ContentGroup, SourceType } from "@/generated/prisma/enums";
+import {
+  CHUYEN_MUC_CO_CHU_DE,
+  maTuTen,
+} from "@/lib/nghiepVu/chuDeCon";
+
+/** Chặn cửa dùng chung cho mấy việc chủ đề con. */
+async function chanCua(
+  viec: string,
+): Promise<{ ok: false; thongDiep: string } | null> {
+  try {
+    await doiHoiChuDuAn(viec);
+    return null;
+  } catch (e) {
+    return {
+      ok: false,
+      thongDiep: e instanceof Error ? e.message : "Không có quyền.",
+    };
+  }
+}
 
 /**
  * Lưu bộ trọng số chấm điểm cho một loại nguồn.
@@ -420,5 +439,121 @@ export async function datHangNgauHung(
     thongDiep:
       `Đã lưu. Lượt quét đêm nay sẽ đi tìm theo ${huong.length} hướng` +
       `${huong.length ? ` (${huong.join(", ")})` : ""}, kết quả có vào sáng mai.`,
+  };
+}
+
+// ==========================================================================
+// CHỦ ĐỀ CON — chủ nhà tự đặt cho từng chuyên mục
+// ==========================================================================
+
+/**
+ * Thêm một chủ đề con.
+ *
+ * NHỚ RẰNG ĐÂY KHÔNG CHỈ LÀ THÊM MỘT CÁI NÚT. Danh sách này đi thẳng vào lời
+ * dặn lúc Claude phân loại, nên thêm xong là lượt quét đêm sau Claude đã biết
+ * xếp nội dung vào đó. Nội dung cũ thì không tự xếp lại — muốn vậy phải cho
+ * đọc lại, và việc đó tốn tiền nên không tự làm.
+ */
+export async function themChuDeCon(
+  chuyenMuc: string,
+  ten: string,
+  moTa: string,
+): Promise<{ ok: boolean; thongDiep: string }> {
+  const chan = await chanCua("thêm chủ đề con");
+  if (chan) return chan;
+
+  const sach = ten.trim();
+  if (!sach) return { ok: false, thongDiep: "Chưa đặt tên." };
+  if (!(CHUYEN_MUC_CO_CHU_DE as readonly string[]).includes(chuyenMuc)) {
+    return { ok: false, thongDiep: "Chuyên mục không hợp lệ." };
+  }
+
+  const ma = maTuTen(sach);
+  if (!ma) {
+    return { ok: false, thongDiep: "Tên phải có ít nhất một chữ cái hoặc số." };
+  }
+
+  const daCo = await prisma.chuDeCon.findUnique({
+    where: { chuyenMuc_ma: { chuyenMuc: chuyenMuc as ContentGroup, ma } },
+    select: { id: true, ten: true, bat: true },
+  });
+  if (daCo) {
+    // Trùng với một chủ đề đang TẮT thì bật lại, đừng báo lỗi — người dùng gõ
+    // lại đúng cái tên cũ nghĩa là họ muốn nó quay về.
+    if (!daCo.bat) {
+      await prisma.chuDeCon.update({ where: { id: daCo.id }, data: { bat: true } });
+      revalidatePath("/cai-dat");
+      revalidatePath("/kham-pha");
+      return { ok: true, thongDiep: `Đã bật lại "${daCo.ten}".` };
+    }
+    return { ok: false, thongDiep: `"${daCo.ten}" đã có rồi.` };
+  }
+
+  const cuoi = await prisma.chuDeCon.aggregate({
+    where: { chuyenMuc: chuyenMuc as ContentGroup },
+    _max: { viTri: true },
+  });
+
+  await prisma.chuDeCon.create({
+    data: {
+      chuyenMuc: chuyenMuc as ContentGroup,
+      ma,
+      ten: sach,
+      moTa: moTa.trim() || null,
+      viTri: (cuoi._max.viTri ?? -1) + 1,
+    },
+  });
+
+  revalidatePath("/cai-dat");
+  revalidatePath("/kham-pha");
+  return { ok: true, thongDiep: `Đã thêm "${sach}". Lượt quét tới Claude sẽ dùng.` };
+}
+
+/** Sửa tên hoặc mô tả một chủ đề con. Mã giữ nguyên để nội dung cũ không lạc. */
+export async function suaChuDeCon(
+  id: string,
+  ten: string,
+  moTa: string,
+): Promise<{ ok: boolean; thongDiep: string }> {
+  const chan = await chanCua("sửa chủ đề con");
+  if (chan) return chan;
+
+  const sach = ten.trim();
+  if (!sach) return { ok: false, thongDiep: "Tên không được để trống." };
+
+  // KHÔNG đổi `ma` theo tên mới: mã đã nằm trong hàng trăm bản ghi nội dung đã
+  // phân loại. Đổi mã là toàn bộ số đó mất liên kết với nút lọc.
+  await prisma.chuDeCon.update({
+    where: { id },
+    data: { ten: sach, moTa: moTa.trim() || null },
+  });
+
+  revalidatePath("/cai-dat");
+  revalidatePath("/kham-pha");
+  return { ok: true, thongDiep: "Đã lưu." };
+}
+
+/**
+ * Bật/tắt một chủ đề con.
+ *
+ * TẮT CHỨ KHÔNG XOÁ, và đó là chủ ý: nội dung đã gắn mã này vẫn giữ nguyên
+ * chữ đó trong database. Xoá hẳn dòng cấu hình thì mã kia thành mồ côi — nội
+ * dung vẫn mang nó nhưng không còn tên nào để hiện ra.
+ */
+export async function batTatChuDeCon(
+  id: string,
+  bat: boolean,
+): Promise<{ ok: boolean; thongDiep: string }> {
+  const chan = await chanCua("bật tắt chủ đề con");
+  if (chan) return chan;
+
+  await prisma.chuDeCon.update({ where: { id }, data: { bat } });
+  revalidatePath("/cai-dat");
+  revalidatePath("/kham-pha");
+  return {
+    ok: true,
+    thongDiep: bat
+      ? "Đã bật — Claude sẽ dùng lại từ lượt quét sau."
+      : "Đã tắt — nội dung cũ vẫn giữ nguyên, chỉ không còn nút lọc.",
   };
 }

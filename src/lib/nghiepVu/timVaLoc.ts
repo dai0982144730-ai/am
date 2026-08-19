@@ -64,18 +64,23 @@ export interface BoLoc {
   tiengViet?: MaTiengViet;
 
   // --- Tầng riêng ---
-  aiChuDe?: AiSubtopic;
+  //
+  // Năm trường chủ đề con là `string` chứ không phải enum: danh sách hợp lệ do
+  // chủ nhà tự đặt trong bảng `ChuDeCon` và đổi bất cứ lúc nào (2026-08-19).
+  aiChuDe?: string;
   aiHang?: SourceReputationTier;
-  thTruongPhai?: PhilosophySchool;
+  thTruongPhai?: string;
   thDang?: PhilosophyContentForm;
-  trTheLoai?: StoryGenre;
+  trTheLoai?: string;
   trXuatXu?: StoryOrigin;
   trDoCang?: StoryIntensity;
   trChuyenThat?: boolean;
-  msTheLoai?: MusicGenre;
+  msTheLoai?: string;
   msDoDai?: string;
   msDaiBpm?: string;
-  khLinhVuc?: ScienceField;
+  khLinhVuc?: string;
+  /** Hạng nguồn cho mục Khoa học — giống `aiHang` nhưng cho chuyên mục khác */
+  khHang?: SourceReputationTier;
   /** Giảng sư (mục Triết học) hoặc nhà văn (mục Truyện) */
   tacGiaId?: string;
 
@@ -354,6 +359,10 @@ export async function dungDieuKien(loc: BoLoc): Promise<Prisma.ContentItemWhereI
 
   // --- Tầng riêng: Khoa học ---
   if (loc.khLinhVuc) phanLoai.scienceField = loc.khLinhVuc;
+  if (loc.khHang) dieuKien.source = {
+    ...(dieuKien.source as Prisma.SourceWhereInput | undefined),
+    reputationTier: loc.khHang,
+  };
 
   // --- Tác giả, dùng chung cho Triết học và Truyện ---
   if (loc.tacGiaId) phanLoai.authorId = loc.tacGiaId;

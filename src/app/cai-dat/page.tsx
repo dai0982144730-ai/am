@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CauHinhChuDeCon } from "@/components/CauHinhChuDeCon";
 import { KhungTrang } from "@/components/KhungTrang";
 import { ChonTongMau } from "@/components/ChonTongMau";
 import { ThanhTrongSo } from "@/components/ThanhTrongSo";
@@ -10,6 +11,11 @@ import { ThanhTyLeNguonMoi } from "@/components/ThanhTyLeNguonMoi";
 import { TinhHinhGiongDoc } from "@/components/TinhHinhGiongDoc";
 import { prisma } from "@/lib/db/prisma";
 import { emailChuDuAn, laChuDuAn } from "@/lib/quyen";
+import {
+  CHUYEN_MUC_CO_CHU_DE,
+  layChuDeConMoiMuc,
+  TEN_HANG_CHU_DE,
+} from "@/lib/nghiepVu/chuDeCon";
 import { CHUYEN_MUC_CHINH_DUOC, docTyLeNguonMoi } from "@/lib/nguonMoi/tyLe";
 import { DEFAULT_WEIGHTS } from "@/lib/scoring/normalize";
 import { daCauHinh } from "@/lib/tts/doc";
@@ -33,6 +39,29 @@ export default async function TrangCaiDat() {
     docTyLeNguonMoi(),
     xemTinhHinhTts(),
   ]);
+
+  // Chủ đề con của cả năm chuyên mục, lấy CẢ cái đang tắt — trang cấu hình
+  // phải thấy chúng thì mới bật lại được.
+  const chuDeTheoMuc = await layChuDeConMoiMuc(true);
+  const TEN_CHUYEN_MUC: Record<string, string> = {
+    ai: "AI",
+    triet_hoc: "Triết học",
+    truyen: "Truyện",
+    music: "Music",
+    khoa_hoc: "Khoa học",
+  };
+  const nhomChuDe = CHUYEN_MUC_CO_CHU_DE.map((m) => ({
+    chuyenMuc: m as string,
+    tenChuyenMuc: TEN_CHUYEN_MUC[m] ?? m,
+    tenHang: TEN_HANG_CHU_DE[m],
+    cac: chuDeTheoMuc[m].map((c) => ({
+      id: c.id,
+      ma: c.ma,
+      ten: c.ten,
+      moTa: c.moTa,
+      bat: c.bat,
+    })),
+  }));
 
   const caiDatTroLy = await prisma.userAssistantSettings.findUnique({
     where: { id: "singleton" },
@@ -125,6 +154,15 @@ export default async function TrangCaiDat() {
             rồi thôi. */}
         <div className="mb-10 break-inside-avoid">
           <ChonTongMau />
+        </div>
+
+        <div className="mb-10 break-inside-avoid">
+          <section>
+            <h2 className="text-base font-semibold">Chủ đề con của từng chuyên mục</h2>
+            <div className="mt-2">
+              <CauHinhChuDeCon cacNhom={nhomChuDe} />
+            </div>
+          </section>
         </div>
 
         <div className="mb-10 break-inside-avoid">

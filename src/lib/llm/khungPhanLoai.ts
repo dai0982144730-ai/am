@@ -99,49 +99,33 @@ export const KhungPhanLoai = z.object({
     ),
 
   // ----- Riêng nhóm AI -----
+  // NĂM TRƯỜNG CHỦ ĐỀ CON DƯỚI ĐÂY LÀ CHỮ TỰ DO, KHÔNG PHẢI DANH SÁCH CỨNG.
+  //
+  // Danh sách hợp lệ do chủ nhà tự đặt trong bảng `ChuDeCon`, đổi được bất cứ
+  // lúc nào — nên nó không thể nằm trong file này. `moTaKhung()` sẽ chèn danh
+  // sách hiện hành vào phần mô tả ngay trước khi gửi cho Claude; chỗ này chỉ
+  // giữ khuôn dạng.
   aiChuDeCon: z
-    .enum([
-      "claude_news",
-      "ai_news_general",
-      "ai_agent_enterprise",
-      "coding_experience_howto",
-      "claude_usage_guide",
-    ])
+    .string()
     .nullable()
-    .describe("Chỉ điền khi nhom = 'ai'."),
+    .describe("Chỉ điền khi nhom = 'ai'. Chọn đúng một mã trong danh sách chủ đề con được cung cấp, hoặc null."),
 
   // ----- Riêng nhóm Khoa học -----
   linhVucKhoaHoc: z
-    .enum([
-      "y_hoc_suc_khoe",
-      "vat_ly_vu_tru",
-      "sinh_hoc",
-      "vat_lieu_nang_luong",
-      "ky_thuat",
-    ])
+    .string()
     .nullable()
     .describe(
-      "Chỉ điền khi nhom = 'khoa_hoc'. Chọn lĩnh vực chiếm phần lớn nội dung. " +
-        "y_hoc_suc_khoe: bệnh tật, dinh dưỡng, tuổi thọ, thể chất, tâm thần. " +
-        "vat_ly_vu_tru: vật lý, thiên văn, không gian. " +
-        "sinh_hoc: sinh vật, gen, tiến hoá, sinh thái. " +
-        "vat_lieu_nang_luong: pin, chất bán dẫn, vật liệu mới, điện, nhiên liệu. " +
-        "ky_thuat: chế tạo, xây dựng, giao thông, máy móc, và cả cách làm khoa " +
-        "học nói chung. Không có lựa chọn nào cho AI: nội dung về AI thuộc " +
-        "nhóm 'ai', không bao giờ vào 'khoa_hoc'.",
+      "Chỉ điền khi nhom = 'khoa_hoc'. Chọn đúng một mã trong danh sách lĩnh " +
+        "vực được cung cấp (lĩnh vực chiếm phần lớn nội dung), hoặc null. " +
+        "Không có lựa chọn nào cho AI: nội dung về AI thuộc nhóm 'ai', không " +
+        "bao giờ vào 'khoa_hoc'.",
     ),
 
   // ----- Riêng nhóm Triết học -----
   truongPhai: z
-    .enum([
-      "stoic",
-      "hien_sinh",
-      "tam_ly_hoc_hien_dai",
-      "phat_giao_nguyen_thuy",
-      "khac",
-    ])
+    .string()
     .nullable()
-    .describe("Chỉ điền khi nhom = 'triet_hoc'."),
+    .describe("Chỉ điền khi nhom = 'triet_hoc'. Chọn đúng một mã trong danh sách trường phái được cung cấp, hoặc null."),
 
   dangTrinhBay: z
     .enum(["giang_phap", "van_dap", "ung_dung_thuc_hanh", "phan_tich_hoc_thuat"])
@@ -163,9 +147,9 @@ export const KhungPhanLoai = z.object({
 
   // ----- Riêng nhóm Truyện -----
   theLoaiTruyen: z
-    .enum(["kinh_di", "vien_tuong", "phieu_luu_mao_hiem"])
+    .string()
     .nullable()
-    .describe("Chỉ điền khi nhom = 'truyen'."),
+    .describe("Chỉ điền khi nhom = 'truyen'. Chọn đúng một mã trong danh sách thể loại được cung cấp, hoặc null."),
 
   xuatXuTruyen: z
     .enum(["viet_nam_sang_tac", "dich_trung_quoc", "dich_au_my", "khac"])
@@ -195,9 +179,9 @@ export const KhungPhanLoai = z.object({
 
   // ----- Riêng nhóm Music -----
   theLoaiNhac: z
-    .enum(["workout_bpm", "dance", "piano", "guitar_rock", "nhac_vang"])
+    .string()
     .nullable()
-    .describe("Chỉ điền khi nhom = 'music'."),
+    .describe("Chỉ điền khi nhom = 'music'. Chọn đúng một mã trong danh sách thể loại nhạc được cung cấp, hoặc null."),
 
   bpm: z
     .number()

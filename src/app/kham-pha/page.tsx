@@ -7,6 +7,12 @@ import { OTimKiem } from "@/components/OTimKiem";
 import { TheNoiDungCard } from "@/components/TheNoiDung";
 import { prisma } from "@/lib/db/prisma";
 import {
+  CHUYEN_MUC_CO_CHU_DE,
+  layChuDeCon,
+  TEN_HANG_CHU_DE,
+  type MaChuyenMucChuDe,
+} from "@/lib/nghiepVu/chuDeCon";
+import {
   danhSachTacGia,
   demTheoNhom,
   timNoiDung,
@@ -54,6 +60,7 @@ function docBoLoc(tham: Record<string, string | undefined>): BoLoc {
     msDoDai: tham.ms_do_dai,
     msDaiBpm: tham.bpm,
     khLinhVuc: tham.kh_linh_vuc as BoLoc["khLinhVuc"],
+    khHang: tham.kh_hang as BoLoc["khHang"],
     tacGiaId: tham.tac_gia,
     nq: tham.nq,
 
@@ -92,6 +99,23 @@ export default async function TrangKhamPha({
       }),
     ]);
 
+  // Chủ đề con của đúng chuyên mục đang mở — danh sách do chủ nhà tự đặt, xem
+  // `chuDeCon.ts`. Chuyên mục không có chủ đề con (Ngẫu hứng, hoặc chưa chọn
+  // chuyên mục nào) thì để rỗng, hàng nút đó tự biến mất.
+  const laMucCoChuDe = (CHUYEN_MUC_CO_CHU_DE as readonly string[]).includes(
+    boLoc.nhom ?? "",
+  );
+  const chuDeCon = laMucCoChuDe
+    ? (await layChuDeCon(boLoc.nhom as MaChuyenMucChuDe)).map((c) => ({
+        ma: c.ma,
+        ten: c.ten,
+        ghi: c.moTa ?? undefined,
+      }))
+    : [];
+  const tenHangChuDe = laMucCoChuDe
+    ? TEN_HANG_CHU_DE[boLoc.nhom as MaChuyenMucChuDe]
+    : "";
+
   /** Giữ nguyên mọi bộ lọc khi chuyển trang, chỉ đổi số trang. */
   function duongDanTrang(trang: number): string {
     const moi = new URLSearchParams();
@@ -119,6 +143,8 @@ export default async function TrangKhamPha({
               demTheoNhom={dem}
               cacTacGia={cacTacGia}
               cacTuKhoaNgauHung={cacTuKhoaNgauHung}
+              chuDeCon={chuDeCon}
+              tenHangChuDe={tenHangChuDe}
               laChu={laChu}
               nganSachNgay={nganSachMoiNgay()}
             />

@@ -28,6 +28,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import * as z from "zod/v4";
 
+import {
+  CHUYEN_MUC_CO_CHU_DE,
+  layChuDeConMoiMuc,
+  TEN_HANG_CHU_DE,
+} from "@/lib/nghiepVu/chuDeCon";
+
 import { coClaudeCli, goiClaudeCli } from "./claudeCli";
 import { KhungPhanLoai, type KetQuaPhanLoai } from "./khungPhanLoai";
 
@@ -71,7 +77,11 @@ const TOI_DA_CHU_LOI_THOAI = 4_000;
 //   2. Thêm trường `linhVucKhoaHoc`, để mục Khoa học có bộ lọc riêng như bốn
 //      mục kia. Làm chung một bản để 304 bài kia chỉ phải đọc lại MỘT lần —
 //      tách ra hai bản thì 21 bài khoa học phải đọc lại lần nữa.
-export const PHIEN_BAN_HUONG_DAN = "v3";
+// v4 (2026-08-19): năm trường chủ đề con thôi khoá cứng trong lời dặn, chuyển
+//      sang đọc từ bảng `ChuDeCon` mà chủ nhà tự đặt. Danh sách hiện hành được
+//      chèn vào cuối lời dặn mỗi lượt gọi, nên đổi cấu hình là lượt quét sau
+//      Claude đã biết ngay — xem `huongDanKemChuDe()`.
+export const PHIEN_BAN_HUONG_DAN = "v4";
 
 export type CachGoi = "cli" | "api";
 
@@ -122,16 +132,9 @@ công nghệ. Người dùng theo dõi AI riêng và kỹ hơn. Vì thế danh s
 khoa học **không có lựa chọn nào cho AI**: đó là chủ ý, để một bài không nằm ở
 hai chỗ cùng lúc.
 
-Xếp vào 'khoa_hoc' rồi thì phải chọn thêm một lĩnh vực:
-
-  - **y_hoc_suc_khoe** — bệnh tật, dinh dưỡng, tuổi thọ, thể chất, tâm thần
-  - **vat_ly_vu_tru** — vật lý, thiên văn, không gian
-  - **sinh_hoc** — sinh vật, gen, tiến hoá, sinh thái
-  - **vat_lieu_nang_luong** — pin, chất bán dẫn, vật liệu mới, điện, nhiên liệu
-  - **ky_thuat** — chế tạo, xây dựng, giao thông, máy móc, và cả chuyện cách
-    làm khoa học nói chung (phương pháp, sai lầm trong nghiên cứu)
-
-Chọn lĩnh vực chiếm phần lớn nội dung, không phải lĩnh vực được nhắc thoáng qua.
+Xếp vào 'khoa_hoc' rồi thì phải chọn thêm một lĩnh vực — lấy trong danh sách ở
+mục "Danh sách chủ đề con hợp lệ" cuối lời dặn này. Chọn lĩnh vực chiếm phần lớn
+nội dung, không phải lĩnh vực được nhắc thoáng qua.
 
 **other** — KHÔNG PHẢI MỘT CHUYÊN MỤC. Đây là dấu "nội dung này lọt vào, người
 dùng không hề đi tìm nó". Chọn 'other' nghĩa là **nội dung bị loại bỏ và không
@@ -190,6 +193,50 @@ Cả ba đều bị xếp thành 'other' và suýt bị vứt:
 
 Nhận xét chất lượng viết bằng tiếng Việt, ngắn gọn, nói thẳng vào cái đáng xem
 hoặc cái dở của nội dung này.`;
+
+/**
+ * Ghép danh sách chủ đề con hiện hành vào lời dặn.
+ *
+ * ## Vì sao phải đọc database mỗi lần thay vì viết cứng vào chuỗi trên
+ *
+ * Từ 2026-08-19 chủ nhà tự đặt chủ đề con cho năm chuyên mục và đổi được bất
+ * cứ lúc nào (bảng `ChuDeCon`). Danh sách ấy vừa là nút lọc trên màn hình, vừa
+ * là thứ Claude phải chọn theo — hai bên mà lệch nhau thì thêm một chủ đề vào
+ * cấu hình xong chẳng bao giờ có bài nào rơi vào đó, vì Claude không biết nó
+ * tồn tại.
+ *
+ * Một truy vấn có chỉ mục trả về hơn hai chục dòng trên database ngay tại máy
+ * mất chưa tới một phần nghìn giây, nên đọc lại mỗi lượt phân loại là cái giá
+ * rẻ hơn nhiều so với rủi ro dùng bản nhớ tạm đã cũ.
+ */
+async function huongDanKemChuDe(): Promise<string> {
+  const theoMuc = await layChuDeConMoiMuc();
+
+  const khoi: string[] = [];
+  for (const muc of CHUYEN_MUC_CO_CHU_DE) {
+    const cac = theoMuc[muc];
+    if (cac.length === 0) continue;
+    const dong = cac
+      .map((c) => `- \`${c.ma}\` — ${c.ten}${c.moTa ? `: ${c.moTa}` : ""}`)
+      .join("\n");
+    khoi.push(`### ${muc} · ${TEN_HANG_CHU_DE[muc]}\n${dong}`);
+  }
+  if (khoi.length === 0) return HUONG_DAN;
+
+  return `${HUONG_DAN}
+
+## Danh sách chủ đề con hợp lệ
+
+Chủ nhà tự đặt danh sách này và đổi theo từng thời điểm. Với năm trường
+\`aiChuDeCon\`, \`truongPhai\`, \`theLoaiTruyen\`, \`theLoaiNhac\`,
+\`linhVucKhoaHoc\`, **chỉ được điền đúng một mã lấy từ danh sách dưới đây**
+(phần trong dấu nháy ngược), hoặc null nếu không cái nào đúng.
+
+TUYỆT ĐỐI KHÔNG TỰ NGHĨ RA MÃ MỚI. Mã lạ sẽ không khớp với nút lọc nào, nội
+dung coi như mất hút. Thà để null còn hơn.
+
+${khoi.join("\n\n")}`;
+}
 
 /**
  * Phần dặn thêm chỉ dùng cho đường CLI.
@@ -320,7 +367,7 @@ async function phanLoaiQuaCli(
   noiDung: NoiDungCanPhanLoai,
   model: string,
 ): Promise<KetQuaGoiClaude> {
-  const loiDan = HUONG_DAN + dinhKemKhuon();
+  const loiDan = (await huongDanKemChuDe()) + dinhKemKhuon();
   const cauHoiGoc = soanNoiDung(noiDung);
 
   let tokenVao = 0;
@@ -390,7 +437,7 @@ async function phanLoaiQuaApi(
     system: [
       {
         type: "text",
-        text: HUONG_DAN,
+        text: await huongDanKemChuDe(),
         // Ghi nhớ tạm phần lời dặn: từ lần gọi thứ hai trở đi chỉ tốn khoảng
         // một phần mười so với đọc lại từ đầu
         cache_control: { type: "ephemeral" },
