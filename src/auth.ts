@@ -62,7 +62,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // Google chỉ cấp refresh token ở lần cấp quyền ĐẦU TIÊN. Ép hỏi lại
           // mỗi lần đăng nhập để lỡ mất token vẫn xin lại được, không phải vào
           // myaccount.google.com gỡ quyền thủ công.
-          prompt: "consent",
+          //
+          // "select_account" bắt Google luôn hiện màn chọn tài khoản, thay vì
+          // tự dùng phiên Google đang đăng nhập sẵn trong trình duyệt (dễ chọn
+          // nhầm tài khoản khác nếu máy đang mở nhiều tài khoản Google).
+          prompt: "consent select_account",
         },
       },
     }),
