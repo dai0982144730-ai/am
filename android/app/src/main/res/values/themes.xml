@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Giao diện thật do Compose vẽ; theme hệ thống chỉ lo thanh trạng thái và nền lúc khởi động -->
+    <style name="Theme.Am" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/nen_khoi_dong</item>
+    </style>
+</resources>
