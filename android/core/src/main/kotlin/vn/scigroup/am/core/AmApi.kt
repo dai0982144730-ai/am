@@ -60,6 +60,30 @@ class AmApi(
     fun tomTatHomNay(soNgay: Int = 1): TomTatHomNay =
         lay("tom-tat-hom-nay", truyVan = "soNgay" to soNgay.coerceIn(1, 30).toString())
 
+    /**
+     * Đổi mã ghép (tạo ở trang Vận hành của web) lấy thẻ thiết bị. Tuyến này không
+     * đòi token nên dùng được khi app chưa có gì: tạo `AmApi(diaChi, "")` rồi gọi.
+     */
+    fun ghepApp(ma: String): TheThietBi = chay(
+        Request.Builder().url(duongDan("ghep-app"))
+            .header("Accept", "application/json")
+            .post(buildJsonObject { put("ma", ma) }.toString().toRequestBody(JSON_MEDIA))
+            .build(),
+    )
+
+    /**
+     * Quản trị tài khoản Claude của máy chủ. Chỉ nhận THẺ THIẾT BỊ (sau khi ghép app),
+     * không nhận TOKEN_TRO_LY. [hanhDong]: trang_thai, mo_link, nhap_ma, huy,
+     * dang_xuat, thu.
+     */
+    fun quanTriClaude(hanhDong: String, ma: String? = null): KetQuaClaude = goi(
+        "quan-tri/claude",
+        buildJsonObject {
+            put("hanhDong", hanhDong)
+            if (ma != null) put("ma", ma)
+        }.toString(),
+    )
+
     // ---------------------------------------------------------------
 
     private fun duongDan(vararg doan: String, truyVan: Pair<String, String>? = null): HttpUrl {
@@ -86,7 +110,7 @@ class AmApi(
 
     private inline fun <reified T> goi(endpoint: String, bodyJson: String): T =
         chay(
-            khoiTao(duongDan(endpoint))
+            khoiTao(duongDan(*endpoint.split('/').toTypedArray()))
                 .post(bodyJson.toRequestBody(JSON_MEDIA))
                 .build(),
         )

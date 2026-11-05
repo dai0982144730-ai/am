@@ -18,47 +18,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { taoGiaCli } from "./gia-claude-cli";
+
 const nha = fs.mkdtempSync(path.join(os.tmpdir(), "am-thu-dn-"));
 process.env.HOME = nha;
 process.env.USERPROFILE = nha;
 process.env.ANTHROPIC_API_KEY = "sk-gia-phai-bi-go";
 
-const giaCli = path.join(nha, "claude");
-fs.writeFileSync(
-  giaCli,
-  `#!/usr/bin/env node
-const fs = require("fs"), path = require("path");
-const a = process.argv.slice(2);
-const dir = process.env.CLAUDE_CONFIG_DIR;
-fs.appendFileSync(process.env.GHI_LOG, JSON.stringify({ a, dir, browser: process.env.BROWSER, coKhoaApi: !!process.env.ANTHROPIC_API_KEY }) + "\\n");
-if (a[0] === "--version") { console.log("9.9.9 (Claude Code gia)"); process.exit(0); }
-if (a[0] === "auth" && a[1] === "status") {
-  const co = dir && fs.existsSync(path.join(dir, ".credentials.json"));
-  console.log("nhieu chu " + JSON.stringify({ loggedIn: !!co, email: co ? "chu@vi-du.test" : "", subscriptionType: co ? "max" : "" }));
-  process.exit(0);
-}
-if (a[0] === "auth" && a[1] === "login") {
-  console.log("Opening browser...");
-  console.log("If the browser didn't open, visit: https://claude.ai/oauth/authorize?code=true&client_id=gia&state=xyz");
-  process.stdin.setEncoding("utf8");
-  let buf = "";
-  process.stdin.on("data", (d) => {
-    buf += d;
-    if (!buf.includes("\\n")) return;
-    const ma = buf.trim();
-    if (ma === "MA-DUNG-1234567890") {
-      fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, ".credentials.json"), "{}");
-      process.exit(0);
-    }
-    console.error("Request failed with status code 400");
-    process.exit(1);
-  });
-  setTimeout(() => process.exit(2), 600000);
-} else { process.exit(3); }
-`,
-);
-fs.chmodSync(giaCli, 0o755);
+const giaCli = taoGiaCli(nha);
 process.env.CLAUDE_CLI_PATH = giaCli;
 process.env.GHI_LOG = path.join(nha, "log.jsonl");
 

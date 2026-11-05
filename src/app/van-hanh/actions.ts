@@ -10,17 +10,18 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db/prisma";
-import { goiClaudeCli, LoiClaudeCli } from "@/lib/llm/claudeCli";
 import {
   chuanHoaMa,
+  dangXuatRieng,
   docTrangThai,
   guiMa,
   huyDangNhap,
   moDangNhap,
+  thuTroLy,
   type TrangThaiClaude,
 } from "@/lib/llm/dangNhapClaude";
-import { dangXuat } from "@/lib/llm/taiKhoanClaude";
-import { doiHoiChuDuAn } from "@/lib/quyen";
+import { doiHoiChuDuAn, emailChuDuAn } from "@/lib/quyen";
+import { taoMaGhep } from "@/lib/troLyChung/theThietBi";
 import { kepCuongDo } from "@/lib/vanHanh/cuongDo";
 import {
   CAC_CHUYEN_MUC,
@@ -124,14 +125,7 @@ export async function huyDangNhapClaude(): Promise<KetQuaClaude> {
 /** Xoá đăng nhập RIÊNG của Am. Tài khoản mặc định của máy không bị đụng tới. */
 export async function dangXuatClaude(): Promise<KetQuaClaude> {
   await doiHoiChuDuAn("đăng xuất Claude");
-  huyDangNhap();
-  const ok = dangXuat();
-  return {
-    ok,
-    message: ok
-      ? "Đã đăng xuất. Am quay về dùng tài khoản Claude mặc định của máy."
-      : "Am chưa đăng nhập tài khoản riêng nên không có gì để đăng xuất.",
-  };
+  return dangXuatRieng();
 }
 
 /** Kiểm nhanh, không tốn hạn mức: chỉ hỏi CLI đã đăng nhập chưa. */
@@ -140,21 +134,33 @@ export async function docTrangThaiClaude(): Promise<TrangThaiClaude> {
   return docTrangThai();
 }
 
-/**
- * Hỏi thử một câu ngắn bằng đúng tài khoản đang dùng. Tốn một lượt nhỏ của gói
- * Claude, nhưng là cách DUY NHẤT biết chắc đăng nhập còn hiệu lực.
- */
+/** Hỏi thử một câu thật: cách duy nhất biết chắc đăng nhập còn hiệu lực. */
 export async function thuTroLyClaude(): Promise<KetQuaClaude> {
   await doiHoiChuDuAn("thử gọi Claude");
-  const batDau = Date.now();
-  try {
-    await goiClaudeCli({ loiDan: "Trả lời đúng một chữ: ok", cauHoi: "ping" });
-    const giay = ((Date.now() - batDau) / 1000).toFixed(1).replace(".", ",");
-    return { ok: true, message: `Claude trả lời được (${giay} giây).` };
-  } catch (e) {
-    return {
-      ok: false,
-      message: e instanceof LoiClaudeCli ? e.message : "Không gọi được Claude.",
-    };
+  return thuTroLy();
+}
+
+// ---------------------------------------------------------------------------
+// Ghép app Android: mã dùng một lần, đổi lấy thẻ thiết bị (xem theThietBi.ts)
+// ---------------------------------------------------------------------------
+
+export interface KetQuaMaGhep {
+  ok: boolean;
+  message: string;
+  /** Dạng `K7M2-QX9P` */
+  ma?: string;
+  /** Lúc hết hạn, mili giây */
+  hetHanLuc?: number;
+}
+
+/** Tạo mã ghép cho app. Chỉ chủ dự án đã đăng nhập Google mới tạo được. */
+export async function taoMaGhepApp(): Promise<KetQuaMaGhep> {
+  await doiHoiChuDuAn("ghép app Android");
+  const email = await emailChuDuAn();
+  if (!email) return { ok: false, message: "Không xác định được tài khoản đang đăng nhập." };
+  if (!process.env.AUTH_SECRET) {
+    return { ok: false, message: "Máy chủ chưa có AUTH_SECRET trong .env nên chưa cấp được thẻ cho app." };
   }
+  const { ma, hetHanLuc } = taoMaGhep(email);
+  return { ok: true, message: "", ma, hetHanLuc };
 }

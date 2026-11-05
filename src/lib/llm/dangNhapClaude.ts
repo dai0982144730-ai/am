@@ -24,10 +24,11 @@ import path from "node:path";
 import {
   chuanBiLenhCli,
   gietCaCay,
+  goiClaudeCli,
   LoiClaudeCli,
   moiTruongCon,
 } from "@/lib/llm/claudeCli";
-import { thuMucTaiKhoan, thuMucChay } from "@/lib/llm/taiKhoanClaude";
+import { dangXuat, thuMucTaiKhoan, thuMucChay } from "@/lib/llm/taiKhoanClaude";
 
 interface LuotCho {
   con: ChildProcess;
@@ -318,5 +319,39 @@ export async function docTrangThai(): Promise<TrangThaiClaude> {
     };
   } catch {
     return { daCaiCli: true, phienBan, daDangNhap: false, dungTaiKhoanRieng };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Đăng xuất và thử gọi: dùng chung cho trang Vận hành (web) và app Android
+// ---------------------------------------------------------------------------
+
+/** Xoá đăng nhập RIÊNG của Am. Tài khoản mặc định của máy không bị đụng tới. */
+export function dangXuatRieng(): { ok: boolean; message: string } {
+  huyDangNhap();
+  const ok = dangXuat();
+  return {
+    ok,
+    message: ok
+      ? "Đã đăng xuất. Am quay về dùng tài khoản Claude mặc định của máy."
+      : "Am chưa đăng nhập tài khoản riêng nên không có gì để đăng xuất.",
+  };
+}
+
+/**
+ * Hỏi thử một câu ngắn bằng đúng tài khoản đang dùng. Tốn một lượt nhỏ của gói
+ * Claude, nhưng là cách DUY NHẤT biết chắc đăng nhập còn hiệu lực.
+ */
+export async function thuTroLy(): Promise<{ ok: boolean; message: string }> {
+  const batDau = Date.now();
+  try {
+    await goiClaudeCli({ loiDan: "Trả lời đúng một chữ: ok", cauHoi: "ping" });
+    const giay = ((Date.now() - batDau) / 1000).toFixed(1).replace(".", ",");
+    return { ok: true, message: `Claude trả lời được (${giay} giây).` };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof LoiClaudeCli ? e.message : "Không gọi được Claude.",
+    };
   }
 }

@@ -299,6 +299,63 @@ Phase 10 làm xong.
 
 ---
 
+## Ghép app và quản trị (thẻ thiết bị)
+
+Ngoài `TOKEN_TRO_LY`, cổng còn nhận **thẻ thiết bị**: chuỗi bắt đầu bằng `am1.`, cấp
+cho app sau khi ghép bằng mã. Thẻ dùng ở **mọi endpoint** ở trên (cùng giới hạn 60
+lần/phút), nên app đã ghép không cần gõ `TOKEN_TRO_LY`. Hai endpoint dưới chỉ có
+trong luồng ghép và quản trị.
+
+Thẻ ký bằng khoá suy ra từ `AUTH_SECRET`, sống 90 ngày, không cần bảng database.
+Đổi `AUTH_SECRET` hoặc `EMAIL_CHU_DU_AN` thì mọi thẻ cũ mất hiệu lực. Chưa thu hồi
+riêng từng thiết bị được.
+
+### 7. `POST /api/v1/tro-ly/ghep-app` *(không cần Authorization)*
+
+Đổi mã ghép lấy thẻ. Mã tạo ở **trang Vận hành** của web (nút "Tạo mã ghép app", chỉ
+người đã đăng nhập Google đúng email chủ dự án mới bấm được): dạng `K7M2-QX9P`,
+sống 5 phút, dùng một lần.
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"ma":"K7M2-QX9P"}' \
+  http://localhost:3000/api/v1/tro-ly/ghep-app
+```
+
+```json
+{ "the": "am1.eyJ...", "hetHanLuc": "2027-02-03T04:05:06.000Z", "email": "chu@example.com" }
+```
+
+Mã sai, đã dùng hoặc quá hạn → `401` `token_sai`. Sai dạng → `400`. Đoán sai quá 10
+lần mỗi phút từ một nguồn → `429` `goi_qua_nhieu`, kể cả khi sau đó nhập mã đúng.
+
+### 8. `POST /api/v1/tro-ly/quan-tri/claude` *(chỉ nhận thẻ thiết bị)*
+
+Đăng nhập tài khoản Claude của máy chủ từ app, cùng luồng với thẻ "Tài khoản
+Claude" ở trang Vận hành. `TOKEN_TRO_LY` bị từ chối (`401`), để điện thoại lộ token
+vẫn không đổi được tài khoản Claude của máy chủ.
+
+| `hanhDong` | Việc | Trả về thêm |
+|---|---|---|
+| `trang_thai` | Đã cài CLI chưa, đã đăng nhập chưa | `trangThai` |
+| `mo_link` | Chạy `claude auth login`, lấy link | `url` |
+| `nhap_ma` | Chuyển mã trang Claude hiện ra (`ma`) | |
+| `huy` | Huỷ lượt đăng nhập đang chờ | |
+| `dang_xuat` | Xoá đăng nhập riêng của Am (không đụng tài khoản mặc định) | |
+| `thu` | Hỏi Claude một câu thật (tốn một lượt nhỏ của gói) | |
+
+Luồng: `mo_link` → app mở `url` bằng trình duyệt của máy → đăng nhập, trang Claude
+hiện mã → `nhap_ma`. Tiến trình `claude` trên máy chủ sống qua hai lần gọi, nên cần
+máy chủ Node chạy liên tục. Lỗi của việc đăng nhập (mã sai, hết hạn) vẫn là `200`
+với `ok: false` và câu tiếng Việt trong `message`.
+
+```json
+{ "ok": true, "message": "", "trangThai": { "daCaiCli": true, "daDangNhap": true,
+  "email": "chu@example.com", "goi": "max", "dungTaiKhoanRieng": true } }
+```
+
+---
+
 ## Cấu trúc code
 
 ```

@@ -43,6 +43,7 @@ import vn.scigroup.am.core.AmApiException
 fun ManCaiDat(vm: AmViewModel, quayLai: () -> Unit) {
     var diaChi by remember { mutableStateOf(vm.diaChi) }
     var token by remember { mutableStateOf(vm.token) }
+    var maGhep by remember { mutableStateOf("") }
     var docTo by remember { mutableStateOf(vm.docTo) }
     var ketQua by remember { mutableStateOf<String?>(null) }
     var dangThu by remember { mutableStateOf(false) }
@@ -73,16 +74,50 @@ fun ManCaiDat(vm: AmViewModel, quayLai: () -> Unit) {
                 placeholder = { Text("https://am.scigroup.vn") },
                 singleLine = true,
             )
+            Text("Ghép với máy chủ", style = MaterialTheme.typography.titleMedium)
+            if (vm.the.isNotBlank()) {
+                Text(
+                    "Đã ghép. App dùng thẻ thiết bị do máy chủ cấp, không cần nhập token.",
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                OutlinedButton(onClick = vm::boGhep) { Text("Bỏ ghép") }
+            } else {
+                Text(
+                    "Trên web Am (đã đăng nhập Google), mở trang Vận hành, bấm Tạo mã ghép app, " +
+                        "rồi gõ mã vào đây. Ghép xong không phải nhập token, và dùng được mục Tài khoản Claude.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = maGhep,
+                    onValueChange = { maGhep = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Mã ghép (dạng K7M2-QX9P)") },
+                    singleLine = true,
+                    enabled = !vm.dangGhep,
+                )
+                Button(
+                    onClick = { vm.ghepApp(diaChi, maGhep) },
+                    enabled = !vm.dangGhep && diaChi.isNotBlank() && maGhep.isNotBlank(),
+                ) { Text(if (vm.dangGhep) "Đang ghép…" else "Ghép app") }
+            }
+            vm.ghepKq?.let { (ok, chu) ->
+                Text(chu, color = if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+            }
+
+            if (vm.the.isNotBlank()) KhoiTaiKhoanClaude(vm)
+
+            Text("Token nhập tay", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = token,
                 onValueChange = { token = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Token (TOKEN_TRO_LY trong .env)") },
+                label = { Text("Token (TOKEN_TRO_LY), không cần nếu đã ghép") },
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true,
             )
             Text(
-                "Dùng địa chỉ https khi có thể. Với http thường, token đi qua mạng không được mã hoá.",
+                "Dùng địa chỉ https khi có thể. Với http thường, token và thẻ đi qua mạng không được mã hoá.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -109,7 +144,7 @@ fun ManCaiDat(vm: AmViewModel, quayLai: () -> Unit) {
                         ketQua = "Đang thử…"
                         phamVi.launch {
                             val dc = diaChi
-                            val tk = token
+                            val tk = vm.the.ifBlank { token }
                             ketQua = try {
                                 val s = withContext(Dispatchers.IO) { AmApi(dc, tk).sucKhoe() }
                                 if (s.database == "ok") {

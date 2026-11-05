@@ -96,6 +96,41 @@ data class SucKhoe(
     val loi: String? = null,
 )
 
+/** Thẻ thiết bị do máy chủ cấp sau khi ghép app bằng mã. */
+@Serializable
+data class TheThietBi(
+    val the: String = "",
+    /** Ngày giờ hết hạn, dạng ISO (thẻ sống 90 ngày). */
+    val hetHanLuc: String = "",
+    val email: String = "",
+)
+
+/** Tình trạng đăng nhập Claude của máy chủ Am. */
+@Serializable
+data class TrangThaiClaude(
+    val daCaiCli: Boolean = false,
+    val phienBan: String? = null,
+    val daDangNhap: Boolean = false,
+    val email: String? = null,
+    val goi: String? = null,
+    /** true = đăng nhập riêng của Am; false = tài khoản mặc định của máy chủ. */
+    val dungTaiKhoanRieng: Boolean = false,
+)
+
+/**
+ * Kết quả một thao tác quản trị Claude. Lỗi của việc đăng nhập (mã sai, hết hạn)
+ * vẫn là 200 với `ok = false` và câu tiếng Việt trong [message].
+ */
+@Serializable
+data class KetQuaClaude(
+    val ok: Boolean = false,
+    val message: String = "",
+    /** Chỉ có khi lấy được link đăng nhập. */
+    val url: String? = null,
+    /** Chỉ có khi hỏi trạng thái. */
+    val trangThai: TrangThaiClaude? = null,
+)
+
 @Serializable
 internal data class PhanHoiLoi(val loi: ChiTietLoi? = null)
 

@@ -150,4 +150,57 @@ class AmApiTest {
         assertEquals("tham_so_sai", e.ma)
         assertEquals(400, e.httpStatus)
     }
+
+    @Test fun ghepAppKhongGuiTokenVaDocDuocThe() {
+        tra("""{"the":"am1.abc.def","hetHanLuc":"2027-02-03T04:05:06.000Z","email":"chu@x.test"}""")
+        val trong = AmApi(may.url("/").toString(), "")  // chưa có token vẫn gọi được
+        val the = trong.ghepApp("K7M2QX9P")
+
+        val yc = may.takeRequest()
+        assertEquals("POST", yc.method)
+        assertEquals("/api/v1/tro-ly/ghep-app", yc.path)
+        assertNull(yc.getHeader("Authorization"))
+        assertTrue("\"ma\":\"K7M2QX9P\"" in yc.body.readUtf8())
+        assertEquals("am1.abc.def", the.the)
+        assertEquals("chu@x.test", the.email)
+    }
+
+    @Test fun ghepAppMaSaiRaThongDiepCuaMayChu() {
+        tra("""{"loi":{"ma":"token_sai","thongDiep":"Mã không đúng, đã dùng rồi, hoặc đã quá 5 phút."}}""", 401)
+        val e = assertFailsWith<AmApiException> { AmApi(may.url("/").toString(), "").ghepApp("AAAAAAAA") }
+        assertEquals("token_sai", e.ma)
+        assertTrue(e.message!!.contains("quá 5 phút"))
+    }
+
+    @Test fun quanTriClaudeGuiDungDuongDanVaThe() {
+        tra("""{"ok":true,"message":"","trangThai":{"daCaiCli":true,"phienBan":"2.1.0","daDangNhap":true,
+            "email":"chu@x.test","goi":"max","dungTaiKhoanRieng":true,"truongLa":1}}""")
+        val kq = api.quanTriClaude("trang_thai")
+        val yc = may.takeRequest()
+        assertEquals("/api/v1/tro-ly/quan-tri/claude", yc.path)
+        assertEquals("Bearer token-thu", yc.getHeader("Authorization"))
+        assertTrue("\"hanhDong\":\"trang_thai\"" in yc.body.readUtf8())
+        assertTrue(kq.ok)
+        val tt = kq.trangThai!!
+        assertTrue(tt.daDangNhap && tt.dungTaiKhoanRieng)
+        assertEquals("max", tt.goi)
+    }
+
+    @Test fun quanTriClaudeNhapMaVaMoLink() {
+        tra("""{"ok":true,"message":"","url":"https://claude.ai/oauth/authorize?x=1"}""")
+        assertEquals("https://claude.ai/oauth/authorize?x=1", api.quanTriClaude("mo_link").url)
+        assertTrue("\"ma\"" !in may.takeRequest().body.readUtf8())  // mo_link không kèm mã
+
+        tra("""{"ok":false,"message":"Mã không đúng hoặc đã quá hạn."}""")
+        val kq = api.quanTriClaude("nhap_ma", "MA-DUNG-1234567890")
+        assertTrue(!kq.ok && kq.message.contains("quá hạn"))
+        assertTrue("\"ma\":\"MA-DUNG-1234567890\"" in may.takeRequest().body.readUtf8())
+    }
+
+    @Test fun quanTriClaudeBangTokenTinhBiTuChoi() {
+        tra("""{"loi":{"ma":"token_sai","thongDiep":"Việc này cần ghép app với máy chủ bằng mã ở trang Vận hành."}}""", 401)
+        val e = assertFailsWith<AmApiException> { api.quanTriClaude("trang_thai") }
+        assertEquals(401, e.httpStatus)
+        assertTrue(e.message!!.contains("ghép app"))
+    }
 }

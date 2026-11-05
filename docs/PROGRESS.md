@@ -3323,3 +3323,36 @@ không có biến môi trường mới.
 - Chưa bấm thử giao diện trên trình duyệt thật.
 - Nhánh Linux (`BROWSER=true`) chưa chạy thật; máy bạn là Windows.
 - Cần máy chủ Node chạy liên tục (máy nhà thì được); Vercel/serverless thì không.
+
+## 2026-11-05 (tiếp) — Ghép app Android bằng mã, đăng nhập Claude từ điện thoại
+
+Chủ dự án muốn đăng nhập Claude cả trong app Android, và đăng nhập app bằng tài
+khoản Google. Chưa có địa chỉ https công khai nên Google không cho đăng nhập trực
+tiếp trong app (Google từ chối địa chỉ IP trong mạng nhà). Chọn cách **ghép bằng mã
+từ PC**, gắn Google trực tiếp vào sau khi có https.
+
+### Luồng
+1. Đăng nhập Google trên web Am ở PC → trang Vận hành → **Tạo mã ghép app** (dạng `K7M2-QX9P`, 5 phút, một lần).
+2. Gõ mã vào app (Cài đặt, Ghép với máy chủ) → máy chủ cấp **thẻ thiết bị** (90 ngày).
+3. App dùng thẻ thay cho `TOKEN_TRO_LY`. Mục **Tài khoản Claude** trong Cài đặt bấm để mở link bằng trình duyệt của máy, rồi dán mã.
+
+### Quyết định
+- `TOKEN_TRO_LY` vẫn chỉ đọc nội dung và hỏi trợ lý. Việc quản trị (`/quan-tri/claude`) chỉ nhận thẻ thiết bị.
+- Thẻ ký HMAC bằng khoá suy ra từ `AUTH_SECRET`, không có bảng database mới. Đổi `AUTH_SECRET` hoặc `EMAIL_CHU_DU_AN` thì mọi thẻ cũ chết.
+- Mã ghép nằm trong bộ nhớ máy chủ, đoán sai quá 10 lần/phút thì khoá nguồn gọi.
+
+### Đã kiểm
+| | Kết quả |
+|---|---|
+| `tsc`, `eslint` (web) | sạch |
+| `scripts/thu-ghep-app.ts` | 43 mục đạt: thẻ ký/hết hạn/bị sửa, đổi email hoặc khoá thì chết, mã một lần, hết hạn, khoá khi đoán sai, thẻ qua xác thực chung, TOKEN_TRO_LY bị từ chối ở tuyến quản trị, đủ 6 hành động Claude |
+| `android/core` | 23 bài kiểm đạt (thêm ghép app, quản trị Claude, kiểm dạng mã) |
+
+### Chưa kiểm
+- Giao diện app (Compose) mới biết có biên dịch được hay không sau khi GitHub build; chưa chạy trên điện thoại.
+- Chưa bấm "Tạo mã ghép app" bằng phiên Google thật; chưa gõ mã vào app thật.
+- Thẻ đi qua http thường trong mạng nhà là không mã hoá. Chưa có https.
+- Chưa thu hồi riêng từng thiết bị.
+
+### Việc kế tiếp (khi có https công khai)
+Thêm nút "Đăng nhập Google" trong app: mở trang đăng nhập Google của Am bằng trình duyệt, máy chủ cấp thẻ qua liên kết sâu `am://`. Dùng lại cơ chế thẻ thiết bị. Cần thêm địa chỉ https vào "Authorized redirect URIs" của khoá OAuth.

@@ -13,6 +13,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
 import type { MaLoi } from "./kieuDuLieu";
+import { kiemThe, TIEN_TO_THE } from "./theThietBi";
 
 export interface KetQuaXacThuc {
   hopLe: boolean;
@@ -20,6 +21,11 @@ export interface KetQuaXacThuc {
   nhanToken?: string;
   maLoi?: MaLoi;
   thongDiep?: string;
+  /**
+   * true khi người gọi dùng thẻ thiết bị (ghép app bằng mã, xem `theThietBi.ts`)
+   * chứ không phải `TOKEN_TRO_LY`. Việc quản trị chỉ nhận thẻ thiết bị.
+   */
+  laTheThietBi?: boolean;
 }
 
 /** Mỗi token gọi tối đa bao nhiêu lần trong bao lâu */
@@ -57,7 +63,7 @@ const SO_LAN_SAI_TOI_DA = 20;
 const boDemSai = new Map<string, number[]>();
 
 /** Nhận diện nguồn gọi: địa chỉ do proxy/tunnel gắn vào, không có thì gộp chung. */
-function nguonGoi(request: Request): string {
+export function nguonGoi(request: Request): string {
   const xff = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   return xff || request.headers.get("x-real-ip") || "khong-ro";
 }
@@ -115,17 +121,6 @@ function vuotGioiHan(token: string): boolean {
  * Chấp nhận đúng dạng `Authorization: Bearer <token>`.
  */
 export function xacThucTokenTroLy(request: Request): KetQuaXacThuc {
-  const danhSach = docDanhSachToken();
-
-  if (danhSach.length === 0) {
-    return {
-      hopLe: false,
-      maLoi: "loi_he_thong",
-      thongDiep:
-        "Máy chủ chưa cấu hình TOKEN_TRO_LY. Thêm biến này vào file .env rồi khởi động lại.",
-    };
-  }
-
   const header = request.headers.get("authorization") ?? "";
   const khop = header.match(/^Bearer\s+(.+)$/i);
 
@@ -138,6 +133,51 @@ export function xacThucTokenTroLy(request: Request): KetQuaXacThuc {
   }
 
   const token = khop[1].trim();
+
+  // Thẻ thiết bị (app đã ghép bằng mã): kiểm chữ ký, không cần TOKEN_TRO_LY
+  if (token.startsWith(TIEN_TO_THE)) {
+    const the = kiemThe(token);
+    if (!the.hopLe) {
+      if (saiQuaNhieu(nguonGoi(request))) {
+        return {
+          hopLe: false,
+          maLoi: "goi_qua_nhieu",
+          thongDiep: "Thử sai quá nhiều lần. Chờ một lát rồi thử lại.",
+        };
+      }
+      return {
+        hopLe: false,
+        maLoi: "token_sai",
+        thongDiep:
+          the.lyDo === "het_han"
+            ? "Thẻ thiết bị đã hết hạn. Ghép lại app bằng mã mới ở trang Vận hành."
+            : "Thẻ thiết bị không hợp lệ. Ghép lại app bằng mã ở trang Vận hành.",
+      };
+    }
+    // Nhãn ghi log lấy từ băm của thẻ, không lấy từ đầu chuỗi (đầu chuỗi giống hệt nhau)
+    const nhan = `the:${createHash("sha256").update(token).digest("hex").slice(0, 6)}`;
+    if (vuotGioiHan(token)) {
+      return {
+        hopLe: false,
+        nhanToken: nhan,
+        maLoi: "goi_qua_nhieu",
+        thongDiep: `Gọi quá ${GIOI_HAN.soLanToiDa} lần mỗi phút. Chờ một lát rồi thử lại.`,
+      };
+    }
+    return { hopLe: true, nhanToken: nhan, laTheThietBi: true };
+  }
+
+  const danhSach = docDanhSachToken();
+
+  if (danhSach.length === 0) {
+    return {
+      hopLe: false,
+      maLoi: "loi_he_thong",
+      thongDiep:
+        "Máy chủ chưa cấu hình TOKEN_TRO_LY. Thêm biến này vào file .env rồi khởi động lại.",
+    };
+  }
+
   const hopLe = danhSach.some((t) => soSanhAnToan(t, token));
 
   if (!hopLe) {

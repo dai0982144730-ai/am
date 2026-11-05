@@ -81,6 +81,14 @@ export interface KetQuaTuyen {
 export function tuyenTroLy(
   endpoint: string,
   xuLy: (request: Request) => Promise<unknown | KetQuaTuyen>,
+  tuyChon: {
+    /**
+     * Việc quản trị (đổi tài khoản Claude của máy chủ...): chỉ nhận thẻ thiết bị
+     * của app đã ghép bằng mã, KHÔNG nhận `TOKEN_TRO_LY`. Nhờ vậy điện thoại lộ
+     * `TOKEN_TRO_LY` vẫn không đổi được gì ngoài đọc nội dung và hỏi trợ lý.
+     */
+    chiTheThietBi?: boolean;
+  } = {},
 ) {
   return async function (request: Request): Promise<Response> {
     const batDau = Date.now();
@@ -96,6 +104,19 @@ export function tuyenTroLy(
         maTrangThai: MA_HTTP[ma],
       }).catch(() => {});
       return phanHoiLoi(ma, xacThuc.thongDiep ?? "Không xác thực được.");
+    }
+
+    if (tuyChon.chiTheThietBi && !xacThuc.laTheThietBi) {
+      void ghiNhatKy?.({
+        endpoint,
+        nhanToken: xacThuc.nhanToken ?? "?",
+        thoiGianPhanHoiMs: Date.now() - batDau,
+        maTrangThai: MA_HTTP.token_sai,
+      }).catch(() => {});
+      return phanHoiLoi(
+        "token_sai",
+        "Việc này cần ghép app với máy chủ bằng mã ở trang Vận hành. TOKEN_TRO_LY không đủ quyền.",
+      );
     }
 
     try {
