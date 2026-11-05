@@ -3241,3 +3241,35 @@ tạo hai playlist, khoá quét đêm theo giờ UTC) chưa làm.
 `docs/demo-app-android.html`: bản xem trước cho Xiaomi 14 Ultra, dữ liệu mẫu,
 trình phát và micro chỉ giả lập. Chủ dự án đã duyệt. Việc kế tiếp: dựng app thật,
 nối vào cổng `/api/v1/tro-ly`.
+
+## 2026-11-05 (tiếp) — App Android thật, bản đầu (thư mục `android/`)
+
+Chủ dự án duyệt demo rồi chốt: Kotlin + Jetpack Compose, build bằng GitHub
+Actions, bản đầu chỉ làm các màn đã có API trong cổng `/api/v1/tro-ly`.
+
+| Phần | Nội dung | Kiểm bằng |
+|---|---|---|
+| `android/core` | Kotlin thuần: gọi 6 endpoint, đọc JSON, đọc markdown nhẹ, mọi lỗi ra tiếng Việt | 15 bài kiểm, chạy được ở mọi máy có JDK 17. Đối chiếu với phản hồi thật của `next dev` |
+| `android/app` | Bản tin, Khám phá/Tìm kiếm, Xem/nghe (đọc to bằng giọng tiếng Việt của máy), Trò chuyện, Cài đặt, trợ lý giọng nói mở bằng nút nguồn | Biên dịch thành công trên GitHub Actions, ra file APK debug |
+| `.github/workflows/android.yml` | Chạy bài kiểm phần lõi rồi build APK, giữ file ở mục Artifacts | Lần chạy 41976006648 xanh |
+
+Bài học Gradle: plugin Kotlin và plugin Android phải khai chung ở
+`android/build.gradle.kts` (buildscript). Khai rời từng module thì lỗi
+`BaseVariant not found`. Phiên đám mây không tải được Android SDK nên
+`settings.gradle.kts` chỉ đưa `:app` vào khi máy có SDK; trên máy không có thì
+vẫn build và kiểm `:core` được.
+
+### Cài lên Xiaomi 14 Ultra
+1. Mở trang lần chạy trên GitHub, mục Artifacts, tải `am-debug-apk`, giải nén ra file `.apk`.
+2. Chép sang điện thoại, mở file, cho phép cài từ nguồn này.
+3. Mở Am, vào Cài đặt, nhập địa chỉ máy chủ và token (`TOKEN_TRO_LY` trong `.env`), bấm "Thử kết nối".
+4. Trợ lý nút nguồn: Cài đặt máy, Ứng dụng mặc định, Ứng dụng trợ lý số, chọn Am.
+
+### Chưa làm / chưa chắc
+- **Chưa chạy thử trên điện thoại thật**: mới biết app biên dịch được, chưa biết nhìn và bấm có đúng không.
+- **Trợ lý giữ nút nguồn chưa thử**: tên mục chọn trợ lý và cách gán nút nguồn trên HyperOS có thể khác.
+- Đọc to chỉ chạy khi mở app (thoát app là dừng), chưa có trình phát chạy nền. Chưa phát video hay nhạc trong app.
+- Playlist, Ghi chú, Thư viện, Cài đặt quét chưa có vì cổng API chưa có endpoint cho chúng.
+- Chưa tính lệnh gọi `/cong-cu` của cả ba trang (tiendo, phaply chưa nối).
+- Máy chủ `am.scigroup.vn` chưa triển khai: app đang cho phép http thường để thử trong mạng nhà. Khi có https thì tắt `cleartextTrafficPermitted` trong `network_security_config.xml`.
+- Token đang lưu dạng thường trong thư mục riêng của app, chưa mã hoá thêm.
