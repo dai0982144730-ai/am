@@ -21,14 +21,16 @@
  *
  * CÁCH NÀY HỌC TỪ ĐÂU: dự án `phaply` (Web Pháp lý) của cùng chủ dự án đã chạy
  * thật theo hướng này — xem `phaply/lib/claude-cli.ts`. Bản ở đây bỏ bớt phần
- * quản lý đăng nhập trong giao diện (chưa cần), và thêm bốn cờ tiết kiệm ở trên
- * mà bản gốc chưa có.
+ * quản lý đăng nhập (đã có từ 2026-11-05: trang Vận hành, mục Tài khoản Claude,
+ * xem `dangNhapClaude.ts`), và thêm bốn cờ tiết kiệm ở trên mà bản gốc chưa có.
  */
 
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
+import { thuMucChay } from "@/lib/llm/taiKhoanClaude";
 
 /** Chờ tối đa một lần gọi. Video dài, lời thoại nhiều, nên để rộng. */
 const HAN_CHO_MS = Number(process.env.CLAUDE_CLI_TIMEOUT_MS) || 180_000;
@@ -100,7 +102,9 @@ function canCuaSoLenh(duongDan: string): boolean {
  * đang được chạy từ bên trong một phiên Claude Code khác — để nguyên thì tiến
  * trình con tưởng mình là phiên cha và chạy sai.
  */
-function moiTruongCon(): NodeJS.ProcessEnv {
+export function moiTruongCon(
+  thuMucTaiKhoan: string | undefined = thuMucChay(),
+): NodeJS.ProcessEnv {
   const moiTruong: NodeJS.ProcessEnv = {
     ...process.env,
     // Việc ở đây không cần suy nghĩ sâu, tắt đi cho nhanh và đỡ tốn
@@ -110,7 +114,14 @@ function moiTruongCon(): NodeJS.ProcessEnv {
   delete moiTruong.CLAUDECODE;
   delete moiTruong.CLAUDE_CODE_ENTRYPOINT;
   delete moiTruong.CLAUDE_CODE_SSE_PORT;
+  delete moiTruong.CLAUDE_CODE_SESSION_ID;
+  delete moiTruong.CLAUDE_CODE_CHILD_SESSION;
+  delete moiTruong.CLAUDE_CODE_EXECPATH;
   delete moiTruong.ELECTRON_RUN_AS_NODE;
+
+  // Đã đăng nhập tài khoản riêng của Am (trang Vận hành) thì dùng nó; chưa thì
+  // để nguyên, CLI dùng tài khoản mặc định của máy như từ trước tới giờ.
+  if (thuMucTaiKhoan) moiTruong.CLAUDE_CONFIG_DIR = thuMucTaiKhoan;
 
   // BẮT BUỘC xoá khoá API. Claude CLI thấy có khoá là dùng khoá đó, bỏ qua tài
   // khoản Claude Pro đã đăng nhập — đúng cái ta đang tránh, vì khoá API tính
@@ -135,7 +146,7 @@ function moiTruongCon(): NodeJS.ProcessEnv {
  * Từ đó mọi lần gọi mới đều treo — mất khá lâu mới nhận ra thủ phạm không phải
  * câu lệnh sai mà là máy đã nghẽn. Dọn sạch chúng đi là chạy lại bình thường.
  */
-function gietCaCay(con: ReturnType<typeof spawn>): void {
+export function gietCaCay(con: ReturnType<typeof spawn>): void {
   try {
     if (process.platform === "win32" && con.pid) {
       spawn("taskkill", ["/pid", String(con.pid), "/T", "/F"], {
@@ -207,13 +218,17 @@ export function goiClaudeCli(
   return xepHang(() => goiThat(tuyChon));
 }
 
-function goiThat(tuyChon: TuyChonGoiCli): Promise<KetQuaGoiCli> {
+/**
+ * Cách chạy Claude CLI mà KHÔNG qua cửa sổ lệnh: trả về chương trình cần chạy và
+ * các tham số đứng đầu. Dùng chung cho gọi hỏi, đăng nhập và kiểm tra đăng nhập.
+ */
+export function chuanBiLenhCli(): { chayBang: string; thamSoDau: string[] } {
   const duongDan = timClaudeCli();
   if (!duongDan) {
     throw new LoiClaudeCli(
       "Không tìm thấy Claude CLI trên máy.\n" +
         "Cài bằng: npm install -g @anthropic-ai/claude-code\n" +
-        "Rồi đăng nhập một lần bằng: claude\n" +
+        "Rồi đăng nhập ở trang Vận hành, mục Tài khoản Claude.\n" +
         "Hoặc khai đường dẫn vào CLAUDE_CLI_PATH trong .env.",
     );
   }
@@ -221,8 +236,6 @@ function goiThat(tuyChon: TuyChonGoiCli): Promise<KetQuaGoiCli> {
   // Không bao giờ chạy qua cửa sổ lệnh: lời dặn hệ thống nhiều dòng, có dấu cách
   // và dấu ngoặc kép, đi qua `cmd.exe` là bị tách vụn hoặc hiểu thành lệnh. File
   // `.cmd` chỉ là vỏ bọc của `cli.js` — chạy thẳng cái đó bằng Node.
-  let chayBang = duongDan;
-  let thamSoDau: string[] = [];
   if (canCuaSoLenh(duongDan)) {
     const cliJs = path.join(
       path.dirname(duongDan),
@@ -238,9 +251,13 @@ function goiThat(tuyChon: TuyChonGoiCli): Promise<KetQuaGoiCli> {
           "Hoặc trỏ CLAUDE_CLI_PATH tới file claude.exe thật.",
       );
     }
-    chayBang = process.execPath;
-    thamSoDau = [cliJs];
+    return { chayBang: process.execPath, thamSoDau: [cliJs] };
   }
+  return { chayBang: duongDan, thamSoDau: [] };
+}
+
+function goiThat(tuyChon: TuyChonGoiCli): Promise<KetQuaGoiCli> {
+  const { chayBang, thamSoDau } = chuanBiLenhCli();
 
   const thamSo = [
     ...thamSoDau,
@@ -322,7 +339,7 @@ function goiThat(tuyChon: TuyChonGoiCli): Promise<KetQuaGoiCli> {
         return hong(
           new LoiClaudeCli(
             /not logged in|authentication/i.test(thongDiep)
-              ? "Chưa đăng nhập Claude trên máy. Mở terminal gõ `claude` rồi đăng nhập một lần."
+              ? "Chưa đăng nhập Claude. Vào trang Vận hành, mục Tài khoản Claude, bấm Đăng nhập Claude."
               : `Claude CLI báo lỗi: ${thongDiep.slice(0, 300)}`,
           ),
         );

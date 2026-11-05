@@ -11,6 +11,7 @@ import { AlertTriangle, CheckCircle2, Download, XCircle } from "lucide-react";
 
 import { KhoiCuongDoVaSuat } from "@/components/KhoiCuongDoVaSuat";
 import { KhungTrang } from "@/components/KhungTrang";
+import { TheTaiKhoanClaude } from "@/components/TheTaiKhoanClaude";
 import { emailChuDuAn, laChuDuAn } from "@/lib/quyen";
 import { docCuongDo } from "@/lib/vanHanh/cuongDo";
 import { docCaiDatSuat } from "@/lib/vanHanh/suatPhanLoai";
@@ -198,6 +199,7 @@ export default async function TrangVanHanh() {
               hangCon={hangCon}
               choPhepSua={laChu}
             />
+            <TheTaiKhoanClaude choPhepSua={laChu} />
             <BangLichChay cacLanChay={cacLanChay} />
             <BangPhienBanDiem
               cacPhienBanDiem={cacPhienBanDiem}
