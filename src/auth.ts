@@ -60,13 +60,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // thì cứ khoảng một giờ là hết quyền gọi API.
           access_type: "offline",
           // Google chỉ cấp refresh token ở lần cấp quyền ĐẦU TIÊN. Ép hỏi lại
-          // mỗi lần đăng nhập để lỡ mất token vẫn xin lại được, không phải vào
-          // myaccount.google.com gỡ quyền thủ công.
+          // mỗi lần đăng nhập ("consent") để lỡ mất token vẫn xin lại được,
+          // không phải vào myaccount.google.com gỡ quyền thủ công.
           //
-          // "select_account" bắt Google luôn hiện màn chọn tài khoản, thay vì
-          // tự dùng phiên Google đang đăng nhập sẵn trong trình duyệt (dễ chọn
-          // nhầm tài khoản khác nếu máy đang mở nhiều tài khoản Google).
-          prompt: "consent select_account",
+          // "login" bắt Google đòi nhập lại tài khoản và mật khẩu mỗi lần, thay
+          // vì tự dùng phiên Google đang mở sẵn trong trình duyệt (chủ dự án
+          // không muốn app tự dùng tài khoản cũ). "select_account" trước đây
+          // vẫn để sẵn các tài khoản đang mở trong danh sách nên dễ bấm nhầm.
+          prompt: "login consent",
+          // Điền sẵn email chủ dự án cho khỏi gõ nhầm. Lấy từ EMAIL_CHU_DU_AN,
+          // không viết cứng vào code. Chưa khai thì bỏ tham số này (app cũng
+          // chặn tất cả ở bước signIn bên dưới).
+          ...(emailChuDuAn() ? { login_hint: emailChuDuAn() } : {}),
         },
       },
     }),

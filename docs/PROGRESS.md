@@ -3198,3 +3198,78 @@ thành "Trợ lý được gợi ý thêm bài" — tên cũ dễ nhầm với s
 - **Kéo-thả đổi thứ tự** (như YouTube) chưa làm — hiện vẫn là hai nút ▲▼.
 - Đã có `datLaiThuTu()` nhận nguyên danh sách đã sắp lại, sẵn cho kéo-thả sau.
 - **Chưa thử ghi thật** `apDungDoiThuTu` lên một playlist thật trên YouTube.
+
+## 2026-11-05 — Đăng nhập Google luôn đòi nhập lại, vá đọc hết trang playlist, demo app Android
+
+### Đăng nhập Google (`src/auth.ts`)
+Chủ dự án muốn mỗi lần đăng nhập phải tự nhập lại tài khoản, không để Google tự
+dùng tài khoản đang mở sẵn trong trình duyệt. Đã chọn cách "điền sẵn email + ép
+nhập lại":
+
+| Tham số gửi Google | Trước | Sau |
+|---|---|---|
+| `prompt` | `consent select_account` | `login consent` |
+| `login_hint` | không có | lấy từ `EMAIL_CHU_DU_AN` (không viết cứng) |
+
+`select_account` vẫn để sẵn các tài khoản đang mở trong danh sách nên dễ bấm
+nhầm. `login` bắt nhập lại; `consent` giữ lại để vẫn xin được refresh token.
+Giữ nguyên: chỉ đúng email `EMAIL_CHU_DU_AN` được vào, `access_type: "offline"`,
+scope cũ, lưu refresh token.
+
+Lần "vào thẳng ksvdai16" trước đó là lỗi `client_id` rỗng của Google, không phải
+chọn nhầm tài khoản.
+
+**Đã kiểm** (giá trị giả, không có khoá thật trong phiên đám mây): chạy `next dev`,
+lấy địa chỉ chuyển hướng bằng curl qua `/api/auth/csrf` và `/api/auth/signin/google`.
+Có đủ `prompt=login consent`, `login_hint`, `access_type=offline`, hai scope
+YouTube. `npx tsc --noEmit` sạch.
+**Chưa kiểm:** đăng nhập thật với Google. Chủ dự án thử trên máy mình.
+
+### Vá đọc hết trang playlist (`apDung.ts`)
+`apDung.ts` chỉ đọc 50 video đầu của playlist thật khi xoá hoặc đổi thứ tự, nên
+playlist dài (có cái 202 video) hỏng từ video thứ 51. Giờ dùng `docHetDong` của
+`ghiThang.ts`, đọc hết các trang. Chưa thử trên YouTube thật.
+
+### Rà soát code
+Cả 10 mục trong `bao-cao-ra-soat-code.md` đã nằm sẵn trong commit `8869aa2`.
+Mục 4 mô phỏng 2.000 ca ngẫu nhiên đều đúng thứ tự. Mục 6 còn cần chạy lại
+`chamDiemHangLoat` để điểm cũ khớp điểm mới.
+Việc nhỏ cuối báo cáo (bấm thêm hai lần bị trùng video, hai lệnh thêm đồng thời
+tạo hai playlist, khoá quét đêm theo giờ UTC) chưa làm.
+
+### Demo app Android
+`docs/demo-app-android.html`: bản xem trước cho Xiaomi 14 Ultra, dữ liệu mẫu,
+trình phát và micro chỉ giả lập. Chủ dự án đã duyệt. Việc kế tiếp: dựng app thật,
+nối vào cổng `/api/v1/tro-ly`.
+
+## 2026-11-05 (tiếp) — App Android thật, bản đầu (thư mục `android/`)
+
+Chủ dự án duyệt demo rồi chốt: Kotlin + Jetpack Compose, build bằng GitHub
+Actions, bản đầu chỉ làm các màn đã có API trong cổng `/api/v1/tro-ly`.
+
+| Phần | Nội dung | Kiểm bằng |
+|---|---|---|
+| `android/core` | Kotlin thuần: gọi 6 endpoint, đọc JSON, đọc markdown nhẹ, mọi lỗi ra tiếng Việt | 15 bài kiểm, chạy được ở mọi máy có JDK 17. Đối chiếu với phản hồi thật của `next dev` |
+| `android/app` | Bản tin, Khám phá/Tìm kiếm, Xem/nghe (đọc to bằng giọng tiếng Việt của máy), Trò chuyện, Cài đặt, trợ lý giọng nói mở bằng nút nguồn | Biên dịch thành công trên GitHub Actions, ra file APK debug |
+| `.github/workflows/android.yml` | Chạy bài kiểm phần lõi rồi build APK, giữ file ở mục Artifacts | Lần chạy 41976006648 xanh |
+
+Bài học Gradle: plugin Kotlin và plugin Android phải khai chung ở
+`android/build.gradle.kts` (buildscript). Khai rời từng module thì lỗi
+`BaseVariant not found`. Phiên đám mây không tải được Android SDK nên
+`settings.gradle.kts` chỉ đưa `:app` vào khi máy có SDK; trên máy không có thì
+vẫn build và kiểm `:core` được.
+
+### Cài lên Xiaomi 14 Ultra
+1. Mở trang lần chạy trên GitHub, mục Artifacts, tải `am-debug-apk`, giải nén ra file `.apk`.
+2. Chép sang điện thoại, mở file, cho phép cài từ nguồn này.
+3. Mở Am, vào Cài đặt, nhập địa chỉ máy chủ và token (`TOKEN_TRO_LY` trong `.env`), bấm "Thử kết nối".
+4. Trợ lý nút nguồn: Cài đặt máy, Ứng dụng mặc định, Ứng dụng trợ lý số, chọn Am.
+
+### Chưa làm / chưa chắc
+- **Chưa chạy thử trên điện thoại thật**: mới biết app biên dịch được, chưa biết nhìn và bấm có đúng không.
+- **Trợ lý giữ nút nguồn chưa thử**: tên mục chọn trợ lý và cách gán nút nguồn trên HyperOS có thể khác.
+- Đọc to chỉ chạy khi mở app (thoát app là dừng), chưa có trình phát chạy nền. Chưa phát video hay nhạc trong app.
+- Playlist, Ghi chú, Thư viện, Cài đặt quét chưa có vì cổng API chưa có endpoint cho chúng.
+- Chưa tính lệnh gọi `/cong-cu` của cả ba trang (tiendo, phaply chưa nối).
+- Máy chủ `am.scigroup.vn` chưa triển khai: app đang cho phép http thường để thử trong mạng nhà. Khi có https thì tắt `cleartextTrafficPermitted` trong `network_security_config.xml`.
+- Token đang lưu dạng thường trong thư mục riêng của app, chưa mã hoá thêm.

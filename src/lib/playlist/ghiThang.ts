@@ -403,7 +403,7 @@ export async function ghiThuTuLenYouTube(playlistId: string): Promise<KetQuaGhi>
 }
 
 /** Đọc hết mọi dòng của một playlist thật, kèm vị trí hiện tại. */
-async function docHetDong(
+export async function docHetDong(
   idPlaylistThat: string,
 ): Promise<{ id: string; maVideo: string; viTri: number }[]> {
   const ra: { id: string; maVideo: string; viTri: number }[] = [];

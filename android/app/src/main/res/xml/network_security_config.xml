@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cho phép http thường để thử với máy chủ chạy trong mạng nhà (địa chỉ IP đổi liên tục
+  nên không liệt kê được). Token đi qua http là KHÔNG mã hoá: khi am.scigroup.vn có https
+  thì đổi cleartextTrafficPermitted thành false.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
