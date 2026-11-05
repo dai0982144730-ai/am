@@ -17,7 +17,7 @@
  */
 
 import { prisma } from "@/lib/db/prisma";
-import { doiTenPlaylistThat } from "@/lib/playlist/ghiThang";
+import { docHetDong, doiTenPlaylistThat } from "@/lib/playlist/ghiThang";
 import { maVideoTuUrl } from "@/lib/playlist/thanhVien";
 import { ghiYouTube } from "@/lib/youtube/goiApi";
 
@@ -233,11 +233,9 @@ async function apDungXoaVideo(
 
   // playlistItems.delete cần đúng id CỦA DÒNG trong playlist (khác id video),
   // nên phải tìm lại đúng dòng trước khi xoá.
-  const trang = await ghiApiDoc<{ items?: { id?: string; snippet?: { resourceId?: { videoId?: string } } }[] }>(
-    idPlaylistThat,
-    ma,
-  );
-  const dong = trang?.items?.find((i) => i.snippet?.resourceId?.videoId === ma);
+  // Đọc HẾT các trang: playlist có thể hơn 50 video, chỉ đọc trang đầu thì
+  // video từ thứ 51 trở đi không bao giờ tìm thấy để xoá.
+  const dong = (await docHetDong(idPlaylistThat)).find((d) => d.maVideo === ma);
   if (!dong?.id) {
     // Đã tự mất trên YouTube rồi — coi như xong, không cần báo lỗi
     await prisma.playlistOrganizationSuggestion.update({
@@ -263,17 +261,6 @@ async function apDungXoaVideo(
   });
 
   return { ok: true, thongDiep: "Đã xoá khỏi playlist trên YouTube." };
-}
-
-/** Đọc một trang playlistItems — dùng riêng để tìm đúng id dòng cần xoá. */
-async function ghiApiDoc<T>(playlistId: string, _video: string): Promise<T> {
-  const { goiYouTube } = await import("@/lib/youtube/goiApi");
-  return goiYouTube<T>(
-    "playlistItems.list",
-    "playlistItems",
-    { part: "snippet", playlistId, maxResults: 50 },
-    { canDangNhap: true },
-  );
 }
 
 async function apDungXoaPlaylist(
@@ -372,25 +359,20 @@ async function apDungDoiThuTu(
     .map((id) => maVideoTuUrl(urlTheoId.get(id) ?? null))
     .filter((ma): ma is string => ma !== null);
 
-  const trang = await ghiApiDoc<{
-    items?: { id?: string; snippet?: { position?: number; resourceId?: { videoId?: string } } }[];
-  }>(idPlaylistThat, "");
-  // Thứ tự thật hiện giờ, được CẬP NHẬT theo sau mỗi lần ghi: YouTube dồn các
-  // dòng khác sang chỗ mới, nên so với vị trí đọc lúc đầu thì dòng đã đúng chỗ
-  // vẫn bị ghi thừa (50 đơn vị một lượt) còn dòng lệch có thể bị bỏ sót.
-  const dangCo = [...(trang?.items ?? [])].sort(
-    (a, b) => (a.snippet?.position ?? 0) - (b.snippet?.position ?? 0),
-  );
+  // Thứ tự thật hiện giờ (đọc hết các trang), được CẬP NHẬT theo sau mỗi lần
+  // ghi: YouTube dồn các dòng khác sang chỗ mới, nên so với vị trí đọc lúc đầu
+  // thì dòng đã đúng chỗ vẫn bị ghi thừa (50 đơn vị một lượt) còn dòng lệch có
+  // thể bị bỏ sót.
+  const dangCo = (await docHetDong(idPlaylistThat)).sort((a, b) => a.viTri - b.viTri);
 
   let soDaGhi = 0;
   for (let viTri = 0; viTri < thuTuMaVideo.length; viTri += 1) {
     const ma = thuTuMaVideo[viTri];
-    const chiSoHienTai = dangCo.findIndex((i) => i.snippet?.resourceId?.videoId === ma);
+    const chiSoHienTai = dangCo.findIndex((i) => i.maVideo === ma);
     // Video này đã tự mất khỏi YouTube từ trước — không có dòng nào để sửa vị
     // trí, bỏ qua chứ không báo lỗi.
     if (chiSoHienTai === -1) continue;
     const dong = dangCo[chiSoHienTai];
-    if (!dong.id) continue;
     if (chiSoHienTai === viTri) continue;
 
     await ghiYouTube(
