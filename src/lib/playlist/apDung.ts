@@ -17,6 +17,7 @@
  */
 
 import { prisma } from "@/lib/db/prisma";
+import { doiTenPlaylistThat } from "@/lib/playlist/ghiThang";
 import { maVideoTuUrl } from "@/lib/playlist/thanhVien";
 import { ghiYouTube } from "@/lib/youtube/goiApi";
 
@@ -319,13 +320,7 @@ async function apDungDoiTen(
     return { ok: false, thongDiep: "Thiếu playlist thật hoặc tên mới." };
   }
 
-  await ghiYouTube(
-    "playlists.update",
-    "playlists",
-    { part: "snippet" },
-    { id: idPlaylistThat, snippet: { title: deXuat.newPlaylistTitle } },
-    "PUT",
-  );
+  await doiTenPlaylistThat(idPlaylistThat, deXuat.newPlaylistTitle);
 
   await prisma.playlistActionLog.create({
     data: {
@@ -380,18 +375,23 @@ async function apDungDoiThuTu(
   const trang = await ghiApiDoc<{
     items?: { id?: string; snippet?: { position?: number; resourceId?: { videoId?: string } } }[];
   }>(idPlaylistThat, "");
-  const dongTheoVideo = new Map(
-    (trang?.items ?? []).map((i) => [i.snippet?.resourceId?.videoId ?? "", i]),
+  // Thứ tự thật hiện giờ, được CẬP NHẬT theo sau mỗi lần ghi: YouTube dồn các
+  // dòng khác sang chỗ mới, nên so với vị trí đọc lúc đầu thì dòng đã đúng chỗ
+  // vẫn bị ghi thừa (50 đơn vị một lượt) còn dòng lệch có thể bị bỏ sót.
+  const dangCo = [...(trang?.items ?? [])].sort(
+    (a, b) => (a.snippet?.position ?? 0) - (b.snippet?.position ?? 0),
   );
 
   let soDaGhi = 0;
   for (let viTri = 0; viTri < thuTuMaVideo.length; viTri += 1) {
     const ma = thuTuMaVideo[viTri];
-    const dong = dongTheoVideo.get(ma);
+    const chiSoHienTai = dangCo.findIndex((i) => i.snippet?.resourceId?.videoId === ma);
     // Video này đã tự mất khỏi YouTube từ trước — không có dòng nào để sửa vị
     // trí, bỏ qua chứ không báo lỗi.
-    if (!dong?.id) continue;
-    if (dong.snippet?.position === viTri) continue;
+    if (chiSoHienTai === -1) continue;
+    const dong = dangCo[chiSoHienTai];
+    if (!dong.id) continue;
+    if (chiSoHienTai === viTri) continue;
 
     await ghiYouTube(
       "playlistItems.update",
@@ -408,6 +408,10 @@ async function apDungDoiThuTu(
       "PUT",
     );
     soDaGhi += 1;
+
+    // Dòng này giờ nằm ở `viTri`, các dòng giữa bị dồn đi một bậc
+    dangCo.splice(chiSoHienTai, 1);
+    dangCo.splice(Math.min(viTri, dangCo.length), 0, dong);
   }
 
   await prisma.playlistActionLog.create({

@@ -218,6 +218,48 @@ async function timDongTrongPlaylist(
   return null;
 }
 
+/**
+ * Đổi tên một playlist thật, GIỮ NGUYÊN mô tả và ngôn ngữ. Ném lỗi nếu hỏng.
+ *
+ * `playlists.update` THAY HẲN snippet: trường ghi được mà không gửi lại thì
+ * YouTube xoá giá trị cũ. Gửi mỗi `title` là mất mô tả của playlist, nên đọc
+ * snippet hiện tại (1 đơn vị) rồi gửi lại nguyên các trường kia. Dùng chung cho
+ * cả đường bấm thẳng lẫn đường duyệt đề xuất (`apDung.ts`).
+ */
+export async function doiTenPlaylistThat(
+  idPlaylistThat: string,
+  tenMoi: string,
+): Promise<void> {
+  const hienTai = await goiYouTube<{
+    items?: { snippet?: { description?: string; defaultLanguage?: string } }[];
+  }>(
+    "playlists.list",
+    "playlists",
+    { part: "snippet", id: idPlaylistThat },
+    { canDangNhap: true },
+  );
+  const cu = hienTai.items?.[0]?.snippet;
+  // Không đọc được snippet cũ thì dừng, tuyệt đối không ghi mù để rồi xoá mô tả
+  if (!cu) {
+    throw new Error("không đọc được playlist trên YouTube để đổi tên an toàn");
+  }
+
+  await ghiYouTube(
+    "playlists.update",
+    "playlists",
+    { part: "snippet" },
+    {
+      id: idPlaylistThat,
+      snippet: {
+        title: tenMoi,
+        description: cu.description ?? "",
+        ...(cu.defaultLanguage ? { defaultLanguage: cu.defaultLanguage } : {}),
+      },
+    },
+    "PUT",
+  );
+}
+
 /** Đổi tên playlist thật trên YouTube. */
 export async function doiTenTrenYouTube(
   playlistId: string,
@@ -230,13 +272,7 @@ export async function doiTenTrenYouTube(
   if (!pl?.youtubePlaylistId) return { ok: true, thongDiep: "" };
 
   try {
-    await ghiYouTube(
-      "playlists.update",
-      "playlists",
-      { part: "snippet" },
-      { id: pl.youtubePlaylistId, snippet: { title: tenMoi } },
-      "PUT",
-    );
+    await doiTenPlaylistThat(pl.youtubePlaylistId, tenMoi);
     await prisma.playlistActionLog.create({
       data: {
         actionType: "rename_playlist",
@@ -310,12 +346,20 @@ export async function ghiThuTuLenYouTube(playlistId: string): Promise<KetQuaGhi>
   if (thuTuMuon.length === 0) return { ok: true, thongDiep: "" };
 
   try {
-    const dongThat = await docHetDong(pl.youtubePlaylistId);
+    // Thứ tự thật hiện giờ trên YouTube, sắp theo vị trí
+    const dongThat = (await docHetDong(pl.youtubePlaylistId)).sort(
+      (a, b) => a.viTri - b.viTri,
+    );
+    // Bản mô phỏng: sau MỖI lần ghi, YouTube dồn các dòng khác sang chỗ mới, nên
+    // phải tự cập nhật bản này theo. So với vị trí đọc lúc đầu thì dòng đã đúng
+    // chỗ vẫn bị ghi thừa (50 đơn vị một lượt) còn dòng lệch thì có thể bị bỏ sót.
+    const dangCo = [...dongThat];
     let daGhi = 0;
 
     for (const [viTri, ma] of thuTuMuon.entries()) {
-      const dong = dongThat.find((d) => d.maVideo === ma);
-      if (!dong || dong.viTri === viTri) continue;
+      const chiSoHienTai = dangCo.findIndex((d) => d.maVideo === ma);
+      if (chiSoHienTai === -1 || chiSoHienTai === viTri) continue;
+      const dong = dangCo[chiSoHienTai];
 
       await ghiYouTube(
         "playlistItems.update",
@@ -332,11 +376,18 @@ export async function ghiThuTuLenYouTube(playlistId: string): Promise<KetQuaGhi>
         "PUT",
       );
       daGhi += 1;
+
+      // Ghi xong thì dòng này đã nằm ở `viTri`, các dòng giữa bị dồn đi một bậc
+      dangCo.splice(chiSoHienTai, 1);
+      dangCo.splice(Math.min(viTri, dangCo.length), 0, dong);
     }
 
     if (daGhi > 0) {
-      // Ảnh chụp phải mang THỨ TỰ mới, không thì `xetLechThuTu` lại đẻ đề xuất
-      await capNhatAnhChup(playlistId, () => thuTuMuon);
+      // Ảnh chụp phải mang THỨ TỰ THẬT mới, không thì `xetLechThuTu` lại đẻ đề
+      // xuất. Lấy từ bản mô phỏng chứ không phải `thuTuMuon`: playlist thật có
+      // thể còn video Am không biết, hoặc thiếu video Am muốn có.
+      const thuTuThat = dangCo.map((d) => d.maVideo);
+      await capNhatAnhChup(playlistId, () => thuTuThat);
       await prisma.playlistActionLog.create({
         data: {
           actionType: "move_item",

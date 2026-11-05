@@ -101,9 +101,13 @@ Ba điều này xuyên suốt thiết kế, đừng phá vỡ khi thêm tính n�
    Thêm nguồn mới = thêm một adapter, không sửa schema.
 2. **Music đi nhánh riêng**: không lấy transcript, không cho LLM đọc sâu. Đánh giá
    nhạc bằng chữ là vô nghĩa và tốn tiền vô ích.
-3. **Mọi thao tác ghi ra thế giới thật đều phải qua "đề xuất → người dùng duyệt →
-   áp dụng"**: ghi playlist YouTube thật, công nhận tác giả mới vào whitelist.
-   Không bao giờ tự động.
+3. **Thao tác ghi ra thế giới thật do TRỢ LÝ tự nghĩ ra thì phải qua "đề xuất →
+   người dùng duyệt → áp dụng"**: ghi playlist YouTube thật, công nhận tác giả
+   mới vào whitelist. Không bao giờ tự động.
+   **Ngoại lệ (chủ dự án chốt 2026-08-18)**: việc chính chủ nhà tự tay bấm (thêm,
+   bỏ, đổi tên, sắp xếp, xoá playlist) thì ghi thẳng lên YouTube, không duyệt lại
+   — cú bấm chính là sự cho phép. Code ở `src/lib/playlist/ghiThang.ts`; phần đề
+   xuất chờ duyệt vẫn giữ cho thứ trợ lý tự nghĩ ra (`apDung.ts`).
 
 Thêm một điều về chấm điểm: **chuẩn hoá percentile trong cùng loại nguồn**, không
 bao giờ so trực tiếp lượt xem YouTube với điểm Hacker News.

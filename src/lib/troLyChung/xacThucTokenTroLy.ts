@@ -10,6 +10,8 @@
  * biến môi trường. Dựng cả hệ thống tài khoản cho một người dùng là thừa.
  */
 
+import { createHash, timingSafeEqual } from "node:crypto";
+
 import type { MaLoi } from "./kieuDuLieu";
 
 export interface KetQuaXacThuc {
@@ -42,13 +44,40 @@ const boDem = new Map<string, number[]>();
  * So bằng `===` sẽ dừng ngay ở ký tự đầu tiên khác nhau, nên thời gian trả lời
  * hé lộ token đúng được bao nhiêu ký tự đầu. Hàm này luôn duyệt hết cả chuỗi.
  */
-function soSanhAnToan(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let khac = 0;
-  for (let i = 0; i < a.length; i++) {
-    khac |= a.charCodeAt(i) ^ b.charCodeAt(i);
+export function soSanhAnToan(a: string, b: string): boolean {
+  // So băm của hai chuỗi: băm luôn dài đúng 32 byte nên thời gian trả lời
+  // không hé lộ độ dài token thật (so thẳng thì chuỗi khác độ dài bị loại ngay).
+  const bamA = createHash("sha256").update(a).digest();
+  const bamB = createHash("sha256").update(b).digest();
+  return timingSafeEqual(bamA, bamB);
+}
+
+/** Dò token sai: tối đa bao nhiêu lần mỗi phút từ cùng một nguồn gọi. */
+const SO_LAN_SAI_TOI_DA = 20;
+const boDemSai = new Map<string, number[]>();
+
+/** Nhận diện nguồn gọi: địa chỉ do proxy/tunnel gắn vào, không có thì gộp chung. */
+function nguonGoi(request: Request): string {
+  const xff = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return xff || request.headers.get("x-real-ip") || "khong-ro";
+}
+
+/** Ghi nhận một lần sai; trả `true` nếu nguồn này đã sai quá nhiều lần. */
+function saiQuaNhieu(nguon: string): boolean {
+  const bayGio = Date.now();
+  const conHieuLuc = (boDemSai.get(nguon) ?? []).filter(
+    (t) => bayGio - t < GIOI_HAN.trongKhoangMs,
+  );
+  conHieuLuc.push(bayGio);
+  boDemSai.set(nguon, conHieuLuc);
+
+  // Dọn định kỳ để bộ đếm không phình mãi khi bị quét từ nhiều địa chỉ
+  if (boDemSai.size > 1_000) {
+    for (const [khoa, ds] of boDemSai) {
+      if (ds.every((t) => bayGio - t >= GIOI_HAN.trongKhoangMs)) boDemSai.delete(khoa);
+    }
   }
-  return khac === 0;
+  return conHieuLuc.length > SO_LAN_SAI_TOI_DA;
 }
 
 /** Đọc danh sách token hợp lệ từ biến môi trường TOKEN_TRO_LY */
@@ -112,6 +141,14 @@ export function xacThucTokenTroLy(request: Request): KetQuaXacThuc {
   const hopLe = danhSach.some((t) => soSanhAnToan(t, token));
 
   if (!hopLe) {
+    // Token sai cũng phải bị đếm, không thì đoán mò được vô hạn lần
+    if (saiQuaNhieu(nguonGoi(request))) {
+      return {
+        hopLe: false,
+        maLoi: "goi_qua_nhieu",
+        thongDiep: "Thử sai quá nhiều lần. Chờ một lát rồi thử lại.",
+      };
+    }
     return { hopLe: false, maLoi: "token_sai", thongDiep: "Token không hợp lệ." };
   }
 

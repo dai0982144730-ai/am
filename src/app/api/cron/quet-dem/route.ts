@@ -11,6 +11,7 @@
  * dùng một chuỗi bí mật riêng trong `.env`.
  */
 
+import { soSanhAnToan } from "@/lib/troLyChung/xacThucTokenTroLy";
 import { quetDem } from "@/lib/vanHanh/quetDem";
 
 /** Việc này chạy lâu, nói trước cho máy chủ biết đừng cắt ngang. */
@@ -34,7 +35,8 @@ export async function POST(request: Request): Promise<Response> {
     ?.replace(/^Bearer\s+/i, "")
     .trim();
 
-  if (khoaGui !== khoaThat) {
+  // So thời gian không đổi, không lộ dần từng ký tự của khoá qua độ trễ
+  if (!khoaGui || !soSanhAnToan(khoaGui, khoaThat)) {
     return Response.json({ loi: "Khoá không đúng." }, { status: 401 });
   }
 

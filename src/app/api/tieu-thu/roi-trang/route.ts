@@ -40,15 +40,39 @@ export async function POST(yeuCau: Request) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  const { idPhien, idNoiDung, thietBi = "desktop" } = than;
-  const viTri = Math.max(0, Math.round(than.viTriGiay ?? 0));
+  const { idPhien, idNoiDung } = than;
+  // Thân do trình duyệt gửi nên không tin kiểu dữ liệu: giá trị lạ làm Prisma
+  // ném lỗi, mà lỗi đó từng kéo theo việc mất luôn chỗ xem dở
+  const thietBi: DeviceType = than.thietBi === "mobile" ? "mobile" : "desktop";
+  const soSach = (n: unknown): number =>
+    typeof n === "number" && Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
+  const viTri = soSach(than.viTriGiay);
 
   if (!idNoiDung) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
   try {
-    if (idPhien) {
+    // Lưu chỗ xem dở TRƯỚC: đây là lý do tuyến này tồn tại. Phần ghi nhật ký
+    // phiên bên dưới hỏng (phiên không còn trong database, v.v.) cũng không
+    // được kéo nó theo.
+    if (viTri >= TOI_THIEU_DE_LUU_CHO_DO) {
+      await prisma.resumePoint.upsert({
+        where: { contentItemId: idNoiDung },
+        create: {
+          contentItemId: idNoiDung,
+          positionSeconds: viTri,
+          lastDevice: thietBi,
+        },
+        update: { positionSeconds: viTri, lastDevice: thietBi },
+      });
+    }
+  } catch {
+    return NextResponse.json({ ok: false }, { status: 500 });
+  }
+
+  if (idPhien) {
+    try {
       await prisma.consumptionEvent.create({
         data: {
           sessionId: idPhien,
@@ -63,25 +87,14 @@ export async function POST(yeuCau: Request) {
         where: { id: idPhien },
         data: {
           endedAt: new Date(),
-          watchedSeconds: Math.round(than.giayDaXem ?? 0),
+          watchedSeconds: soSach(than.giayDaXem),
         },
       });
+    } catch (loi) {
+      // Nhật ký phiên là phần phụ; chỗ xem dở đã lưu xong ở trên
+      console.error("[rời trang] Không ghi được nhật ký phiên:", loi);
     }
-
-    if (viTri >= TOI_THIEU_DE_LUU_CHO_DO) {
-      await prisma.resumePoint.upsert({
-        where: { contentItemId: idNoiDung },
-        create: {
-          contentItemId: idNoiDung,
-          positionSeconds: viTri,
-          lastDevice: thietBi,
-        },
-        update: { positionSeconds: viTri, lastDevice: thietBi },
-      });
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ ok: false }, { status: 500 });
   }
+
+  return NextResponse.json({ ok: true });
 }

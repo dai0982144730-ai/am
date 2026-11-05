@@ -17,13 +17,36 @@
 export function toPercentile(value: number, population: number[]): number {
   if (population.length < 5) return 0.5;
 
-  const sorted = [...population].sort((a, b) => a - b);
-  let below = 0;
-  for (const v of sorted) {
-    if (v < value) below++;
-    else break;
+  const sorted = daSapXep(population);
+
+  // Tìm nhị phân: đếm số phần tử nhỏ hơn `value`
+  let thap = 0;
+  let cao = sorted.length;
+  while (thap < cao) {
+    const giua = (thap + cao) >>> 1;
+    if (sorted[giua] < value) thap = giua + 1;
+    else cao = giua;
   }
-  return below / sorted.length;
+  return thap / sorted.length;
+}
+
+/**
+ * Bản đã sắp xếp của một tập tham chiếu, nhớ lại theo chính mảng đó.
+ *
+ * Chấm điểm gọi `toPercentile` ba bốn lần cho MỖI nội dung trên cùng một tập
+ * vài nghìn phần tử; sắp xếp lại mỗi lần là hàng trăm triệu phép so sánh vô
+ * ích. Điều kiện để nhớ được: dựng xong tập thì không sửa nó nữa — đúng với
+ * cách `chamDiem.ts` dùng. Tập mới (mảng mới) thì tự có bản sắp xếp mới.
+ */
+const BAN_DA_SAP_XEP = new WeakMap<number[], number[]>();
+
+function daSapXep(population: number[]): number[] {
+  let ban = BAN_DA_SAP_XEP.get(population);
+  if (!ban || ban.length !== population.length) {
+    ban = [...population].sort((a, b) => a - b);
+    BAN_DA_SAP_XEP.set(population, ban);
+  }
+  return ban;
 }
 
 /**
@@ -37,16 +60,20 @@ export function toPercentile(value: number, population: number[]): number {
 export function popularityScore(params: {
   viewCount: number | null;
   followerCount: number | null;
-  /** Tỷ lệ xem/follower của các nội dung khác CÙNG loại nguồn */
+  /** Tỷ lệ xem/follower của các nội dung khác CÙNG loại nguồn CÓ số follower */
   peerRatios: number[];
+  /** Lượt xem thô của các nội dung CÙNG loại nguồn mà KHÔNG có số follower */
+  peerRawViews: number[];
 }): number | null {
-  const { viewCount, followerCount, peerRatios } = params;
+  const { viewCount, followerCount, peerRatios, peerRawViews } = params;
   if (viewCount === null) return null;
 
-  // Nguồn không công bố số người theo dõi (blog, podcast) thì đành so
-  // lượt xem thô với nhau
+  // Nguồn không công bố số người theo dõi (blog, podcast, kênh ẩn số sub) thì
+  // đành so lượt xem thô với nhau — nhưng CHỈ với nhau. Trộn lượt xem thô
+  // (hàng nghìn) vào tập tỷ lệ xem/follower (thường dưới vài chục) thì mọi
+  // video ẩn sub đều lên percentile ~1 và kéo lệch điểm của cả loại.
   if (!followerCount || followerCount <= 0) {
-    return toPercentile(viewCount, peerRatios);
+    return toPercentile(viewCount, peerRawViews);
   }
 
   return toPercentile(viewCount / followerCount, peerRatios);

@@ -24,6 +24,15 @@ import { layAccessToken } from "./tokenGoogle";
 
 const GOC = "https://www.googleapis.com/youtube/v3";
 
+/**
+ * Chờ tối đa bao lâu cho một lệnh gọi YouTube.
+ *
+ * Không đặt thì mạng treo giữa chừng là `fetch` chờ vô hạn, kéo cả bước quét
+ * đêm đứng im theo. Hết giờ thì `fetch` ném lỗi, bước đó được ghi là hỏng và
+ * các bước sau vẫn chạy tiếp.
+ */
+const HAN_CHO_MS = 30_000;
+
 /** Lỗi từ phía YouTube, đã dịch sang lời dễ hiểu. */
 export class LoiYouTube extends Error {
   constructor(
@@ -129,7 +138,10 @@ export async function goiYouTube<T>(
     url.searchParams.set("key", khoa);
   }
 
-  const phanHoi = await fetch(url, { headers: header });
+  const phanHoi = await fetch(url, {
+    headers: header,
+    signal: AbortSignal.timeout(HAN_CHO_MS),
+  });
 
   // Ghi hạn mức ngay cả khi lỗi — Google trừ theo lượt gọi, không theo lượt
   // thành công. Ghi hỏng cũng không được làm chết lệnh chính.
@@ -159,8 +171,14 @@ export async function goiYouTube<T>(
  *
  * Luôn dùng token đăng nhập — không có kiểu ghi bằng khoá API.
  *
- * **Chỉ được gọi từ `playlist/apDung.ts`**, tức là sau khi người dùng đã bấm
- * duyệt từng việc một. Không gọi thẳng từ chỗ nào khác.
+ * **Chỉ được gọi từ hai nơi** (chủ dự án chốt 2026-08-18):
+ *
+ *   - `playlist/ghiThang.ts`: cú bấm của chính chủ nhà, ghi thẳng, không qua
+ *     bước duyệt — bấm chính là sự cho phép.
+ *   - `playlist/apDung.ts`: đề xuất do **trợ lý tự nghĩ ra**, bắt buộc có người
+ *     duyệt từng việc trước khi áp dụng.
+ *
+ * Không gọi thẳng từ chỗ nào khác.
  */
 export async function ghiYouTube<T>(
   lenh: TenLenh,
@@ -182,6 +200,7 @@ export async function ghiYouTube<T>(
   }
 
   const phanHoi = await fetch(url, {
+    signal: AbortSignal.timeout(HAN_CHO_MS),
     method: phuongThuc,
     headers: {
       Accept: "application/json",

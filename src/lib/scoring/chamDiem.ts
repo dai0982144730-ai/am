@@ -46,7 +46,10 @@ const HAN_CHO_MS = 30_000;
  * chỉ được so với video khác, một bài diễn đàn chỉ so với bài diễn đàn khác.
  */
 interface TapThamChieu {
+  /** Chỉ gồm nội dung của nguồn CÓ số người theo dõi */
   tyLeXemTrenNguoiTheoDoi: number[];
+  /** Lượt xem thô của nội dung thuộc nguồn KHÔNG có số người theo dõi */
+  luotXemTho: number[];
   tyLeBinhLuanTrenXem: number[];
   tyLeThichTrenXem: number[];
   soNguoiTheoDoi: number[];
@@ -66,11 +69,15 @@ async function dungTapThamChieu(
       source: { select: { followerCount: true } },
       externalDiscussions: { select: { score: true } },
     },
+    // Có thứ tự rõ ràng: không có orderBy thì khi kho vượt 5.000, mỗi lần chấm
+    // có thể lấy một nhóm khác nhau và percentile nhảy lung tung
+    orderBy: { publishedAt: { sort: "desc", nulls: "last" } },
     take: 5_000,
   });
 
   const tap: TapThamChieu = {
     tyLeXemTrenNguoiTheoDoi: [],
+    luotXemTho: [],
     tyLeBinhLuanTrenXem: [],
     tyLeThichTrenXem: [],
     soNguoiTheoDoi: [],
@@ -82,9 +89,12 @@ async function dungTapThamChieu(
     const theoDoi = muc.source.followerCount;
 
     if (xem !== null && xem > 0) {
-      tap.tyLeXemTrenNguoiTheoDoi.push(
-        theoDoi && theoDoi > 0 ? xem / theoDoi : xem,
-      );
+      // Hai thang đo khác nhau thì hai tập riêng, không trộn vào một mảng
+      if (theoDoi && theoDoi > 0) {
+        tap.tyLeXemTrenNguoiTheoDoi.push(xem / theoDoi);
+      } else {
+        tap.luotXemTho.push(xem);
+      }
       if (muc.commentCount !== null) {
         tap.tyLeBinhLuanTrenXem.push(muc.commentCount / xem);
       }
@@ -251,6 +261,7 @@ export async function chamDiemHangLoat(
         viewCount: muc.viewOrPlayCount,
         followerCount: nguon.followerCount,
         peerRatios: tap.tyLeXemTrenNguoiTheoDoi,
+        peerRawViews: tap.luotXemTho,
       });
 
       const boonTuongTac = engagementDepthScore({

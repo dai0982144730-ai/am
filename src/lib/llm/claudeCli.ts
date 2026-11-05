@@ -141,7 +141,8 @@ function gietCaCay(con: ReturnType<typeof spawn>): void {
       spawn("taskkill", ["/pid", String(con.pid), "/T", "/F"], {
         windowsHide: true,
         stdio: "ignore",
-      });
+        // Thiếu taskkill thì lỗi đến qua sự kiện 'error', không qua try/catch
+      }).on("error", () => {});
     } else {
       con.kill("SIGTERM");
     }
@@ -217,9 +218,32 @@ function goiThat(tuyChon: TuyChonGoiCli): Promise<KetQuaGoiCli> {
     );
   }
 
-  const dungCuaSoLenh = canCuaSoLenh(duongDan);
+  // Không bao giờ chạy qua cửa sổ lệnh: lời dặn hệ thống nhiều dòng, có dấu cách
+  // và dấu ngoặc kép, đi qua `cmd.exe` là bị tách vụn hoặc hiểu thành lệnh. File
+  // `.cmd` chỉ là vỏ bọc của `cli.js` — chạy thẳng cái đó bằng Node.
+  let chayBang = duongDan;
+  let thamSoDau: string[] = [];
+  if (canCuaSoLenh(duongDan)) {
+    const cliJs = path.join(
+      path.dirname(duongDan),
+      "node_modules",
+      "@anthropic-ai",
+      "claude-code",
+      "cli.js",
+    );
+    if (!fs.existsSync(cliJs)) {
+      throw new LoiClaudeCli(
+        `Chỉ tìm thấy file bọc ${duongDan} mà không thấy cli.js bên cạnh, nên không chạy an toàn được.\n` +
+          "Cài lại bằng: npm install -g @anthropic-ai/claude-code\n" +
+          "Hoặc trỏ CLAUDE_CLI_PATH tới file claude.exe thật.",
+      );
+    }
+    chayBang = process.execPath;
+    thamSoDau = [cliJs];
+  }
 
   const thamSo = [
+    ...thamSoDau,
     "--print",
     "--output-format",
     "json",
@@ -236,9 +260,8 @@ function goiThat(tuyChon: TuyChonGoiCli): Promise<KetQuaGoiCli> {
   if (tuyChon.model) thamSo.push("--model", tuyChon.model);
 
   return new Promise<KetQuaGoiCli>((xong, hong) => {
-    const con = spawn(dungCuaSoLenh ? `"${duongDan}"` : duongDan, thamSo, {
+    const con = spawn(chayBang, thamSo, {
       stdio: ["pipe", "pipe", "pipe"],
-      shell: dungCuaSoLenh,
       windowsHide: true,
       env: moiTruongCon(),
     });
@@ -316,6 +339,12 @@ function goiThat(tuyChon: TuyChonGoiCli): Promise<KetQuaGoiCli> {
         },
       });
     });
+
+    // Lỗi ghi vào stdin (EPIPE khi CLI chết giữa chừng) đến BẤT ĐỒNG BỘ, qua
+    // sự kiện 'error' của luồng — try/catch bên dưới không bắt được. Không có
+    // dòng này thì Node coi là lỗi chưa xử lý và sập cả máy chủ. Bỏ qua cũng
+    // an toàn vì phần `close` ở trên sẽ báo lỗi thật.
+    con.stdin.on("error", () => {});
 
     try {
       con.stdin.write(tuyChon.cauHoi);

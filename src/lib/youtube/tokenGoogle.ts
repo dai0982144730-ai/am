@@ -145,9 +145,12 @@ async function lamMoiToken(refreshToken: string): Promise<string> {
       refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
+    // Không đặt giờ chờ thì Google treo là cả bước quét đêm đứng im theo
+    signal: AbortSignal.timeout(30_000),
   });
 
-  const ketQua = (await phanHoi.json()) as PhanHoiLamMoi;
+  // Lúc hạ tầng Google lỗi nó có thể trả HTML thay vì JSON
+  const ketQua = (await phanHoi.json().catch(() => ({}))) as PhanHoiLamMoi;
 
   if (!phanHoi.ok || !ketQua.access_token) {
     // `invalid_grant` nghĩa là refresh token không dùng được nữa — thường do
