@@ -3273,3 +3273,53 @@ vẫn build và kiểm `:core` được.
 - Chưa tính lệnh gọi `/cong-cu` của cả ba trang (tiendo, phaply chưa nối).
 - Máy chủ `am.scigroup.vn` chưa triển khai: app đang cho phép http thường để thử trong mạng nhà. Khi có https thì tắt `cleartextTrafficPermitted` trong `network_security_config.xml`.
 - Token đang lưu dạng thường trong thư mục riêng của app, chưa mã hoá thêm.
+
+## 2026-11-05 (tiếp) — Đăng nhập Claude ngay trên trang Vận hành
+
+Chủ dự án bảo lấy phần "đăng nhập Claude ở quản trị" từ phiên "@ 11 Việc chung"
+(thật ra code nằm ở app agent SCI) rồi ghép vào Am. Trước đây muốn đăng nhập
+Claude phải mở terminal của máy chủ gõ `claude`; giờ làm ngay trên web.
+
+### Cách hoạt động
+Am không tự làm OAuth. Máy chủ chạy `claude auth login --claudeai` và nói chuyện
+với nó qua đầu vào/đầu ra chuẩn:
+
+1. Bấm **Đăng nhập Claude** → máy chủ bắt link CLI in ra, tab mới mở sẵn trang đó.
+2. Đăng nhập Claude trên máy hoặc điện thoại → trang Claude hiện một mã.
+3. Dán mã vào ô → dán xong tự gửi → CLI tự lưu đăng nhập vào `~/.am/claude-tk`.
+
+Am không đọc, không lưu token; file do chính CLI ghi. Không có bảng database mới,
+không có biến môi trường mới.
+
+### Cái gì đổi
+| File | Việc |
+|---|---|
+| `src/lib/llm/taiKhoanClaude.ts` (mới) | Thư mục `~/.am/claude-tk`; đã đăng nhập = có `.credentials.json` |
+| `src/lib/llm/dangNhapClaude.ts` (mới) | Luồng ①②③, kiểm trạng thái (`auth status`) |
+| `src/lib/llm/claudeCli.ts` | Tách `chuanBiLenhCli()` dùng chung; `moiTruongCon()` tự thêm `CLAUDE_CONFIG_DIR` khi đã đăng nhập riêng; xuất `gietCaCay` |
+| `src/app/van-hanh/actions.ts` | 6 thao tác: mở link, nhập mã, huỷ, đăng xuất, đọc trạng thái, thử trợ lý. Mỗi cái chặn cửa bằng `doiHoiChuDuAn` |
+| `src/components/TheTaiKhoanClaude.tsx` (mới), `page.tsx` | Thẻ giao diện trên trang Vận hành |
+| `scripts/thu-dang-nhap-claude.ts` (mới) | Bài kiểm luồng bằng Claude CLI giả |
+
+### Quyết định
+- **Chưa đăng nhập riêng thì Am dùng tài khoản mặc định của máy như từ trước.** Quét
+  đêm không đổi hành vi cho tới khi bạn bấm đăng nhập.
+- Đăng xuất chỉ xoá đăng nhập riêng của Am, không đụng `~/.claude` của máy.
+- Bỏ phần 2 tài khoản luân phiên của SCI (Am một người dùng) và hộp xác nhận khi
+  đăng xuất (theo quy tắc "bớt cú bấm").
+- Nút **Thử trợ lý** hỏi một câu thật vì `auth status` chỉ nhìn file đăng nhập,
+  không biết mã còn hiệu lực (đo bên SCI).
+
+### Đã kiểm
+| | Kết quả |
+|---|---|
+| `npx tsc --noEmit`, `eslint`, `next build` | sạch |
+| `scripts/thu-dang-nhap-claude.ts` (CLI giả) | 29 mục đạt: tiến trình sống qua hai lần bấm, mã đi qua đầu vào chuẩn, đúng thư mục, khoá API bị gỡ, mã sai báo lỗi tiếng Việt, huỷ thì tiến trình chết, đăng xuất, chưa đăng nhập thì không ép thư mục |
+
+### Chưa kiểm
+- **Chưa chạy với Claude CLI thật.** Phiên đám mây không có CLI. Dòng chữ CLI in ra
+  (`If the browser didn't open, visit: ...`) có thể đổi theo phiên bản; khi đó sửa biểu
+  thức `RE_LINK` trong `dangNhapClaude.ts`. App SCI đã chạy đúng luồng này thật trên Windows.
+- Chưa bấm thử giao diện trên trình duyệt thật.
+- Nhánh Linux (`BROWSER=true`) chưa chạy thật; máy bạn là Windows.
+- Cần máy chủ Node chạy liên tục (máy nhà thì được); Vercel/serverless thì không.
